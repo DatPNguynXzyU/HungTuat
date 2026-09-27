@@ -68,15 +68,21 @@ export class TokenService {
       );
 
       const redisKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${user.id}:${jti}`;
-      await this.redisService.setJson(
-         redisKey,
-         {
-            userId: user.id,
-            jti,
-            createdAt: new Date().toISOString(),
-         },
-         this.refreshTokenExpiresIn,
-      );
+      const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${user.id}`;
+
+      await Promise.all([
+         this.redisService.setJson(
+            redisKey,
+            {
+               userId: user.id,
+               jti,
+               createdAt: new Date().toISOString(),
+            },
+            this.refreshTokenExpiresIn,
+         ),
+         this.redisService.sadd(sessionsKey, jti),
+         this.redisService.expire(sessionsKey, this.refreshTokenExpiresIn),
+      ]);
 
       return { accessToken, refreshToken };
    }
@@ -118,12 +124,16 @@ export class TokenService {
 
       const isRevoked = await this.isTokenRevoked(payload.jti);
       if (isRevoked) {
+         // Token reuse detected: Revoke all active sessions for this user to mitigate breach
+         await this.revokeAllUserTokens(payload.sub);
          throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_REVOKED);
       }
 
       const activeKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${payload.sub}:${payload.jti}`;
       const activeToken = await this.redisService.getJson(activeKey);
       if (!activeToken) {
+         // Token reuse detected or not active: Revoke all active sessions for this user
+         await this.revokeAllUserTokens(payload.sub);
          throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_REVOKED);
       }
 
@@ -138,10 +148,42 @@ export class TokenService {
 
    async invalidateRefreshToken(userId: string, jti: string, remainingTtl?: number): Promise<void> {
       const activeKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${userId}:${jti}`;
+      const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${userId}`;
       const revokedKey = `${REDIS_KEY_PREFIX.REVOKED_TOKEN}${jti}`;
       const ttl = typeof remainingTtl === 'number' && remainingTtl > 0 ? remainingTtl : this.refreshTokenExpiresIn;
 
-      await Promise.all([this.redisService.del(activeKey), this.redisService.set(revokedKey, 'revoked', ttl)]);
+      await Promise.all([
+         this.redisService.del(activeKey),
+         this.redisService.srem(sessionsKey, jti),
+         this.redisService.set(revokedKey, 'revoked', ttl),
+      ]);
+   }
+
+   async revokeAllUserTokens(userId: string): Promise<void> {
+      if (!userId) {
+         return;
+      }
+      const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${userId}`;
+      const activeJtis = await this.redisService.smembers(sessionsKey);
+
+      const delPromises: Promise<unknown>[] = [this.redisService.del(sessionsKey)];
+
+      for (const jti of activeJtis) {
+         const activeKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${userId}:${jti}`;
+         const revokedKey = `${REDIS_KEY_PREFIX.REVOKED_TOKEN}${jti}`;
+         delPromises.push(
+            this.redisService.del(activeKey),
+            this.redisService.set(revokedKey, 'revoked', this.refreshTokenExpiresIn),
+         );
+      }
+
+      delPromises.push(this.redisService.deleteByPattern(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}${userId}:*`));
+
+      await Promise.all(delPromises);
+   }
+
+   async logoutAll(userId: string): Promise<void> {
+      await this.revokeAllUserTokens(userId);
    }
 
    async revokeToken(token: string): Promise<IRevokeTokenResult> {

@@ -10,7 +10,8 @@
       "**/dist": true,
       "**/.pnpm-store": true,
       "**/coverage": true,
-      "**/.omni": true
+      "**/.omni": true,
+      "**/.codegraph": true
    },
    "search.exclude": {
       "**/node_modules": true,
@@ -18,7 +19,8 @@
       "**/.pnpm-store": true,
       "**/coverage": true,
       "**/.omni": true,
-      "**/pnpm-lock.yaml": true
+      "**/pnpm-lock.yaml": true,
+      "**/.codegraph": true
    },
    "files.watcherExclude": {
       "**/.git/objects/**": true,
@@ -27,7 +29,8 @@
       "**/dist/**": true,
       "**/.pnpm-store/**": true,
       "**/coverage/**": true,
-      "**/.omni/**": true
+      "**/.omni/**": true,
+      "**/.codegraph/**": true
    },
    "editor.defaultFormatter": "esbenp.prettier-vscode",
    "editor.formatOnSave": true,
@@ -43,5 +46,5 @@
    "[json]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode"
    },
-   "cSpell.words": ["amqp"]
+   "cSpell.words": ["amqp", "codegrab", "codegraph", "colbymchenry"]
 }

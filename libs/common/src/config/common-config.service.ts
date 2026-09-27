@@ -85,6 +85,7 @@ export class CommonConfigService {
          authQueue: this.configService.get('RABBIT_MQ_AUTH_SERVICE_QUEUE', { infer: true }),
          userQueue: this.configService.get('RABBIT_MQ_USER_SERVICE_QUEUE', { infer: true }),
          orderQueue: this.configService.get('RABBIT_MQ_ORDER_SERVICE_QUEUE', { infer: true }),
+         notificationQueue: this.configService.get('RABBIT_MQ_NOTIFICATION_SERVICE_QUEUE', { infer: true }),
          getQueue: (serviceName: string): string => {
             const dynamicKey = `RABBIT_MQ_${serviceName}_QUEUE` as keyof SharedEnvConfig;
             const configuredQueue = this.configService.get(dynamicKey, { infer: true });

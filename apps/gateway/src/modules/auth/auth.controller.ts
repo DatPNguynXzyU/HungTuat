@@ -3,6 +3,7 @@ import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import type { Request, Response } from 'express';
 import {
    AUTH_COOKIES,
+   ChangePasswordDto,
    CurrentUser,
    LoginDto,
    Public,
@@ -152,6 +153,50 @@ export class AuthController {
 
       return {
          message: 'Logged out successfully',
+      };
+   }
+
+   @Post('logout-all')
+   @HttpCode(HttpStatus.OK)
+   @ApiCookieAuth()
+   @ApiOperation({
+      summary: 'Revoke all sessions/tokens for the current user across all devices and clear auth cookies',
+   })
+   @ApiResponse({ status: 200, description: 'All user sessions logged out successfully.' })
+   @ResponseMessage('AUTH.LOGOUT_ALL_SUCCESS')
+   async logoutAll(
+      @CurrentUser() user: JwtPayload,
+      @Res({ passthrough: true }) res: Response,
+   ): Promise<{ message: string }> {
+      if (user?.sub) {
+         await this.authService.logoutAll(user.sub);
+      }
+
+      this.clearAuthCookies(res);
+
+      return {
+         message: 'All sessions logged out successfully',
+      };
+   }
+
+   @Post('change-password')
+   @HttpCode(HttpStatus.OK)
+   @ApiCookieAuth()
+   @ApiOperation({ summary: 'Change password and revoke all active sessions across all devices' })
+   @ApiResponse({ status: 200, description: 'Password changed successfully and all sessions revoked.' })
+   @ApiResponse({ status: 400, description: 'Current password invalid or same as new password.' })
+   @ResponseMessage('AUTH.CHANGE_PASSWORD_SUCCESS')
+   async changePassword(
+      @CurrentUser() user: JwtPayload,
+      @Body() changePasswordDto: ChangePasswordDto,
+      @Res({ passthrough: true }) res: Response,
+   ): Promise<{ message: string }> {
+      const result = await this.authService.changePassword(user.sub, changePasswordDto);
+
+      this.clearAuthCookies(res);
+
+      return {
+         message: result.message,
       };
    }
 

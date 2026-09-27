@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { AUTH_PATTERNS, LoginDto, RegisterDto, RmqService } from '@common';
+import { AUTH_PATTERNS, ChangePasswordDto, LoginDto, RegisterDto, RmqService } from '@common';
 import { AuthService } from '@auth/auth.service';
 
 @Controller()
@@ -50,6 +50,45 @@ export class AuthController {
    async revokeToken(@Payload() data: { token: string }, @Ctx() context: RmqContext) {
       try {
          const result = await this.authService.revokeToken(data.token);
+         this.rmqService.ack(context);
+         return result;
+      } catch (error) {
+         this.rmqService.ack(context);
+         throw error;
+      }
+   }
+
+   @MessagePattern({ cmd: AUTH_PATTERNS.REVOKE_ALL_USER_TOKENS })
+   async revokeAllUserTokens(@Payload() data: { userId: string }, @Ctx() context: RmqContext) {
+      try {
+         await this.authService.revokeAllUserTokens(data.userId);
+         this.rmqService.ack(context);
+         return { success: true, message: 'All tokens revoked successfully' };
+      } catch (error) {
+         this.rmqService.ack(context);
+         throw error;
+      }
+   }
+
+   @MessagePattern({ cmd: AUTH_PATTERNS.LOGOUT_ALL })
+   async logoutAll(@Payload() data: { userId: string }, @Ctx() context: RmqContext) {
+      try {
+         await this.authService.logoutAll(data.userId);
+         this.rmqService.ack(context);
+         return { success: true, message: 'All sessions logged out successfully' };
+      } catch (error) {
+         this.rmqService.ack(context);
+         throw error;
+      }
+   }
+
+   @MessagePattern({ cmd: AUTH_PATTERNS.CHANGE_PASSWORD })
+   async changePassword(
+      @Payload() data: { userId: string; changePasswordDto: ChangePasswordDto },
+      @Ctx() context: RmqContext,
+   ) {
+      try {
+         const result = await this.authService.changePassword(data.userId, data.changePasswordDto);
          this.rmqService.ack(context);
          return result;
       } catch (error) {

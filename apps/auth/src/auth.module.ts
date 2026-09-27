@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { LoggerModule, RedisModule, RmqModule } from '@common';
+import { LoggerModule, RedisModule, RmqModule, SERVICES } from '@common';
 import { AuthController } from '@auth/auth.controller';
 import { AuthService } from '@auth/auth.service';
 import { AuthConfigModule } from '@auth/config';
@@ -8,7 +8,16 @@ import { AUTH_REPOSITORY, AuthRepository } from '@auth/repositories';
 import { TokenService } from '@auth/services/token.service';
 
 @Module({
-   imports: [AuthConfigModule, LoggerModule, RedisModule, RmqModule, PrismaModule],
+   imports: [
+      AuthConfigModule,
+      LoggerModule,
+      RedisModule,
+      RmqModule,
+      RmqModule.register({
+         name: SERVICES.NOTIFICATION_SERVICE,
+      }),
+      PrismaModule,
+   ],
    controllers: [AuthController],
    providers: [
       TokenService,

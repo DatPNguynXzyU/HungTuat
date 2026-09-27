@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
    AUTH_PATTERNS,
+   ChangePasswordDto,
    IAuthResult,
    IRevokeTokenResult,
    IValidateTokenResult,
@@ -41,6 +42,36 @@ export class AuthService {
    async revokeToken(token: string): Promise<IRevokeTokenResult> {
       return firstValueFrom(
          this.authClient.send<IRevokeTokenResult, { token: string }>({ cmd: AUTH_PATTERNS.REVOKE_TOKEN }, { token }),
+      );
+   }
+
+   async revokeAllUserTokens(userId: string): Promise<{ success: boolean; message: string }> {
+      return firstValueFrom(
+         this.authClient.send<{ success: boolean; message: string }, { userId: string }>(
+            { cmd: AUTH_PATTERNS.REVOKE_ALL_USER_TOKENS },
+            { userId },
+         ),
+      );
+   }
+
+   async logoutAll(userId: string): Promise<{ success: boolean; message: string }> {
+      return firstValueFrom(
+         this.authClient.send<{ success: boolean; message: string }, { userId: string }>(
+            { cmd: AUTH_PATTERNS.LOGOUT_ALL },
+            { userId },
+         ),
+      );
+   }
+
+   async changePassword(
+      userId: string,
+      changePasswordDto: ChangePasswordDto,
+   ): Promise<{ success: boolean; message: string }> {
+      return firstValueFrom(
+         this.authClient.send<
+            { success: boolean; message: string },
+            { userId: string; changePasswordDto: ChangePasswordDto }
+         >({ cmd: AUTH_PATTERNS.CHANGE_PASSWORD }, { userId, changePasswordDto }),
       );
    }
 

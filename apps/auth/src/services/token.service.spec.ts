@@ -11,6 +11,11 @@ describe('TokenService', () => {
       get: jest.fn(),
       set: jest.fn(),
       del: jest.fn(),
+      sadd: jest.fn(),
+      srem: jest.fn(),
+      smembers: jest.fn(),
+      expire: jest.fn(),
+      deleteByPattern: jest.fn(),
       getJson: jest.fn(),
       setJson: jest.fn(),
    };
@@ -24,6 +29,7 @@ describe('TokenService', () => {
 
    beforeEach(async () => {
       jest.clearAllMocks();
+      mockRedisService.smembers.mockResolvedValue([]);
 
       const module: TestingModule = await Test.createTestingModule({
          providers: [
@@ -43,7 +49,7 @@ describe('TokenService', () => {
    });
 
    describe('generateTokenPair', () => {
-      it('should generate a pair of access and refresh tokens with separated secrets and save refresh token whitelist to Redis', async () => {
+      it('should generate a pair of access and refresh tokens, save refresh token whitelist and add jti to user session set in Redis', async () => {
          const user = {
             id: 'user-id-1',
             email: 'test@example.com',
@@ -60,6 +66,16 @@ describe('TokenService', () => {
          expect(mockRedisService.setJson).toHaveBeenCalledWith(
             expect.stringContaining(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-id-1:`),
             expect.objectContaining({ userId: 'user-id-1' }),
+            mockConfigService.jwtRefreshTokenExpiresIn,
+         );
+
+         // Redis session set verification
+         expect(mockRedisService.sadd).toHaveBeenCalledWith(
+            `${REDIS_KEY_PREFIX.USER_SESSIONS}user-id-1`,
+            expect.any(String),
+         );
+         expect(mockRedisService.expire).toHaveBeenCalledWith(
+            `${REDIS_KEY_PREFIX.USER_SESSIONS}user-id-1`,
             mockConfigService.jwtRefreshTokenExpiresIn,
          );
 
@@ -192,7 +208,7 @@ describe('TokenService', () => {
          await expect(service.validateRefreshToken(tokenWithoutJti)).rejects.toThrow(UnauthorizedException);
       });
 
-      it('should throw UnauthorizedException if refresh token is in blacklist', async () => {
+      it('should revoke all user sessions and throw UnauthorizedException if refresh token is in blacklist (token reuse detected)', async () => {
          const token = JwtUtil.sign(
             { sub: 'user-1', email: 'user@example.com', tokenType: 'refresh', jti: 'revoked-jti' },
             mockConfigService.jwtRefreshSecret,
@@ -202,9 +218,10 @@ describe('TokenService', () => {
          mockRedisService.get.mockResolvedValue('revoked');
 
          await expect(service.validateRefreshToken(token)).rejects.toThrow(UnauthorizedException);
+         expect(mockRedisService.deleteByPattern).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:*`);
       });
 
-      it('should throw UnauthorizedException if refresh token is missing from Redis whitelist', async () => {
+      it('should revoke all user sessions and throw UnauthorizedException if refresh token is missing from Redis whitelist (token reuse detected)', async () => {
          const token = JwtUtil.sign(
             { sub: 'user-1', email: 'user@example.com', tokenType: 'refresh', jti: 'not-found-jti' },
             mockConfigService.jwtRefreshSecret,
@@ -215,14 +232,55 @@ describe('TokenService', () => {
          mockRedisService.getJson.mockResolvedValue(null); // not active in whitelist
 
          await expect(service.validateRefreshToken(token)).rejects.toThrow(UnauthorizedException);
+         expect(mockRedisService.deleteByPattern).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:*`);
+      });
+   });
+
+   describe('revokeAllUserTokens and logoutAll', () => {
+      it('should iterate over user sessions set in Redis, delete active keys, set blacklist keys, delete set and pattern fallback', async () => {
+         mockRedisService.smembers.mockResolvedValue(['jti-1', 'jti-2']);
+
+         await service.revokeAllUserTokens('user-1');
+
+         expect(mockRedisService.smembers).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`);
+         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`);
+         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-1`);
+         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-2`);
+         expect(mockRedisService.set).toHaveBeenCalledWith(
+            `${REDIS_KEY_PREFIX.REVOKED_TOKEN}jti-1`,
+            'revoked',
+            mockConfigService.jwtRefreshTokenExpiresIn,
+         );
+         expect(mockRedisService.set).toHaveBeenCalledWith(
+            `${REDIS_KEY_PREFIX.REVOKED_TOKEN}jti-2`,
+            'revoked',
+            mockConfigService.jwtRefreshTokenExpiresIn,
+         );
+         expect(mockRedisService.deleteByPattern).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:*`);
+      });
+
+      it('should delegate logoutAll to revokeAllUserTokens', async () => {
+         mockRedisService.smembers.mockResolvedValue(['jti-1']);
+
+         await service.logoutAll('user-1');
+
+         expect(mockRedisService.smembers).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`);
+         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`);
+      });
+
+      it('should do nothing if userId is empty', async () => {
+         await service.revokeAllUserTokens('');
+
+         expect(mockRedisService.smembers).not.toHaveBeenCalled();
       });
    });
 
    describe('invalidateRefreshToken', () => {
-      it('should delete active key from whitelist and set blacklist key with remaining TTL', async () => {
+      it('should delete active key from whitelist, remove jti from session set and set blacklist key with remaining TTL', async () => {
          await service.invalidateRefreshToken('user-1', 'jti-abc', 300);
 
          expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-abc`);
+         expect(mockRedisService.srem).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`, 'jti-abc');
          expect(mockRedisService.set).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REVOKED_TOKEN}jti-abc`, 'revoked', 300);
       });
 
@@ -230,6 +288,7 @@ describe('TokenService', () => {
          await service.invalidateRefreshToken('user-1', 'jti-abc');
 
          expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-abc`);
+         expect(mockRedisService.srem).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`, 'jti-abc');
          expect(mockRedisService.set).toHaveBeenCalledWith(
             `${REDIS_KEY_PREFIX.REVOKED_TOKEN}jti-abc`,
             'revoked',
@@ -269,6 +328,7 @@ describe('TokenService', () => {
          const res = await service.revokeToken(token);
          expect(res.success).toBe(true);
          expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:to-revoke-jti`);
+         expect(mockRedisService.srem).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`, 'to-revoke-jti');
          expect(mockRedisService.set).toHaveBeenCalledWith(
             `${REDIS_KEY_PREFIX.REVOKED_TOKEN}to-revoke-jti`,
             'revoked',

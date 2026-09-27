@@ -2,6 +2,7 @@ export const REDIS_KEY_PREFIX = {
    ROLE: 'rbac:role:',
    ROLE_PERMISSIONS: 'rbac:role_permissions:',
    REFRESH_TOKEN: 'auth:refresh_token:',
+   USER_SESSIONS: 'auth:user_sessions:',
    REVOKED_TOKEN: 'auth:revoked_token:',
 } as const;
 

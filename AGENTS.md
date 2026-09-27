@@ -15,3 +15,8 @@
    - **Do NOT use long relative paths with parent traversals** (e.g. `../../` or `../../../`).
    - Relative imports (`./`) are ONLY acceptable for direct sibling files within the exact same local folder.
    - When adding new apps or shared libraries, always configure their respective `@` aliases in `tsconfig.json`, `nest-cli.json`, and `package.json` (`moduleNameMapper`).
+
+4. **Code Intelligence with CodeGraph**:
+   - OmniServices uses **CodeGraph** (`@colbymchenry/codegraph`) to provide semantic code intelligence and knowledge graph querying for AI agents (Antigravity IDE, Cursor, Claude Code, Gemini CLI, etc.).
+   - Rather than crawling and reading dozens of files one-by-one, agents use CodeGraph's local MCP tools (`codegraph_explore`, `codegraph_search`, `codegraph_impact`) to retrieve exact definitions, caller/callee graphs, and impact radiuses in single calls.
+   - For detailed setup, MCP tools, and workflow instructions, see [codegraph-guidelines.md](.agent/rules/codegraph-guidelines.md).

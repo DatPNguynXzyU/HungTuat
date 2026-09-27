@@ -3,7 +3,11 @@ export interface IAuthUser {
    email: string;
    fullName: string;
    roles: string[];
+   status?: string;
+   isEmailVerified?: boolean;
+   lastLoginAt?: string | null;
    createdAt: string;
+   updatedAt?: string;
 }
 
 export interface IAuthResult {

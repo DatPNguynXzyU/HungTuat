@@ -79,6 +79,68 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       }
    }
 
+   async sadd(key: string, ...members: string[]): Promise<void> {
+      if (!this.client || members.length === 0) return;
+      try {
+         await this.client.sadd(key, ...members);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis SADD failed for key "${key}": ${error.message}`);
+      }
+   }
+
+   async srem(key: string, ...members: string[]): Promise<void> {
+      if (!this.client || members.length === 0) return;
+      try {
+         await this.client.srem(key, ...members);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis SREM failed for key "${key}": ${error.message}`);
+      }
+   }
+
+   async smembers(key: string): Promise<string[]> {
+      if (!this.client) return [];
+      try {
+         return await this.client.smembers(key);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis SMEMBERS failed for key "${key}": ${error.message}`);
+         return [];
+      }
+   }
+
+   async expire(key: string, ttlSeconds: number): Promise<void> {
+      if (!this.client || ttlSeconds <= 0) return;
+      try {
+         await this.client.expire(key, ttlSeconds);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis EXPIRE failed for key "${key}": ${error.message}`);
+      }
+   }
+
+   async deleteByPattern(pattern: string): Promise<number> {
+      if (!this.client) return 0;
+      try {
+         let cursor = '0';
+         let totalDeleted = 0;
+         do {
+            const [nextCursor, keys] = await this.client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+            cursor = nextCursor;
+            if (keys.length > 0) {
+               await this.client.del(...keys);
+               totalDeleted += keys.length;
+            }
+         } while (cursor !== '0');
+         return totalDeleted;
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis deleteByPattern failed for pattern "${pattern}": ${error.message}`);
+         return 0;
+      }
+   }
+
    async getJson<T>(key: string): Promise<T | null> {
       const data = await this.get(key);
       if (!data) return null;

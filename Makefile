@@ -1,6 +1,7 @@
 .PHONY: install
 install:
 	pnpm install
+	npx -y @colbymchenry/codegraph install
 
 .PHONY: build
 build:
@@ -54,4 +55,8 @@ clean:
 .PHONY: docker-clean
 docker-clean:
 	docker compose down -v --remove-orphans
+
+.PHONY: codegraph-sync
+codegraph-sync:
+	npx -y @colbymchenry/codegraph sync
 

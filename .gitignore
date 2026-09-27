@@ -49,3 +49,6 @@ Thumbs.db
 
 # Omni / local session data
 .omni/
+
+# CodeGraph database and index
+.codegraph/

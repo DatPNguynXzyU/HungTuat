@@ -1,0 +1,129 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { RmqContext } from '@nestjs/microservices';
+import { RmqService } from '@common';
+import { NotificationController } from '@notification/notification.controller';
+import { NotificationService } from '@notification/notification.service';
+
+describe('NotificationController', () => {
+   let controller: NotificationController;
+   let mockSendEmail: jest.Mock;
+   let mockSendWelcomeEmail: jest.Mock;
+   let mockSendVerificationEmail: jest.Mock;
+   let mockSendResetPasswordEmail: jest.Mock;
+   let mockSendOtpEmail: jest.Mock;
+   let mockAck: jest.Mock;
+
+   const mockContext = {
+      getChannelRef: jest.fn(),
+      getMessage: jest.fn(),
+   } as unknown as RmqContext;
+
+   beforeEach(async () => {
+      mockSendEmail = jest.fn().mockResolvedValue({ id: 'msg_1', to: 'test@example.com', subject: 'Custom' });
+      mockSendWelcomeEmail = jest.fn().mockResolvedValue({ id: 'msg_2', to: 'test@example.com', subject: 'Welcome' });
+      mockSendVerificationEmail = jest
+         .fn()
+         .mockResolvedValue({ id: 'msg_3', to: 'test@example.com', subject: 'Verify' });
+      mockSendResetPasswordEmail = jest
+         .fn()
+         .mockResolvedValue({ id: 'msg_4', to: 'test@example.com', subject: 'Reset' });
+      mockSendOtpEmail = jest.fn().mockResolvedValue({ id: 'msg_5', to: 'test@example.com', subject: 'OTP' });
+      mockAck = jest.fn();
+
+      const mockNotificationService = {
+         sendEmail: mockSendEmail,
+         sendWelcomeEmail: mockSendWelcomeEmail,
+         sendVerificationEmail: mockSendVerificationEmail,
+         sendResetPasswordEmail: mockSendResetPasswordEmail,
+         sendOtpEmail: mockSendOtpEmail,
+      };
+
+      const mockRmqService = {
+         ack: mockAck,
+         getOptions: jest.fn(),
+      };
+
+      const module: TestingModule = await Test.createTestingModule({
+         controllers: [NotificationController],
+         providers: [
+            {
+               provide: NotificationService,
+               useValue: mockNotificationService,
+            },
+            {
+               provide: RmqService,
+               useValue: mockRmqService,
+            },
+         ],
+      }).compile();
+
+      controller = module.get<NotificationController>(NotificationController);
+   });
+
+   it('should handle sendEmail message pattern and ack', async () => {
+      const payload = { to: 'test@example.com', subject: 'Test', html: '<p>Hi</p>' };
+      const res = await controller.sendEmail(payload, mockContext);
+
+      expect(res).toEqual({ id: 'msg_1', to: 'test@example.com', subject: 'Custom' });
+      expect(mockSendEmail).toHaveBeenCalledWith(payload);
+      expect(mockAck).toHaveBeenCalledWith(mockContext);
+   });
+
+   it('should handle sendWelcomeEmail message pattern and ack', async () => {
+      const payload = { to: 'test@example.com', fullName: 'John Doe' };
+      const res = await controller.sendWelcomeEmail(payload, mockContext);
+
+      expect(res).toEqual({ id: 'msg_2', to: 'test@example.com', subject: 'Welcome' });
+      expect(mockSendWelcomeEmail).toHaveBeenCalledWith(payload);
+      expect(mockAck).toHaveBeenCalledWith(mockContext);
+   });
+
+   it('should handle sendVerificationEmail and ack', async () => {
+      const payload = { to: 'test@example.com', fullName: 'John Doe', verificationUrl: 'http://test' };
+      const res = await controller.sendVerificationEmail(payload, mockContext);
+
+      expect(res).toEqual({ id: 'msg_3', to: 'test@example.com', subject: 'Verify' });
+      expect(mockSendVerificationEmail).toHaveBeenCalledWith(payload);
+      expect(mockAck).toHaveBeenCalledWith(mockContext);
+   });
+
+   it('should handle sendResetPasswordEmail and ack', async () => {
+      const payload = { to: 'test@example.com', fullName: 'John Doe', resetUrl: 'http://test' };
+      const res = await controller.sendResetPasswordEmail(payload, mockContext);
+
+      expect(res).toEqual({ id: 'msg_4', to: 'test@example.com', subject: 'Reset' });
+      expect(mockSendResetPasswordEmail).toHaveBeenCalledWith(payload);
+      expect(mockAck).toHaveBeenCalledWith(mockContext);
+   });
+
+   it('should handle sendOtpEmail and ack', async () => {
+      const payload = { to: 'test@example.com', otpCode: '123456' };
+      const res = await controller.sendOtpEmail(payload, mockContext);
+
+      expect(res).toEqual({ id: 'msg_5', to: 'test@example.com', subject: 'OTP' });
+      expect(mockSendOtpEmail).toHaveBeenCalledWith(payload);
+      expect(mockAck).toHaveBeenCalledWith(mockContext);
+   });
+
+   it('should handle handleUserRegistered event pattern and ack', async () => {
+      const payload = { email: 'test@example.com', fullName: 'John Doe' };
+      const res = await controller.handleUserRegistered(payload, mockContext);
+
+      expect(res).toEqual({ id: 'msg_2', to: 'test@example.com', subject: 'Welcome' });
+      expect(mockSendWelcomeEmail).toHaveBeenCalledWith({
+         to: 'test@example.com',
+         fullName: 'John Doe',
+      });
+      expect(mockAck).toHaveBeenCalledWith(mockContext);
+   });
+
+   it('should ack and throw error if service fails', async () => {
+      mockSendEmail.mockRejectedValue(new Error('Send error'));
+
+      await expect(controller.sendEmail({ to: 'fail@example.com', subject: 'Fail' }, mockContext)).rejects.toThrow(
+         'Send error',
+      );
+
+      expect(mockAck).toHaveBeenCalledWith(mockContext);
+   });
+});

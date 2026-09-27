@@ -3,6 +3,11 @@ export interface UserEntity {
    email: string;
    fullName: string;
    passwordHash: string;
+   status?: string;
+   isEmailVerified?: boolean;
+   lastLoginAt?: string | null;
+   version?: number;
+   deletedAt?: string | null;
    roles?: string[];
    createdAt: string;
    updatedAt?: string;
@@ -12,6 +17,11 @@ export type CreateUserData = Omit<UserEntity, 'id' | 'createdAt' | 'updatedAt' |
    id?: string;
    createdAt?: string;
    roleId?: string;
+   status?: string;
+   isEmailVerified?: boolean;
+   lastLoginAt?: string | null;
+   version?: number;
+   deletedAt?: string | null;
 };
 
 export interface RoleEntity {
@@ -19,6 +29,8 @@ export interface RoleEntity {
    code: string;
    name: string;
    description?: string | null;
+   version?: number;
+   deletedAt?: string | null;
    permissions?: string[];
    createdAt?: string;
    updatedAt?: string;
@@ -29,6 +41,8 @@ export interface PermissionEntity {
    code: string;
    name: string;
    description?: string | null;
+   version?: number;
+   deletedAt?: string | null;
    createdAt?: string;
    updatedAt?: string;
 }

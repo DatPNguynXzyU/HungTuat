@@ -3,7 +3,7 @@ import { uuidv7 } from 'uuidv7';
 import type { CreateUserData, RoleEntity, UserEntity } from '@auth/entities/user.entity';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import type { IAuthRepository } from '@auth/repositories/auth.repository.interface';
-import type { Role, User } from '@prisma/client';
+import type { Role, User, UserStatus } from '@prisma/client';
 
 type UserWithRoles = User & {
    userRoles?: Array<{
@@ -21,6 +21,11 @@ export class AuthRepository implements IAuthRepository {
          email: user.email,
          fullName: user.fullName,
          passwordHash: user.passwordHash,
+         status: user.status,
+         isEmailVerified: user.isEmailVerified,
+         lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+         version: user.version,
+         deletedAt: user.deletedAt ? user.deletedAt.toISOString() : null,
          roles: user.userRoles ? user.userRoles.map((ur) => ur.role.code) : [],
          createdAt: user.createdAt.toISOString(),
          updatedAt: user.updatedAt.toISOString(),
@@ -66,6 +71,8 @@ export class AuthRepository implements IAuthRepository {
             email: data.email.toLowerCase().trim(),
             fullName: data.fullName.trim(),
             passwordHash: data.passwordHash,
+            ...(data.status ? { status: data.status as UserStatus } : {}),
+            ...(typeof data.isEmailVerified === 'boolean' ? { isEmailVerified: data.isEmailVerified } : {}),
             ...(data.createdAt ? { createdAt: new Date(data.createdAt) } : {}),
             ...(data.roleId
                ? {
@@ -99,6 +106,13 @@ export class AuthRepository implements IAuthRepository {
                ...(data.email ? { email: data.email.toLowerCase().trim() } : {}),
                ...(data.fullName ? { fullName: data.fullName.trim() } : {}),
                ...(data.passwordHash ? { passwordHash: data.passwordHash } : {}),
+               ...(data.status ? { status: data.status as UserStatus } : {}),
+               ...(typeof data.isEmailVerified === 'boolean' ? { isEmailVerified: data.isEmailVerified } : {}),
+               ...(data.lastLoginAt !== undefined
+                  ? { lastLoginAt: data.lastLoginAt ? new Date(data.lastLoginAt) : null }
+                  : {}),
+               ...(typeof data.version === 'number' ? { version: data.version } : {}),
+               ...(data.deletedAt !== undefined ? { deletedAt: data.deletedAt ? new Date(data.deletedAt) : null } : {}),
             },
             include: {
                userRoles: {
@@ -145,6 +159,8 @@ export class AuthRepository implements IAuthRepository {
          code: role.code,
          name: role.name,
          description: role.description,
+         version: role.version,
+         deletedAt: role.deletedAt ? role.deletedAt.toISOString() : null,
          permissions: role.rolePermissions.map((rp) => rp.permission.code),
          createdAt: role.createdAt.toISOString(),
          updatedAt: role.updatedAt.toISOString(),

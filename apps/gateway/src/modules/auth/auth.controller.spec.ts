@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Request, Response } from 'express';
-import { AUTH_COOKIES, CommonConfigService, UnauthorizedException } from '@common';
+import { AUTH_COOKIES, CommonConfigService, JwtPayload, UnauthorizedException } from '@common';
 import { GatewayConfigService } from '@/config';
 import { AuthController } from '@/modules/auth/auth.controller';
 import { AuthService } from '@/modules/auth/auth.service';
@@ -13,6 +13,9 @@ describe('Gateway AuthController', () => {
       login: jest.fn(),
       refreshToken: jest.fn(),
       revokeToken: jest.fn(),
+      revokeAllUserTokens: jest.fn(),
+      logoutAll: jest.fn(),
+      changePassword: jest.fn(),
       validateToken: jest.fn(),
    };
 
@@ -233,5 +236,57 @@ describe('Gateway AuthController', () => {
       expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.ACCESS_TOKEN, mockConfigService.clearCookieOptions);
       expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.REFRESH_TOKEN, mockConfigService.clearCookieOptions);
       expect(res.message).toBe('Logged out successfully');
+   });
+
+   it('should logoutAll, revoke all user tokens and clear auth cookies', async () => {
+      const mockClearCookie = jest.fn();
+      const mockResponse = {
+         clearCookie: mockClearCookie,
+      } as unknown as Response;
+
+      const user: JwtPayload = {
+         sub: 'user-123',
+         email: 'user@example.com',
+         tokenType: 'access',
+      };
+
+      mockAuthService.logoutAll.mockResolvedValue({ success: true, message: 'All sessions logged out' });
+
+      const res = await controller.logoutAll(user, mockResponse);
+
+      expect(mockAuthService.logoutAll).toHaveBeenCalledWith('user-123');
+      expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.ACCESS_TOKEN, mockConfigService.clearCookieOptions);
+      expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.REFRESH_TOKEN, mockConfigService.clearCookieOptions);
+      expect(res.message).toBe('All sessions logged out successfully');
+   });
+
+   it('should changePassword, revoke all user sessions and clear auth cookies', async () => {
+      const mockClearCookie = jest.fn();
+      const mockResponse = {
+         clearCookie: mockClearCookie,
+      } as unknown as Response;
+
+      const user: JwtPayload = {
+         sub: 'user-123',
+         email: 'user@example.com',
+         tokenType: 'access',
+      };
+
+      const changePasswordDto = {
+         currentPassword: 'oldPassword123',
+         newPassword: 'newPassword123',
+      };
+
+      mockAuthService.changePassword.mockResolvedValue({
+         success: true,
+         message: 'Password changed successfully. All sessions have been logged out.',
+      });
+
+      const res = await controller.changePassword(user, changePasswordDto, mockResponse);
+
+      expect(mockAuthService.changePassword).toHaveBeenCalledWith('user-123', changePasswordDto);
+      expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.ACCESS_TOKEN, mockConfigService.clearCookieOptions);
+      expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.REFRESH_TOKEN, mockConfigService.clearCookieOptions);
+      expect(res.message).toBe('Password changed successfully. All sessions have been logged out.');
    });
 });

@@ -17,6 +17,7 @@ export const sharedEnvSchema = z.object({
    RABBIT_MQ_AUTH_SERVICE_QUEUE: z.string().default('auth_queue'),
    RABBIT_MQ_USER_SERVICE_QUEUE: z.string().default('user_queue'),
    RABBIT_MQ_ORDER_SERVICE_QUEUE: z.string().default('order_queue'),
+   RABBIT_MQ_NOTIFICATION_SERVICE_QUEUE: z.string().default('notification_queue'),
    REDIS_HOST: z.string().default('localhost'),
    REDIS_PORT: z.coerce.number().int().positive().default(6379),
    REDIS_PASSWORD: z.string().optional(),

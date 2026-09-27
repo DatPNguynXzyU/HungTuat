@@ -54,7 +54,7 @@ describe('AuthRepository', () => {
       expect(repository).toBeDefined();
    });
 
-   it('should create a user with a valid UUIDv7 id', async () => {
+   it('should create a user with a valid UUIDv7 id and enterprise defaults', async () => {
       prismaService.user.create.mockImplementation(
          ({
             data,
@@ -66,6 +66,11 @@ describe('AuthRepository', () => {
                email: data.email,
                fullName: data.fullName,
                passwordHash: data.passwordHash,
+               status: 'ACTIVE',
+               isEmailVerified: false,
+               lastLoginAt: null,
+               version: 1,
+               deletedAt: null,
                createdAt: new Date('2026-09-27T00:00:00.000Z'),
                updatedAt: new Date('2026-09-27T00:00:00.000Z'),
             }),
@@ -82,6 +87,9 @@ describe('AuthRepository', () => {
       expect(UUID_V7_REGEX.test(user.id)).toBe(true);
       expect(user.email).toBe('test@example.com');
       expect(user.fullName).toBe('Test User');
+      expect(user.status).toBe('ACTIVE');
+      expect(user.isEmailVerified).toBe(false);
+      expect(user.version).toBe(1);
       expect(prismaService.user.create).toHaveBeenCalledTimes(1);
    });
 
@@ -91,6 +99,11 @@ describe('AuthRepository', () => {
          email: 'user@example.com',
          fullName: 'User Example',
          passwordHash: 'hash',
+         status: 'ACTIVE',
+         isEmailVerified: true,
+         lastLoginAt: new Date('2026-09-27T01:00:00.000Z'),
+         version: 1,
+         deletedAt: null,
          createdAt: new Date('2026-09-27T00:00:00.000Z'),
          updatedAt: new Date('2026-09-27T00:00:00.000Z'),
          userRoles: [
@@ -100,6 +113,8 @@ describe('AuthRepository', () => {
                   code: 'USER',
                   name: 'User',
                   description: 'Standard user',
+                  version: 1,
+                  deletedAt: null,
                   createdAt: new Date('2026-09-27T00:00:00.000Z'),
                   updatedAt: new Date('2026-09-27T00:00:00.000Z'),
                },
@@ -120,6 +135,9 @@ describe('AuthRepository', () => {
       });
       expect(found).toBeDefined();
       expect(found?.email).toBe('user@example.com');
+      expect(found?.status).toBe('ACTIVE');
+      expect(found?.isEmailVerified).toBe(true);
+      expect(found?.lastLoginAt).toBe('2026-09-27T01:00:00.000Z');
       expect(found?.roles).toEqual(['USER']);
    });
 
@@ -129,6 +147,11 @@ describe('AuthRepository', () => {
          email: 'user2@example.com',
          fullName: 'User Two',
          passwordHash: 'hash',
+         status: 'ACTIVE',
+         isEmailVerified: false,
+         lastLoginAt: null,
+         version: 1,
+         deletedAt: null,
          createdAt: new Date('2026-09-27T00:00:00.000Z'),
          updatedAt: new Date('2026-09-27T00:00:00.000Z'),
          userRoles: [],
@@ -156,6 +179,8 @@ describe('AuthRepository', () => {
          code: 'USER',
          name: 'Standard User',
          description: 'Standard role',
+         version: 1,
+         deletedAt: null,
          createdAt: new Date('2026-09-27T00:00:00.000Z'),
          updatedAt: new Date('2026-09-27T00:00:00.000Z'),
          rolePermissions: [
@@ -165,6 +190,8 @@ describe('AuthRepository', () => {
                   code: 'USERS:READ',
                   name: 'Read Users',
                   description: null,
+                  version: 1,
+                  deletedAt: null,
                   createdAt: new Date('2026-09-27T00:00:00.000Z'),
                   updatedAt: new Date('2026-09-27T00:00:00.000Z'),
                },
@@ -175,6 +202,7 @@ describe('AuthRepository', () => {
       const role = await repository.findRoleByCode('USER');
       expect(role).toBeDefined();
       expect(role?.code).toBe('USER');
+      expect(role?.version).toBe(1);
       expect(role?.permissions).toEqual(['USERS:READ']);
    });
 });

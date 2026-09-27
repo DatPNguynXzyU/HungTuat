@@ -22,13 +22,31 @@
       "strictBindCallApply": true,
       "noFallthroughCasesInSwitch": true,
       "paths": {
-         "@/*": ["apps/gateway/src/*"],
-         "@gateway/*": ["apps/gateway/src/*"],
-         "@auth/*": ["apps/auth/src/*"],
-         "@common": ["libs/common/src"],
-         "@common/*": ["libs/common/src/*"],
-         "@app/common": ["libs/common/src"],
-         "@app/common/*": ["libs/common/src/*"]
-      }
+         "@/*": [
+            "apps/gateway/src/*"
+         ],
+         "@gateway/*": [
+            "apps/gateway/src/*"
+         ],
+         "@auth/*": [
+            "apps/auth/src/*"
+         ],
+         "@common": [
+            "libs/common/src"
+         ],
+         "@common/*": [
+            "libs/common/src/*"
+         ],
+         "@app/common": [
+            "libs/common/src"
+         ],
+         "@app/common/*": [
+            "libs/common/src/*"
+         ],
+         "@notification/*": [
+            "apps/notification/src/*"
+         ]
+      },
+      "jsx": "react-jsx"
    }
 }
