@@ -1,0 +1,32 @@
+name: omni-auth
+
+services:
+   postgres:
+      image: postgres:17-alpine
+      container_name: omni-auth-postgres
+      command: ['postgres', '-p', '5433']
+      restart: unless-stopped
+      environment:
+         POSTGRES_USER: ${POSTGRES_USER:-postgres}
+         POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+         POSTGRES_DB: ${POSTGRES_DB:-omni_service_auth}
+         PGPORT: ${POSTGRES_PORT:-5433}
+      ports:
+         - '${POSTGRES_PORT:-5433}:${POSTGRES_PORT:-5433}'
+      volumes:
+         - auth_postgres_data:/var/lib/postgresql/data
+      healthcheck:
+         test: ['CMD-SHELL', 'pg_isready -p ${POSTGRES_PORT:-5433} -U ${POSTGRES_USER:-postgres}']
+         interval: 10s
+         timeout: 5s
+         retries: 5
+      networks:
+         - omni-network
+
+volumes:
+   auth_postgres_data:
+      driver: local
+
+networks:
+   omni-network:
+      driver: bridge
