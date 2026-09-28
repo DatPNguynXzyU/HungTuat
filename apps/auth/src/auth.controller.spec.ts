@@ -5,6 +5,7 @@ import { DEFAULT_ROLES, RbacCacheService, RedisService, RmqService, SERVICES } f
 import { AuthController } from '@auth/auth.controller';
 import { AuthService } from '@auth/auth.service';
 import { AuthConfigService } from '@auth/config';
+import { OutboxPublisherService } from '@auth/outbox/services/outbox-publisher.service';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import { AUTH_REPOSITORY, AuthRepository } from '@auth/repositories';
 import { TokenService } from '@auth/services/token.service';
@@ -32,8 +33,25 @@ describe('AuthController', () => {
 
    beforeEach(async () => {
       const usersMap = new Map<string, MockUserRecord>();
-      const mockPrisma = {
+      const mockPrisma: Record<string, unknown> = {
+         $transaction: jest.fn().mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => cb(mockPrisma)),
+         outboxEvent: {
+            create: jest.fn().mockResolvedValue({}),
+         },
          user: {
+            findFirst: jest
+               .fn()
+               .mockImplementation(({ where }: { where: { email?: string; id?: string; deletedAt?: unknown } }) => {
+                  if (where.email) {
+                     for (const u of usersMap.values()) {
+                        if (u.email === where.email) return Promise.resolve(u);
+                     }
+                  }
+                  if (where.id) {
+                     return Promise.resolve(usersMap.get(where.id) || null);
+                  }
+                  return Promise.resolve(null);
+               }),
             findUnique: jest.fn().mockImplementation(({ where }: { where: { email?: string; id?: string } }) => {
                if (where.email) {
                   for (const u of usersMap.values()) {
@@ -98,6 +116,22 @@ describe('AuthController', () => {
             }),
          },
          role: {
+            findFirst: jest.fn().mockResolvedValue({
+               id: 'role-user-id',
+               code: DEFAULT_ROLES.USER,
+               name: 'Standard User',
+               description: null,
+               rolePermissions: [
+                  {
+                     permission: {
+                        id: 'perm-1',
+                        code: 'USERS:READ',
+                        name: 'Read Users',
+                        description: null,
+                     },
+                  },
+               ],
+            }),
             findUnique: jest.fn().mockResolvedValue({
                id: 'role-user-id',
                code: DEFAULT_ROLES.USER,
@@ -144,6 +178,14 @@ describe('AuthController', () => {
             redisSets.delete(key);
             return Promise.resolve(1);
          }),
+         incr: jest.fn().mockImplementation((key: string) => {
+            const current = Number(redisStorage.get(key) || 0) + 1;
+            redisStorage.set(key, String(current));
+            return Promise.resolve(current);
+         }),
+         ttl: jest.fn().mockImplementation((key: string) => {
+            return Promise.resolve(redisStorage.has(key) ? 900 : -2);
+         }),
          sadd: jest.fn().mockImplementation((key: string, ...members: string[]) => {
             if (!redisSets.has(key)) redisSets.set(key, new Set());
             const set = redisSets.get(key)!;
@@ -188,6 +230,11 @@ describe('AuthController', () => {
          send: jest.fn().mockReturnValue(of(true)),
       };
 
+      const mockOutboxPublisherService = {
+         triggerPublish: jest.fn(),
+         publishPendingEvents: jest.fn().mockResolvedValue(0),
+      };
+
       const module: TestingModule = await Test.createTestingModule({
          controllers: [AuthController],
          providers: [
@@ -196,6 +243,10 @@ describe('AuthController', () => {
             {
                provide: AUTH_REPOSITORY,
                useClass: AuthRepository,
+            },
+            {
+               provide: OutboxPublisherService,
+               useValue: mockOutboxPublisherService,
             },
             {
                provide: SERVICES.NOTIFICATION_SERVICE,

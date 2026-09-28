@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { type FC } from 'react';
 import {
    Body,
    Button,
@@ -20,7 +20,7 @@ export interface ResetPasswordEmailProps {
    token?: string;
 }
 
-export const ResetPasswordEmail: React.FC<ResetPasswordEmailProps> = ({
+export const ResetPasswordEmail: FC<ResetPasswordEmailProps> = ({
    fullName = 'User',
    resetUrl = 'https://zeion.online/reset-password',
    token,

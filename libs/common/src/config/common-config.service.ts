@@ -38,6 +38,13 @@ export class CommonConfigService {
       return this.configService.get('JWT_REFRESH_SECRET', { infer: true }) || this.jwtSecret;
    }
 
+   get argon2Secret(): string | undefined {
+      return (
+         this.configService.get('ARGON2_SECRET', { infer: true }) ||
+         this.configService.get('ARGON2_SALT', { infer: true })
+      );
+   }
+
    get jwtAccessTokenExpiresIn(): number {
       return (
          this.configService.get('JWT_ACCESS_TOKEN_EXPIRES_IN', { infer: true }) ||

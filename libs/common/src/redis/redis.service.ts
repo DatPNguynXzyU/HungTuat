@@ -79,6 +79,28 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       }
    }
 
+   async incr(key: string): Promise<number> {
+      if (!this.client) return 0;
+      try {
+         return await this.client.incr(key);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis INCR failed for key "${key}": ${error.message}`);
+         return 0;
+      }
+   }
+
+   async ttl(key: string): Promise<number> {
+      if (!this.client) return -2;
+      try {
+         return await this.client.ttl(key);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis TTL failed for key "${key}": ${error.message}`);
+         return -2;
+      }
+   }
+
    async sadd(key: string, ...members: string[]): Promise<void> {
       if (!this.client || members.length === 0) return;
       try {

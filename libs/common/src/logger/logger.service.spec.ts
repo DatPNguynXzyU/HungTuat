@@ -1,5 +1,5 @@
 import { PinoLogger } from 'nestjs-pino';
-import { AppLogger } from './logger.service';
+import { AppLogger } from '@common/logger/logger.service';
 
 describe('AppLogger', () => {
    let logger: AppLogger;

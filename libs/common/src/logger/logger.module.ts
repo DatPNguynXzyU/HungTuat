@@ -4,8 +4,8 @@ import { randomUUID } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
 import { ReqId } from 'pino-http';
 import { AppConfigModule, AppConfigService } from '@common/config';
-import { CORRELATION_ID_HEADER, REQUEST_ID_HEADER } from './logger.constants';
-import { AppLogger } from './logger.service';
+import { CORRELATION_ID_HEADER, REQUEST_ID_HEADER } from '@common/logger/logger.constants';
+import { AppLogger } from '@common/logger/logger.service';
 
 interface ExtendedRequest extends IncomingMessage {
    id: ReqId;

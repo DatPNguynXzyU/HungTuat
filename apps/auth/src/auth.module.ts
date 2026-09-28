@@ -3,6 +3,7 @@ import { LoggerModule, RedisModule, RmqModule, SERVICES } from '@common';
 import { AuthController } from '@auth/auth.controller';
 import { AuthService } from '@auth/auth.service';
 import { AuthConfigModule } from '@auth/config';
+import { OutboxModule } from '@auth/outbox';
 import { PrismaModule } from '@auth/prisma';
 import { AUTH_REPOSITORY, AuthRepository } from '@auth/repositories';
 import { TokenService } from '@auth/services/token.service';
@@ -11,23 +12,23 @@ import { TokenService } from '@auth/services/token.service';
    imports: [
       AuthConfigModule,
       LoggerModule,
+      PrismaModule,
       RedisModule,
-      RmqModule,
+      OutboxModule,
       RmqModule.register({
          name: SERVICES.NOTIFICATION_SERVICE,
       }),
-      PrismaModule,
    ],
    controllers: [AuthController],
    providers: [
-      TokenService,
       AuthService,
+      TokenService,
       {
          provide: AUTH_REPOSITORY,
          useClass: AuthRepository,
       },
       AuthRepository,
    ],
-   exports: [AuthService, TokenService, AUTH_REPOSITORY, AuthRepository],
+   exports: [AuthService, TokenService, AUTH_REPOSITORY, AuthRepository, OutboxModule],
 })
 export class AuthModule {}

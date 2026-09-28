@@ -41,7 +41,8 @@ export class TokenService {
       fullName?: string;
       roles: string[];
    }): Promise<TokenPair> {
-      const jti = uuidv7();
+      const accessTokenJti = uuidv7();
+      const refreshTokenJti = uuidv7();
 
       const accessToken = JwtUtil.sign(
          {
@@ -50,6 +51,7 @@ export class TokenService {
             fullName: user.fullName,
             roles: user.roles,
             tokenType: 'access',
+            jti: accessTokenJti,
          },
          this.jwtSecret,
          this.accessTokenExpiresIn,
@@ -61,33 +63,33 @@ export class TokenService {
             email: user.email,
             roles: user.roles,
             tokenType: 'refresh',
-            jti,
+            jti: refreshTokenJti,
          },
          this.jwtRefreshSecret,
          this.refreshTokenExpiresIn,
       );
 
-      const redisKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${user.id}:${jti}`;
+      const refreshRedisKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${user.id}:${refreshTokenJti}`;
       const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${user.id}`;
 
       await Promise.all([
          this.redisService.setJson(
-            redisKey,
+            refreshRedisKey,
             {
                userId: user.id,
-               jti,
+               jti: refreshTokenJti,
                createdAt: new Date().toISOString(),
             },
             this.refreshTokenExpiresIn,
          ),
-         this.redisService.sadd(sessionsKey, jti),
+         this.redisService.sadd(sessionsKey, accessTokenJti, refreshTokenJti),
          this.redisService.expire(sessionsKey, this.refreshTokenExpiresIn),
       ]);
 
       return { accessToken, refreshToken };
    }
 
-   validateAccessToken(token: string): JwtPayload {
+   async validateAccessToken(token: string): Promise<JwtPayload> {
       let payload: JwtPayload;
       try {
          payload = JwtUtil.verify(token, this.jwtSecret);
@@ -97,6 +99,21 @@ export class TokenService {
 
       if (payload.tokenType !== 'access') {
          throw new UnauthorizedException(AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED);
+      }
+
+      if (payload.jti) {
+         const isRevoked = await this.isTokenRevoked(payload.jti);
+         if (isRevoked) {
+            throw new UnauthorizedException(AUTH_ERROR_CODES.TOKEN_REVOKED);
+         }
+      }
+
+      if (payload.sub && payload.iat) {
+         const userRevokedAtKey = `${REDIS_KEY_PREFIX.USER_REVOKED_AT}${payload.sub}`;
+         const revokedAt = await this.redisService.get(userRevokedAtKey);
+         if (revokedAt && payload.iat <= Number(revokedAt)) {
+            throw new UnauthorizedException(AUTH_ERROR_CODES.TOKEN_REVOKED);
+         }
       }
 
       return payload;
@@ -163,10 +180,15 @@ export class TokenService {
       if (!userId) {
          return;
       }
+      const nowInSeconds = Math.floor(Date.now() / 1000);
       const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${userId}`;
+      const userRevokedAtKey = `${REDIS_KEY_PREFIX.USER_REVOKED_AT}${userId}`;
       const activeJtis = await this.redisService.smembers(sessionsKey);
 
-      const delPromises: Promise<unknown>[] = [this.redisService.del(sessionsKey)];
+      const delPromises: Promise<unknown>[] = [
+         this.redisService.del(sessionsKey),
+         this.redisService.set(userRevokedAtKey, String(nowInSeconds), this.refreshTokenExpiresIn),
+      ];
 
       for (const jti of activeJtis) {
          const activeKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${userId}:${jti}`;

@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
 import {
    Argon2Util,
+   AUTH_SECURITY,
    BadRequestException,
    ChangePasswordDto,
    DEFAULT_ROLES,
@@ -11,13 +11,17 @@ import {
    LoginDto,
    NOTIFICATION_EVENTS,
    RbacCacheService,
+   REDIS_KEY_PREFIX,
+   REDIS_TTL,
+   RedisService,
    RegisterDto,
-   SERVICES,
    USER_STATUS,
    UnauthorizedException,
 } from '@common';
 import { AUTH_ERROR_CODES } from '@auth/constants/auth-error-codes';
+import { AuthConfigService } from '@auth/config';
 import type { RoleEntity } from '@auth/entities/user.entity';
+import { OutboxPublisherService } from '@auth/outbox/services/outbox-publisher.service';
 import type { IAuthRepository } from '@auth/repositories/auth.repository.interface';
 import { AUTH_REPOSITORY } from '@auth/repositories/auth.repository.interface';
 import { TokenService } from '@auth/services/token.service';
@@ -32,10 +36,11 @@ export class AuthService {
    constructor(
       @Inject(AUTH_REPOSITORY)
       private readonly authRepository: IAuthRepository,
-      @Inject(SERVICES.NOTIFICATION_SERVICE)
-      private readonly notificationClient: ClientProxy,
       private readonly rbacCacheService: RbacCacheService,
       private readonly tokenService: TokenService,
+      private readonly outboxPublisherService: OutboxPublisherService,
+      private readonly redisService: RedisService,
+      private readonly config: AuthConfigService,
    ) {}
 
    private async getOrCacheRole(roleCode: string): Promise<RoleEntity | null> {
@@ -74,17 +79,30 @@ export class AuthService {
 
       const [defaultRole, passwordHash] = await Promise.all([
          this.getOrCacheRole(DEFAULT_ROLES.USER),
-         Argon2Util.hash(dto.password),
+         Argon2Util.hash(dto.password, this.config.argon2Secret),
       ]);
 
-      const newUser = await this.authRepository.createUser({
-         email: normalizedEmail,
-         fullName: dto.fullName.trim(),
-         passwordHash,
-         roleId: defaultRole?.id,
-         status: USER_STATUS.ACTIVE,
-         isEmailVerified: false,
-      });
+      const newUser = await this.authRepository.createUser(
+         {
+            email: normalizedEmail,
+            fullName: dto.fullName.trim(),
+            passwordHash,
+            roleId: defaultRole?.id,
+            status: USER_STATUS.ACTIVE,
+            isEmailVerified: false,
+         },
+         {
+            aggregateType: 'USER',
+            eventType: NOTIFICATION_EVENTS.USER_REGISTERED,
+            payload: {
+               email: normalizedEmail,
+               fullName: dto.fullName.trim(),
+            },
+         },
+      );
+
+      this.logger.log(`Created user ${newUser.email} with Outbox event; triggering publisher`);
+      this.outboxPublisherService.triggerPublish();
 
       const userRoles = newUser.roles && newUser.roles.length > 0 ? newUser.roles : [DEFAULT_ROLES.USER];
 
@@ -94,21 +112,6 @@ export class AuthService {
          fullName: newUser.fullName,
          roles: userRoles,
       });
-
-      // Emit user registered event to send welcome email asynchronously
-      this.logger.log(`Emitting USER_REGISTERED event to notification service for: ${newUser.email}`);
-      this.notificationClient
-         .emit(NOTIFICATION_EVENTS.USER_REGISTERED, {
-            email: newUser.email,
-            fullName: newUser.fullName,
-         })
-         .subscribe({
-            error: (err: unknown) => {
-               this.logger.error(
-                  `Failed to emit USER_REGISTERED event: ${err instanceof Error ? err.message : String(err)}`,
-               );
-            },
-         });
 
       return {
          user: {
@@ -127,15 +130,69 @@ export class AuthService {
       };
    }
 
+   private async handleFailedLoginAttempt(
+      lockoutKey: string,
+      failedAttemptsKey: string,
+      email: string,
+      ip: string,
+   ): Promise<void> {
+      const attempts = await this.redisService.incr(failedAttemptsKey);
+      if (attempts === 1) {
+         await this.redisService.expire(failedAttemptsKey, REDIS_TTL.AUTH_FAILED_ATTEMPTS);
+      }
+
+      if (attempts >= AUTH_SECURITY.MAX_FAILED_LOGIN_ATTEMPTS) {
+         await Promise.all([
+            this.redisService.set(lockoutKey, 'locked', REDIS_TTL.AUTH_LOCKOUT),
+            this.redisService.del(failedAttemptsKey),
+         ]);
+         this.logger.warn(
+            `Account ${email} temporarily locked for IP ${ip} after ${attempts} consecutive failed attempts.`,
+         );
+         throw new UnauthorizedException(AUTH_ERROR_CODES.ACCOUNT_LOCKED_TEMPORARILY, {
+            params: {
+               email,
+               ip,
+               remainingSeconds: REDIS_TTL.AUTH_LOCKOUT,
+               remainingMinutes: Math.ceil(REDIS_TTL.AUTH_LOCKOUT / 60),
+            },
+         });
+      }
+   }
+
    async login(dto: LoginDto): Promise<IAuthResult> {
       const normalizedEmail = dto.email.trim().toLowerCase();
+      const clientIp = dto.ip?.trim() || 'unknown';
+      const lockoutKey = `${REDIS_KEY_PREFIX.LOCKOUT}${normalizedEmail}:${clientIp}`;
+      const failedAttemptsKey = `${REDIS_KEY_PREFIX.FAILED_LOGIN_ATTEMPTS}${normalizedEmail}:${clientIp}`;
+
+      // Check if identity + IP combination is currently locked out
+      const isLocked = await this.redisService.get(lockoutKey);
+      if (isLocked) {
+         const remainingSeconds = await this.redisService.ttl(lockoutKey);
+         const remainingMinutes = Math.max(
+            Math.ceil((remainingSeconds > 0 ? remainingSeconds : REDIS_TTL.AUTH_LOCKOUT) / 60),
+            1,
+         );
+         throw new UnauthorizedException(AUTH_ERROR_CODES.ACCOUNT_LOCKED_TEMPORARILY, {
+            params: {
+               email: normalizedEmail,
+               ip: clientIp,
+               remainingSeconds: remainingSeconds > 0 ? remainingSeconds : REDIS_TTL.AUTH_LOCKOUT,
+               remainingMinutes,
+            },
+         });
+      }
+
       const user = await this.authRepository.findByEmail(normalizedEmail);
       if (!user) {
+         await this.handleFailedLoginAttempt(lockoutKey, failedAttemptsKey, normalizedEmail, clientIp);
          throw new UnauthorizedException(AUTH_ERROR_CODES.INVALID_CREDENTIALS);
       }
 
-      const isValid = await Argon2Util.verify(user.passwordHash, dto.password);
+      const isValid = await Argon2Util.verify(user.passwordHash, dto.password, this.config.argon2Secret);
       if (!isValid) {
+         await this.handleFailedLoginAttempt(lockoutKey, failedAttemptsKey, normalizedEmail, clientIp);
          throw new UnauthorizedException(AUTH_ERROR_CODES.INVALID_CREDENTIALS);
       }
 
@@ -146,6 +203,9 @@ export class AuthService {
       if (user.status === USER_STATUS.INACTIVE) {
          throw new UnauthorizedException(AUTH_ERROR_CODES.ACCOUNT_INACTIVE);
       }
+
+      // Successful authentication -> Reset failed attempts counter and clear lockout if any
+      await Promise.all([this.redisService.del(failedAttemptsKey), this.redisService.del(lockoutKey)]);
 
       const userRoles = user.roles && user.roles.length > 0 ? user.roles : [DEFAULT_ROLES.USER];
 
@@ -249,7 +309,7 @@ export class AuthService {
          throw new UnauthorizedException(AUTH_ERROR_CODES.USER_NOT_FOUND);
       }
 
-      const isOldValid = await Argon2Util.verify(user.passwordHash, dto.currentPassword);
+      const isOldValid = await Argon2Util.verify(user.passwordHash, dto.currentPassword, this.config.argon2Secret);
       if (!isOldValid) {
          throw new BadRequestException(AUTH_ERROR_CODES.INVALID_OLD_PASSWORD);
       }
@@ -258,10 +318,10 @@ export class AuthService {
          throw new BadRequestException(AUTH_ERROR_CODES.PASSWORD_UNCHANGED);
       }
 
-      const newPasswordHash = await Argon2Util.hash(dto.newPassword);
+      const newPasswordHash = await Argon2Util.hash(dto.newPassword, this.config.argon2Secret);
       await this.authRepository.updateUser(userId, { passwordHash: newPasswordHash });
 
-      // Invalidate all active user sessions across devices
+      // Invalidate all active user sessions and access/refresh tokens across devices
       await this.tokenService.logoutAll(userId);
 
       return {
@@ -271,7 +331,7 @@ export class AuthService {
    }
 
    async validateToken(token: string): Promise<IValidateTokenResult> {
-      const payload = this.tokenService.validateAccessToken(token);
+      const payload = await this.tokenService.validateAccessToken(token);
 
       const user = await this.authRepository.findById(payload.sub);
       if (!user) {

@@ -1,9 +1,9 @@
-name: omni-auth
+name: omni-services
 
 services:
-   postgres:
+   auth-postgres:
       image: postgres:17-alpine
-      container_name: omni-auth-postgres
+      container_name: omni-services-auth
       command: ['postgres', '-p', '5433']
       restart: unless-stopped
       environment:

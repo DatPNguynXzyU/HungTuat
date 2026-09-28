@@ -23,6 +23,24 @@ export class AuthController {
       private readonly config: GatewayConfigService,
    ) {}
 
+   private extractClientIp(req?: Request): string {
+      if (!req) {
+         return '127.0.0.1';
+      }
+      const forwarded = req.headers?.['x-forwarded-for'];
+      if (typeof forwarded === 'string') {
+         return forwarded.split(',')[0].trim();
+      }
+      if (Array.isArray(forwarded) && forwarded.length > 0) {
+         return forwarded[0].trim();
+      }
+      const realIp = req.headers?.['x-real-ip'];
+      if (typeof realIp === 'string') {
+         return realIp.trim();
+      }
+      return req.ip || req.socket?.remoteAddress || '127.0.0.1';
+   }
+
    private setAuthCookies(res: Response, tokens: { accessToken: string; refreshToken: string }): void {
       res.cookie(AUTH_COOKIES.ACCESS_TOKEN, tokens.accessToken, this.config.accessTokenCookieOptions);
       res.cookie(AUTH_COOKIES.REFRESH_TOKEN, tokens.refreshToken, this.config.refreshTokenCookieOptions);
@@ -64,8 +82,16 @@ export class AuthController {
    @ApiOperation({ summary: 'User login with dual tokens stored in HttpOnly cookies' })
    @ApiResponse({ status: 200, description: 'User successfully logged in with dual cookies.' })
    @ResponseMessage('AUTH.LOGIN_SUCCESS')
-   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<{ user: unknown }> {
-      const result = await this.authService.login(loginDto);
+   async login(
+      @Req() req: Request,
+      @Body() loginDto: LoginDto,
+      @Res({ passthrough: true }) res: Response,
+   ): Promise<{ user: unknown }> {
+      const clientIp = this.extractClientIp(req);
+      const result = await this.authService.login({
+         ...loginDto,
+         ip: loginDto.ip || clientIp,
+      });
 
       this.setAuthCookies(res, {
          accessToken: result.accessToken,

@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { type FC } from 'react';
 import { Body, Button, Container, Head, Heading, Hr, Html, Preview, Section, Text } from '@react-email/components';
 import { EMAIL_COLORS, EMAIL_FONTS } from '@notification/constants';
 
@@ -7,10 +7,7 @@ export interface WelcomeEmailProps {
    actionUrl?: string;
 }
 
-export const WelcomeEmail: React.FC<WelcomeEmailProps> = ({
-   fullName = 'Customer',
-   actionUrl = 'https://zeion.online',
-}) => {
+export const WelcomeEmail: FC<WelcomeEmailProps> = ({ fullName = 'Customer', actionUrl = 'https://zeion.online' }) => {
    const currentYear = new Date().getFullYear();
 
    return (

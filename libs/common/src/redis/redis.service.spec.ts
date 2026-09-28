@@ -21,11 +21,17 @@ describe('RedisService', () => {
       expect(() => service.onModuleInit()).not.toThrow();
    });
 
-   it('should handle get and setJson gracefully when client is not connected', async () => {
+   it('should handle get, setJson, incr and ttl gracefully when client is not connected', async () => {
       const data = await service.get('non-existent');
       expect(data).toBeNull();
 
       await expect(service.setJson('key', { a: 1 })).resolves.not.toThrow();
+
+      const incrResult = await service.incr('counter');
+      expect(incrResult).toBe(0);
+
+      const ttlResult = await service.ttl('some_key');
+      expect(ttlResult).toBe(-2);
    });
 
    it('should handle set methods (sadd, srem, smembers, expire) gracefully when client is not connected', async () => {

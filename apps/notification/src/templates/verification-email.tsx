@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { type FC } from 'react';
 import {
    Body,
    Button,
@@ -20,7 +20,7 @@ export interface VerificationEmailProps {
    token?: string;
 }
 
-export const VerificationEmail: React.FC<VerificationEmailProps> = ({
+export const VerificationEmail: FC<VerificationEmailProps> = ({
    fullName = 'User',
    verificationUrl = 'https://zeion.online/verify',
    token,

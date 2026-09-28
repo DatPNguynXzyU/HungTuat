@@ -1,5 +1,4 @@
-import * as jwt from 'jsonwebtoken';
-import type { SignOptions, VerifyOptions } from 'jsonwebtoken';
+import jwt, { type SignOptions, type VerifyOptions } from 'jsonwebtoken';
 
 export interface JwtPayload {
    sub: string;

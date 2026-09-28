@@ -46,5 +46,16 @@
    "[json]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode"
    },
-   "cSpell.words": ["amqp", "codegrab", "codegraph", "colbymchenry"]
+   "cSpell.words": [
+      "amqp",
+      "codegrab",
+      "codegraph",
+      "colbymchenry",
+      "ehthumbs",
+      "isready",
+      "Loggable",
+      "njsproj",
+      "ntvs",
+      "PGPORT"
+   ]
 }

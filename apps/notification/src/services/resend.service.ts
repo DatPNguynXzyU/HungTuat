@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
 import {
    AppException,
@@ -58,7 +58,7 @@ export class ResendService {
             throw new AppException({
                errorCode: NOTIFICATION_ERROR_CODES.EMAIL_SEND_FAILED,
                message: `Failed to send email via Resend: ${error.message}`,
-               statusCode: 500,
+               statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
                details: { errorName: error.name, errorMessage: error.message },
             });
          }
@@ -80,7 +80,7 @@ export class ResendService {
          throw new AppException({
             errorCode: NOTIFICATION_ERROR_CODES.EMAIL_SEND_FAILED,
             message,
-            statusCode: 500,
+            statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
          });
       }
    }

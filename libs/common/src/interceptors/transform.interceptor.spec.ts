@@ -1,7 +1,7 @@
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { of } from 'rxjs';
-import { TransformInterceptor } from './transform.interceptor';
+import { TransformInterceptor } from '@common/interceptors/transform.interceptor';
 import { RESPONSE_MESSAGE_KEY } from '@common/decorators/response-message.decorator';
 import { LOG_ACTION_KEY } from '@common/logger/logger.constants';
 

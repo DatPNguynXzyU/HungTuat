@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { uuidv7 } from 'uuidv7';
 import type { CreateUserData, RoleEntity, UserEntity } from '@auth/entities/user.entity';
+import type { CreateOutboxEventData } from '@auth/outbox/entities/outbox-event.entity';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import type { IAuthRepository } from '@auth/repositories/auth.repository.interface';
-import type { Role, User, UserStatus } from '@prisma/client';
+import type { Prisma, Role, User, UserStatus } from '@prisma/client';
 
 type UserWithRoles = User & {
    userRoles?: Array<{
@@ -34,8 +35,11 @@ export class AuthRepository implements IAuthRepository {
 
    async findByEmail(email: string): Promise<UserEntity | null> {
       const normalizedEmail = email.toLowerCase().trim();
-      const user = await this.prisma.user.findUnique({
-         where: { email: normalizedEmail },
+      const user = await this.prisma.user.findFirst({
+         where: {
+            email: normalizedEmail,
+            deletedAt: null,
+         },
          include: {
             userRoles: {
                include: {
@@ -49,8 +53,11 @@ export class AuthRepository implements IAuthRepository {
    }
 
    async findById(id: string): Promise<UserEntity | null> {
-      const user = await this.prisma.user.findUnique({
-         where: { id },
+      const user = await this.prisma.user.findFirst({
+         where: {
+            id,
+            deletedAt: null,
+         },
          include: {
             userRoles: {
                include: {
@@ -63,36 +70,54 @@ export class AuthRepository implements IAuthRepository {
       return user ? this.toEntity(user) : null;
    }
 
-   async createUser(data: CreateUserData): Promise<UserEntity> {
+   async createUser(data: CreateUserData, outboxEvent?: CreateOutboxEventData): Promise<UserEntity> {
       const id = data.id || uuidv7();
-      const user = await this.prisma.user.create({
-         data: {
-            id,
-            email: data.email.toLowerCase().trim(),
-            fullName: data.fullName.trim(),
-            passwordHash: data.passwordHash,
-            ...(data.status ? { status: data.status as UserStatus } : {}),
-            ...(typeof data.isEmailVerified === 'boolean' ? { isEmailVerified: data.isEmailVerified } : {}),
-            ...(data.createdAt ? { createdAt: new Date(data.createdAt) } : {}),
-            ...(data.roleId
-               ? {
-                    userRoles: {
-                       create: [
-                          {
-                             roleId: data.roleId,
-                          },
-                       ],
-                    },
-                 }
-               : {}),
-         },
-         include: {
-            userRoles: {
-               include: {
-                  role: true,
+
+      const user = await this.prisma.$transaction(async (tx) => {
+         const createdUser = await tx.user.create({
+            data: {
+               id,
+               email: data.email.toLowerCase().trim(),
+               fullName: data.fullName.trim(),
+               passwordHash: data.passwordHash,
+               ...(data.status ? { status: data.status as UserStatus } : {}),
+               ...(typeof data.isEmailVerified === 'boolean' ? { isEmailVerified: data.isEmailVerified } : {}),
+               ...(data.createdAt ? { createdAt: new Date(data.createdAt) } : {}),
+               ...(data.roleId
+                  ? {
+                       userRoles: {
+                          create: [
+                             {
+                                roleId: data.roleId,
+                             },
+                          ],
+                       },
+                    }
+                  : {}),
+            },
+            include: {
+               userRoles: {
+                  include: {
+                     role: true,
+                  },
                },
             },
-         },
+         });
+
+         if (outboxEvent) {
+            await tx.outboxEvent.create({
+               data: {
+                  id: outboxEvent.id || uuidv7(),
+                  aggregateType: outboxEvent.aggregateType,
+                  aggregateId: outboxEvent.aggregateId || id,
+                  eventType: outboxEvent.eventType,
+                  payload: outboxEvent.payload as Prisma.InputJsonValue,
+                  status: 'PENDING',
+               },
+            });
+         }
+
+         return createdUser;
       });
 
       return this.toEntity(user);
@@ -141,8 +166,11 @@ export class AuthRepository implements IAuthRepository {
    }
 
    async findRoleByCode(code: string): Promise<RoleEntity | null> {
-      const role = await this.prisma.role.findUnique({
-         where: { code },
+      const role = await this.prisma.role.findFirst({
+         where: {
+            code,
+            deletedAt: null,
+         },
          include: {
             rolePermissions: {
                include: {

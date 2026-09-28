@@ -30,6 +30,7 @@ describe('TokenService', () => {
    beforeEach(async () => {
       jest.clearAllMocks();
       mockRedisService.smembers.mockResolvedValue([]);
+      mockRedisService.get.mockResolvedValue(null);
 
       const module: TestingModule = await Test.createTestingModule({
          providers: [
@@ -69,9 +70,10 @@ describe('TokenService', () => {
             mockConfigService.jwtRefreshTokenExpiresIn,
          );
 
-         // Redis session set verification
+         // Redis session set verification (tracks both access and refresh jtis)
          expect(mockRedisService.sadd).toHaveBeenCalledWith(
             `${REDIS_KEY_PREFIX.USER_SESSIONS}user-id-1`,
+            expect.any(String),
             expect.any(String),
          );
          expect(mockRedisService.expire).toHaveBeenCalledWith(
@@ -83,6 +85,7 @@ describe('TokenService', () => {
          const accessPayload = JwtUtil.verify(tokens.accessToken, mockConfigService.jwtSecret);
          expect(accessPayload.sub).toBe('user-id-1');
          expect(accessPayload.tokenType).toBe('access');
+         expect(accessPayload.jti).toBeDefined();
 
          // Access token fails verification against refresh secret
          expect(() => JwtUtil.verify(tokens.accessToken, mockConfigService.jwtRefreshSecret)).toThrow();
@@ -99,61 +102,100 @@ describe('TokenService', () => {
    });
 
    describe('validateAccessToken', () => {
-      it('should validate a valid access token successfully', () => {
+      it('should validate a valid access token successfully', async () => {
          const token = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'access' },
+            { sub: 'user-1', email: 'user@example.com', tokenType: 'access', jti: 'jti-123' },
             mockConfigService.jwtSecret,
             900,
          );
 
-         const payload = service.validateAccessToken(token);
+         const payload = await service.validateAccessToken(token);
          expect(payload.sub).toBe('user-1');
          expect(payload.tokenType).toBe('access');
       });
 
-      it('should throw UnauthorizedException if access token is signed with wrong secret', () => {
+      it('should throw UnauthorizedException if access token JTI is in Redis blacklist', async () => {
+         const token = JwtUtil.sign(
+            { sub: 'user-1', email: 'user@example.com', tokenType: 'access', jti: 'revoked-jti' },
+            mockConfigService.jwtSecret,
+            900,
+         );
+         mockRedisService.get.mockImplementation((key: string) => {
+            if (key === `${REDIS_KEY_PREFIX.REVOKED_TOKEN}revoked-jti`) return Promise.resolve('revoked');
+            return Promise.resolve(null);
+         });
+
+         await expect(service.validateAccessToken(token)).rejects.toThrow(UnauthorizedException);
+         try {
+            await service.validateAccessToken(token);
+         } catch (err) {
+            expect((err as UnauthorizedException).errorCode).toBe(AUTH_ERROR_CODES.TOKEN_REVOKED);
+         }
+      });
+
+      it('should throw UnauthorizedException if user tokens were revoked globally', async () => {
+         const now = Math.floor(Date.now() / 1000);
+         const token = JwtUtil.sign(
+            { sub: 'user-1', email: 'user@example.com', tokenType: 'access', jti: 'old-jti', iat: now - 100 },
+            mockConfigService.jwtSecret,
+            900,
+         );
+         mockRedisService.get.mockImplementation((key: string) => {
+            if (key === `${REDIS_KEY_PREFIX.USER_REVOKED_AT}user-1`) return Promise.resolve(String(now));
+            return Promise.resolve(null);
+         });
+
+         await expect(service.validateAccessToken(token)).rejects.toThrow(UnauthorizedException);
+         try {
+            await service.validateAccessToken(token);
+         } catch (err) {
+            expect((err as UnauthorizedException).errorCode).toBe(AUTH_ERROR_CODES.TOKEN_REVOKED);
+         }
+      });
+
+      it('should throw UnauthorizedException if access token is signed with wrong secret', async () => {
          const token = JwtUtil.sign(
             { sub: 'user-1', email: 'user@example.com', tokenType: 'access' },
             mockConfigService.jwtRefreshSecret,
             900,
          );
 
-         expect(() => service.validateAccessToken(token)).toThrow(UnauthorizedException);
+         await expect(service.validateAccessToken(token)).rejects.toThrow(UnauthorizedException);
          try {
-            service.validateAccessToken(token);
+            await service.validateAccessToken(token);
          } catch (err) {
             expect((err as UnauthorizedException).errorCode).toBe(AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED);
          }
       });
 
-      it('should throw UnauthorizedException if access token is missing tokenType field', () => {
+      it('should throw UnauthorizedException if access token is missing tokenType field', async () => {
          const token = JwtUtil.sign({ sub: 'user-1', email: 'user@example.com' }, mockConfigService.jwtSecret, 900);
 
-         expect(() => service.validateAccessToken(token)).toThrow(UnauthorizedException);
+         await expect(service.validateAccessToken(token)).rejects.toThrow(UnauthorizedException);
          try {
-            service.validateAccessToken(token);
+            await service.validateAccessToken(token);
          } catch (err) {
             expect((err as UnauthorizedException).errorCode).toBe(AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED);
          }
       });
 
-      it('should throw UnauthorizedException if tokenType is refresh instead of access', () => {
+      it('should throw UnauthorizedException if tokenType is refresh instead of access', async () => {
          const token = JwtUtil.sign(
             { sub: 'user-1', email: 'user@example.com', tokenType: 'refresh' },
             mockConfigService.jwtSecret,
             900,
          );
 
-         expect(() => service.validateAccessToken(token)).toThrow(UnauthorizedException);
+         await expect(service.validateAccessToken(token)).rejects.toThrow(UnauthorizedException);
          try {
-            service.validateAccessToken(token);
+            await service.validateAccessToken(token);
          } catch (err) {
             expect((err as UnauthorizedException).errorCode).toBe(AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED);
          }
       });
 
-      it('should throw UnauthorizedException if token is invalid or expired', () => {
-         expect(() => service.validateAccessToken('invalid.token.string')).toThrow(UnauthorizedException);
+      it('should throw UnauthorizedException if token is invalid or expired', async () => {
+         await expect(service.validateAccessToken('invalid.token.string')).rejects.toThrow(UnauthorizedException);
       });
    });
 
@@ -237,7 +279,7 @@ describe('TokenService', () => {
    });
 
    describe('revokeAllUserTokens and logoutAll', () => {
-      it('should iterate over user sessions set in Redis, delete active keys, set blacklist keys, delete set and pattern fallback', async () => {
+      it('should iterate over user sessions set in Redis, delete active keys, set blacklist keys, delete set and set userRevokedAt', async () => {
          mockRedisService.smembers.mockResolvedValue(['jti-1', 'jti-2']);
 
          await service.revokeAllUserTokens('user-1');
@@ -254,6 +296,11 @@ describe('TokenService', () => {
          expect(mockRedisService.set).toHaveBeenCalledWith(
             `${REDIS_KEY_PREFIX.REVOKED_TOKEN}jti-2`,
             'revoked',
+            mockConfigService.jwtRefreshTokenExpiresIn,
+         );
+         expect(mockRedisService.set).toHaveBeenCalledWith(
+            `${REDIS_KEY_PREFIX.USER_REVOKED_AT}user-1`,
+            expect.any(String),
             mockConfigService.jwtRefreshTokenExpiresIn,
          );
          expect(mockRedisService.deleteByPattern).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:*`);

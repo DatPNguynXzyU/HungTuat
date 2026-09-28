@@ -1,4 +1,4 @@
-import { Catch, HttpException, Logger, RpcExceptionFilter } from '@nestjs/common';
+import { Catch, HttpException, HttpStatus, Logger, RpcExceptionFilter } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { Observable, throwError } from 'rxjs';
 import { AppException } from '@common/exceptions/app.exception';
@@ -67,7 +67,7 @@ export class AllRpcExceptionsFilter implements RpcExceptionFilter {
                const parsed = JSON.parse(error) as Record<string, unknown>;
                if (typeof parsed === 'object' && parsed !== null && (parsed.statusCode || parsed.errorCode)) {
                   payload = {
-                     statusCode: (parsed.statusCode as number) || 400,
+                     statusCode: (parsed.statusCode as number) || HttpStatus.BAD_REQUEST,
                      errorCode: (parsed.errorCode as string) || COMMON_ERROR_CODES.INVALID_REQUEST,
                      message:
                         (parsed.message as string) ||
@@ -80,7 +80,7 @@ export class AllRpcExceptionsFilter implements RpcExceptionFilter {
                } else {
                   const safeMsg = error === '[object Object]' ? COMMON_ERROR_CODES.INVALID_REQUEST : error;
                   payload = {
-                     statusCode: 400,
+                     statusCode: HttpStatus.BAD_REQUEST,
                      errorCode: safeMsg,
                      message: safeMsg,
                   };
@@ -88,14 +88,14 @@ export class AllRpcExceptionsFilter implements RpcExceptionFilter {
             } catch {
                const safeMsg = error === '[object Object]' ? COMMON_ERROR_CODES.INVALID_REQUEST : error;
                payload = {
-                  statusCode: 400,
+                  statusCode: HttpStatus.BAD_REQUEST,
                   errorCode: safeMsg,
                   message: safeMsg,
                };
             }
          } else {
             payload = {
-               statusCode: 400,
+               statusCode: HttpStatus.BAD_REQUEST,
                errorCode: COMMON_ERROR_CODES.INVALID_REQUEST,
                message: COMMON_ERROR_CODES.INVALID_REQUEST,
             };
@@ -112,7 +112,7 @@ export class AllRpcExceptionsFilter implements RpcExceptionFilter {
                    : null;
 
          if (nestedObj) {
-            const status = (nestedObj.statusCode as number) || 400;
+            const status = (nestedObj.statusCode as number) || HttpStatus.BAD_REQUEST;
             const errorCode: string =
                (nestedObj.errorCode as string) ||
                (typeof nestedObj.message === 'string' && nestedObj.message !== '[object Object]'
@@ -135,7 +135,7 @@ export class AllRpcExceptionsFilter implements RpcExceptionFilter {
                const parsed = JSON.parse(exception.message) as Record<string, unknown>;
                if (typeof parsed === 'object' && parsed !== null && (parsed.statusCode || parsed.errorCode)) {
                   payload = {
-                     statusCode: (parsed.statusCode as number) || 400,
+                     statusCode: (parsed.statusCode as number) || HttpStatus.BAD_REQUEST,
                      errorCode: (parsed.errorCode as string) || COMMON_ERROR_CODES.INVALID_REQUEST,
                      message:
                         (parsed.message as string) ||
@@ -147,7 +147,7 @@ export class AllRpcExceptionsFilter implements RpcExceptionFilter {
                   };
                } else {
                   payload = {
-                     statusCode: 500,
+                     statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
                      errorCode: COMMON_ERROR_CODES.INTERNAL_SERVER_ERROR,
                      message:
                         exception.message === '[object Object]'
@@ -157,7 +157,7 @@ export class AllRpcExceptionsFilter implements RpcExceptionFilter {
                }
             } catch {
                payload = {
-                  statusCode: 500,
+                  statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
                   errorCode: COMMON_ERROR_CODES.INTERNAL_SERVER_ERROR,
                   message:
                      exception.message === '[object Object]'
@@ -168,7 +168,7 @@ export class AllRpcExceptionsFilter implements RpcExceptionFilter {
          }
       } else if (typeof exception === 'object' && exception !== null) {
          const obj = exception as Record<string, unknown>;
-         const statusCode = (obj.statusCode as number) || 500;
+         const statusCode = (obj.statusCode as number) || HttpStatus.INTERNAL_SERVER_ERROR;
          const errorCode =
             (obj.errorCode as string) ||
             (typeof obj.message === 'string' && obj.message !== '[object Object]'
@@ -185,13 +185,12 @@ export class AllRpcExceptionsFilter implements RpcExceptionFilter {
          };
       } else {
          payload = {
-            statusCode: 500,
+            statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
             errorCode: COMMON_ERROR_CODES.INTERNAL_SERVER_ERROR,
             message: COMMON_ERROR_CODES.INTERNAL_SERVER_ERROR,
          };
       }
 
-      // Final cleanup to ensure no "[object Object]" leaks
       if (
          typeof payload.message !== 'string' ||
          payload.message === '[object Object]' ||

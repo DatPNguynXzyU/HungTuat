@@ -23,6 +23,12 @@ export const AUTH_PATTERNS = {
    GET_ROLE_PERMISSIONS: 'auth.get_role_permissions',
 } as const;
 
+export const AUTH_SECURITY = {
+   MAX_FAILED_LOGIN_ATTEMPTS: 5,
+   LOCKOUT_DURATION_SECONDS: 900, // 15 minutes in seconds
+   FAILED_ATTEMPTS_TTL_SECONDS: 900, // 15 minutes window
+} as const;
+
 export type AuthCookieName = (typeof AUTH_COOKIES)[keyof typeof AUTH_COOKIES];
 export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
 export type AuthPattern = (typeof AUTH_PATTERNS)[keyof typeof AUTH_PATTERNS];

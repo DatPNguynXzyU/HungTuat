@@ -1,36 +1,53 @@
-import * as crypto from 'crypto';
+import argon2 from 'argon2';
+import type { HashOptions, VerifyOptions } from 'argon2';
 
-function scryptPromise(password: string, salt: string, keylen: number): Promise<Buffer> {
-   return new Promise((resolve, reject) => {
-      crypto.scrypt(password, salt, keylen, (err, derivedKey) => {
-         if (err) {
-            return reject(err);
-         }
-         resolve(derivedKey);
-      });
-   });
+export interface Argon2Options extends Omit<HashOptions, 'secret'> {
+   secret?: string | Buffer;
 }
 
-export class Argon2Util {
-   static async hash(password: string): Promise<string> {
-      const salt = crypto.randomBytes(16).toString('hex');
-      const derivedKey = await scryptPromise(password, salt, 64);
-      return `$argon2id$v=19$m=65536,t=3,p=4$${salt}$${derivedKey.toString('hex')}`;
+const resolveSecret = (secret?: string | Buffer): Buffer | undefined => {
+   if (!secret) {
+      return undefined;
+   }
+   return typeof secret === 'string' ? Buffer.from(secret) : secret;
+};
+
+const parseOptions = <T extends HashOptions | VerifyOptions>(
+   secretOrOptions?: string | Buffer | Argon2Options,
+   options?: Argon2Options,
+): T => {
+   if (typeof secretOrOptions === 'string' || Buffer.isBuffer(secretOrOptions)) {
+      const secret = resolveSecret(secretOrOptions);
+      return { ...options, ...(secret ? { secret } : {}) } as T;
    }
 
-   static async verify(hash: string, password: string): Promise<boolean> {
-      const parts = hash.split('$');
-      if (parts.length < 5) {
-         return false;
-      }
-      const salt = parts[4];
-      const key = parts[5];
-      const derivedKey = await scryptPromise(password, salt, 64);
+   const secret = resolveSecret(secretOrOptions?.secret);
+   return { ...secretOrOptions, ...(secret ? { secret } : {}) } as T;
+};
 
-      const keyBuffer = Buffer.from(key, 'hex');
-      if (keyBuffer.length !== derivedKey.length) {
+export class Argon2Util {
+   static async hash(
+      password: string | Buffer,
+      secretOrOptions?: string | Buffer | Argon2Options,
+      options?: Argon2Options,
+   ): Promise<string> {
+      return argon2.hash(password, {
+         type: argon2.argon2id,
+         ...parseOptions<HashOptions>(secretOrOptions, options),
+         raw: false,
+      });
+   }
+
+   static async verify(
+      hash: string,
+      password: string | Buffer,
+      secretOrOptions?: string | Buffer | Argon2Options,
+      options?: Argon2Options,
+   ): Promise<boolean> {
+      try {
+         return await argon2.verify(hash, password, parseOptions<VerifyOptions>(secretOrOptions, options));
+      } catch {
          return false;
       }
-      return crypto.timingSafeEqual(keyBuffer, derivedKey);
    }
 }

@@ -7,14 +7,20 @@ const UUID_V7_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[
 describe('AuthRepository', () => {
    let repository: AuthRepository;
    let prismaService: {
+      $transaction: jest.Mock;
       user: {
+         findFirst: jest.Mock;
          findUnique: jest.Mock;
          create: jest.Mock;
          update: jest.Mock;
          delete: jest.Mock;
       };
       role: {
+         findFirst: jest.Mock;
          findUnique: jest.Mock;
+      };
+      outboxEvent: {
+         create: jest.Mock;
       };
       userRole: {
          upsert: jest.Mock;
@@ -23,14 +29,20 @@ describe('AuthRepository', () => {
 
    beforeEach(async () => {
       prismaService = {
+         $transaction: jest.fn().mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => cb(prismaService)),
          user: {
+            findFirst: jest.fn(),
             findUnique: jest.fn(),
             create: jest.fn(),
             update: jest.fn(),
             delete: jest.fn(),
          },
          role: {
+            findFirst: jest.fn(),
             findUnique: jest.fn(),
+         },
+         outboxEvent: {
+            create: jest.fn(),
          },
          userRole: {
             upsert: jest.fn(),
@@ -54,7 +66,7 @@ describe('AuthRepository', () => {
       expect(repository).toBeDefined();
    });
 
-   it('should create a user with a valid UUIDv7 id and enterprise defaults', async () => {
+   it('should create a user with a valid UUIDv7 id and enterprise defaults and optional outbox event in transaction', async () => {
       prismaService.user.create.mockImplementation(
          ({
             data,
@@ -75,12 +87,20 @@ describe('AuthRepository', () => {
                updatedAt: new Date('2026-09-27T00:00:00.000Z'),
             }),
       );
+      prismaService.outboxEvent.create.mockResolvedValue({});
 
-      const user = await repository.createUser({
-         email: 'test@example.com',
-         fullName: 'Test User',
-         passwordHash: 'hashed_password',
-      });
+      const user = await repository.createUser(
+         {
+            email: 'test@example.com',
+            fullName: 'Test User',
+            passwordHash: 'hashed_password',
+         },
+         {
+            aggregateType: 'USER',
+            eventType: 'USER_REGISTERED',
+            payload: { email: 'test@example.com', fullName: 'Test User' },
+         },
+      );
 
       expect(user).toBeDefined();
       expect(user.id).toBeDefined();
@@ -91,10 +111,11 @@ describe('AuthRepository', () => {
       expect(user.isEmailVerified).toBe(false);
       expect(user.version).toBe(1);
       expect(prismaService.user.create).toHaveBeenCalledTimes(1);
+      expect(prismaService.outboxEvent.create).toHaveBeenCalledTimes(1);
    });
 
-   it('should find user by email with case-insensitivity', async () => {
-      prismaService.user.findUnique.mockResolvedValue({
+   it('should find user by email with case-insensitivity and deletedAt null check', async () => {
+      prismaService.user.findFirst.mockResolvedValue({
          id: 'test-id',
          email: 'user@example.com',
          fullName: 'User Example',
@@ -123,8 +144,11 @@ describe('AuthRepository', () => {
       });
 
       const found = await repository.findByEmail('USER@EXAMPLE.COM');
-      expect(prismaService.user.findUnique).toHaveBeenCalledWith({
-         where: { email: 'user@example.com' },
+      expect(prismaService.user.findFirst).toHaveBeenCalledWith({
+         where: {
+            email: 'user@example.com',
+            deletedAt: null,
+         },
          include: {
             userRoles: {
                include: {
@@ -141,8 +165,28 @@ describe('AuthRepository', () => {
       expect(found?.roles).toEqual(['USER']);
    });
 
-   it('should find user by id', async () => {
-      prismaService.user.findUnique.mockResolvedValue({
+   it('should return null when finding user by email if user is soft deleted', async () => {
+      prismaService.user.findFirst.mockResolvedValue(null);
+
+      const found = await repository.findByEmail('deleted@example.com');
+      expect(prismaService.user.findFirst).toHaveBeenCalledWith({
+         where: {
+            email: 'deleted@example.com',
+            deletedAt: null,
+         },
+         include: {
+            userRoles: {
+               include: {
+                  role: true,
+               },
+            },
+         },
+      });
+      expect(found).toBeNull();
+   });
+
+   it('should find user by id filtering deletedAt null', async () => {
+      prismaService.user.findFirst.mockResolvedValue({
          id: 'user-id-123',
          email: 'user2@example.com',
          fullName: 'User Two',
@@ -158,8 +202,11 @@ describe('AuthRepository', () => {
       });
 
       const found = await repository.findById('user-id-123');
-      expect(prismaService.user.findUnique).toHaveBeenCalledWith({
-         where: { id: 'user-id-123' },
+      expect(prismaService.user.findFirst).toHaveBeenCalledWith({
+         where: {
+            id: 'user-id-123',
+            deletedAt: null,
+         },
          include: {
             userRoles: {
                include: {
@@ -173,8 +220,28 @@ describe('AuthRepository', () => {
       expect(found?.roles).toEqual([]);
    });
 
-   it('should find role by code with permissions', async () => {
-      prismaService.role.findUnique.mockResolvedValue({
+   it('should return null when finding user by id if user is soft deleted', async () => {
+      prismaService.user.findFirst.mockResolvedValue(null);
+
+      const found = await repository.findById('deleted-id');
+      expect(prismaService.user.findFirst).toHaveBeenCalledWith({
+         where: {
+            id: 'deleted-id',
+            deletedAt: null,
+         },
+         include: {
+            userRoles: {
+               include: {
+                  role: true,
+               },
+            },
+         },
+      });
+      expect(found).toBeNull();
+   });
+
+   it('should find role by code with permissions and deletedAt null', async () => {
+      prismaService.role.findFirst.mockResolvedValue({
          id: 'role-user-id',
          code: 'USER',
          name: 'Standard User',
@@ -200,6 +267,19 @@ describe('AuthRepository', () => {
       });
 
       const role = await repository.findRoleByCode('USER');
+      expect(prismaService.role.findFirst).toHaveBeenCalledWith({
+         where: {
+            code: 'USER',
+            deletedAt: null,
+         },
+         include: {
+            rolePermissions: {
+               include: {
+                  permission: true,
+               },
+            },
+         },
+      });
       expect(role).toBeDefined();
       expect(role?.code).toBe('USER');
       expect(role?.version).toBe(1);

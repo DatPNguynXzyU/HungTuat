@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { type FC } from 'react';
 import { Body, Container, Head, Heading, Hr, Html, Preview, Section, Text } from '@react-email/components';
 import { EMAIL_COLORS, EMAIL_FONTS } from '@notification/constants';
 
@@ -8,7 +8,7 @@ export interface OtpEmailProps {
    expiresInMinutes?: number;
 }
 
-export const OtpEmail: React.FC<OtpEmailProps> = ({ fullName, otpCode = '123456', expiresInMinutes = 10 }) => {
+export const OtpEmail: FC<OtpEmailProps> = ({ fullName, otpCode = '123456', expiresInMinutes = 10 }) => {
    const greeting = fullName ? `Hi ${fullName},` : 'Hello,';
    const currentYear = new Date().getFullYear();
 

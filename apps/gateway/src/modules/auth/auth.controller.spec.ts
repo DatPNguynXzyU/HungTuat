@@ -111,11 +111,17 @@ describe('Gateway AuthController', () => {
       });
    });
 
-   it('should login and set dual HTTP-only cookies', async () => {
+   it('should login and set dual HTTP-only cookies with forwarded IP', async () => {
       const loginDto = {
          email: 'test@example.com',
          password: 'password123',
       };
+
+      const mockRequest = {
+         headers: {
+            'x-forwarded-for': '203.0.113.195, 70.41.3.18',
+         },
+      } as unknown as Request;
 
       const mockCookie = jest.fn();
       const mockResponse = {
@@ -128,9 +134,12 @@ describe('Gateway AuthController', () => {
          refreshToken: 'mock-refresh-token',
       });
 
-      const res = await controller.login(loginDto, mockResponse);
+      const res = await controller.login(mockRequest, loginDto, mockResponse);
 
-      expect(mockAuthService.login).toHaveBeenCalledWith(loginDto);
+      expect(mockAuthService.login).toHaveBeenCalledWith({
+         ...loginDto,
+         ip: '203.0.113.195',
+      });
       expect(mockCookie).toHaveBeenCalledWith(
          AUTH_COOKIES.ACCESS_TOKEN,
          'mock-access-token',

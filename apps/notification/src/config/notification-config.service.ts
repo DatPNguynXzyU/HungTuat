@@ -30,4 +30,12 @@ export class NotificationConfigService extends CommonConfigService {
       const from = this.emailFrom;
       return name ? `${name} <${from}>` : from;
    }
+
+   get databaseUrl(): string | undefined {
+      return this.configService.get('DATABASE_URL', { infer: true });
+   }
+
+   get postgresPort(): number {
+      return this.configService.get('POSTGRES_PORT', { infer: true });
+   }
 }

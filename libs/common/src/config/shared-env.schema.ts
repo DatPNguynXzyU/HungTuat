@@ -6,6 +6,8 @@ export const sharedEnvSchema = z.object({
    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
    JWT_SECRET: z.string().default('default-super-secret-key'),
    JWT_REFRESH_SECRET: z.string().optional(),
+   ARGON2_SECRET: z.string().default('default-argon2-secret-key'),
+   ARGON2_SALT: z.string().default('default-argon2-salt-key'),
    JWT_ACCESS_TOKEN_EXPIRES_IN: z.coerce.number().int().positive().default(900), // 15 minutes (900 seconds)
    JWT_REFRESH_TOKEN_EXPIRES_IN: z.coerce.number().int().positive().default(604800), // 7 days (604800 seconds)
    JWT_EXPIRES_IN: z.coerce.number().int().positive().default(900),

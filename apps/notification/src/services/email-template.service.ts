@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import * as React from 'react';
+import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { OtpEmail, ResetPasswordEmail, VerificationEmail, WelcomeEmail } from '@notification/templates';
 

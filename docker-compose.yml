@@ -1,5 +1,9 @@
 name: omni-services
 
+include:
+   - apps/auth/docker-compose.yml
+   - apps/notification/docker-compose.yml
+
 services:
    redis:
       image: redis/redis-stack-server:latest
