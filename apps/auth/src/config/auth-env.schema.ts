@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { sharedEnvSchema } from '@common';
+import { sharedEnvSchema, DEFAULT_JWT_KEY_ID } from '@common';
 
 export const authEnvSchema = sharedEnvSchema.extend({
    POSTGRES_USER: z.string().default('postgres'),
@@ -7,6 +7,9 @@ export const authEnvSchema = sharedEnvSchema.extend({
    POSTGRES_DB: z.string().default('omni_service_auth'),
    POSTGRES_PORT: z.coerce.number().int().positive().default(5433),
    DATABASE_URL: z.string().default('postgresql://postgres:postgres@localhost:5433/omni_service_auth'),
+   JWT_PRIVATE_KEY_PATH: z.string().default('apps/auth/keys/private.key'),
+   JWT_PUBLIC_KEY_PATH: z.string().default('apps/auth/keys/public.key'),
+   JWT_KEY_ID: z.string().default(DEFAULT_JWT_KEY_ID),
 });
 
 export type AuthEnvConfig = z.infer<typeof authEnvSchema>;

@@ -1,6 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Request, Response } from 'express';
-import { AUTH_COOKIES, CommonConfigService, JwtPayload, UnauthorizedException } from '@common';
+import {
+   AUTH_COOKIES,
+   CommonConfigService,
+   DEFAULT_DEV_RSA_PRIVATE_KEY,
+   DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_JWT_KEY_ID,
+   JwtPayload,
+   JwtUtil,
+   UnauthorizedException,
+} from '@common';
 import { GatewayConfigService } from '@/config';
 import { AuthController } from '@/modules/auth/auth.controller';
 import { AuthService } from '@/modules/auth/auth.service';
@@ -9,6 +18,7 @@ describe('Gateway AuthController', () => {
    let controller: AuthController;
 
    const mockAuthService = {
+      getJwks: jest.fn(),
       register: jest.fn(),
       login: jest.fn(),
       refreshToken: jest.fn(),
@@ -17,10 +27,15 @@ describe('Gateway AuthController', () => {
       logoutAll: jest.fn(),
       changePassword: jest.fn(),
       validateToken: jest.fn(),
+      getSessions: jest.fn(),
+      revokeSession: jest.fn(),
+      revokeOtherSessions: jest.fn(),
+      getUserAuditLogs: jest.fn(),
    };
 
    const mockConfigService = {
-      jwtSecret: 'test-secret',
+      jwtPublicKey: DEFAULT_DEV_RSA_PUBLIC_KEY,
+      jwtKeyId: DEFAULT_JWT_KEY_ID,
       cookieName: 'access_token',
       isProduction: false,
       accessTokenCookieOptions: {
@@ -73,12 +88,70 @@ describe('Gateway AuthController', () => {
       expect(controller).toBeDefined();
    });
 
+   describe('JWKS endpoints', () => {
+      it('should return JWKS from auth microservice when available', async () => {
+         const expectedJwks = {
+            keys: [
+               {
+                  kty: 'RSA',
+                  use: 'sig',
+                  alg: 'RS256',
+                  kid: 'test-kid',
+                  n: 'test-n',
+                  e: 'AQAB',
+               },
+            ],
+         };
+         mockAuthService.getJwks.mockResolvedValue(expectedJwks);
+
+         const result = await controller.getJwks();
+         expect(mockAuthService.getJwks).toHaveBeenCalled();
+         expect(result).toEqual(expectedJwks);
+      });
+
+      it('should fallback to local public key JWKS if auth microservice fails', async () => {
+         mockAuthService.getJwks.mockRejectedValue(new Error('Microservice unavailable'));
+
+         const result = await controller.getJwks();
+         expect(result).toBeDefined();
+         expect(Array.isArray(result.keys)).toBe(true);
+         expect(result.keys[0].kty).toBe('RSA');
+         expect(result.keys[0].alg).toBe('RS256');
+         expect(result.keys[0].kid).toBe(DEFAULT_JWT_KEY_ID);
+      });
+
+      it('should return JWKS for alias endpoint', async () => {
+         const expectedJwks = {
+            keys: [
+               {
+                  kty: 'RSA',
+                  use: 'sig',
+                  alg: 'RS256',
+                  kid: 'alias-kid',
+                  n: 'alias-n',
+                  e: 'AQAB',
+               },
+            ],
+         };
+         mockAuthService.getJwks.mockResolvedValue(expectedJwks);
+
+         const result = await controller.getJwksAlias();
+         expect(result).toEqual(expectedJwks);
+      });
+   });
+
    it('should register and set dual HTTP-only cookies (access_token & refresh_token)', async () => {
       const registerDto = {
          email: 'test@example.com',
          password: 'password123',
          fullName: 'Test User',
       };
+
+      const mockRequest = {
+         headers: {
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+         },
+      } as unknown as Request;
 
       const mockCookie = jest.fn();
       const mockResponse = {
@@ -91,9 +164,9 @@ describe('Gateway AuthController', () => {
          refreshToken: 'mock-refresh-token',
       });
 
-      const res = await controller.register(registerDto, mockResponse);
+      const res = await controller.register(mockRequest, registerDto, mockResponse);
 
-      expect(mockAuthService.register).toHaveBeenCalledWith(registerDto);
+      expect(mockAuthService.register).toHaveBeenCalledWith(registerDto, expect.any(Object));
       expect(mockCookie).toHaveBeenCalledWith(
          AUTH_COOKIES.ACCESS_TOKEN,
          'mock-access-token',
@@ -120,6 +193,7 @@ describe('Gateway AuthController', () => {
       const mockRequest = {
          headers: {
             'x-forwarded-for': '203.0.113.195, 70.41.3.18',
+            'user-agent': 'Mozilla/5.0',
          },
       } as unknown as Request;
 
@@ -136,10 +210,13 @@ describe('Gateway AuthController', () => {
 
       const res = await controller.login(mockRequest, loginDto, mockResponse);
 
-      expect(mockAuthService.login).toHaveBeenCalledWith({
-         ...loginDto,
-         ip: '203.0.113.195',
-      });
+      expect(mockAuthService.login).toHaveBeenCalledWith(
+         expect.objectContaining({
+            ...loginDto,
+            ip: '203.0.113.195',
+         }),
+         expect.any(Object),
+      );
       expect(mockCookie).toHaveBeenCalledWith(
          AUTH_COOKIES.ACCESS_TOKEN,
          'mock-access-token',
@@ -177,7 +254,7 @@ describe('Gateway AuthController', () => {
 
       const res = await controller.refreshToken(mockRequest, mockResponse);
 
-      expect(mockAuthService.refreshToken).toHaveBeenCalledWith('valid-refresh-token');
+      expect(mockAuthService.refreshToken).toHaveBeenCalledWith('valid-refresh-token', expect.any(Object));
       expect(mockCookie).toHaveBeenCalledWith(
          AUTH_COOKIES.ACCESS_TOKEN,
          'new-access-token',
@@ -203,11 +280,79 @@ describe('Gateway AuthController', () => {
       await expect(controller.refreshToken(mockRequest, mockResponse)).rejects.toThrow(UnauthorizedException);
    });
 
+   describe('Sessions endpoints', () => {
+      it('should get active sessions list', async () => {
+         const mockUser: JwtPayload = { sub: 'user-123', email: 'test@example.com', tokenType: 'access' };
+         const validRefreshToken = JwtUtil.sign(
+            { sub: 'user-123', tokenType: 'refresh', jti: 'current-jti' },
+            DEFAULT_DEV_RSA_PRIVATE_KEY,
+            604800,
+         );
+         const mockRequest = {
+            cookies: {
+               [AUTH_COOKIES.REFRESH_TOKEN]: validRefreshToken,
+            },
+         } as unknown as Request;
+
+         mockAuthService.getSessions.mockResolvedValue([
+            { id: 'sess-1', deviceName: 'Chrome on macOS', isCurrent: true },
+         ]);
+
+         const result = await controller.getSessions(mockUser, mockRequest);
+
+         expect(mockAuthService.getSessions).toHaveBeenCalledWith('user-123', 'current-jti');
+         expect(result).toHaveLength(1);
+      });
+
+      it('should revoke a session by session ID', async () => {
+         const mockUser: JwtPayload = { sub: 'user-123', email: 'test@example.com', tokenType: 'access' };
+         const mockRequest = { headers: {} } as unknown as Request;
+         mockAuthService.revokeSession.mockResolvedValue({ success: true, message: 'Session revoked successfully' });
+
+         const result = await controller.revokeSession(mockUser, 'sess-1', mockRequest);
+
+         expect(mockAuthService.revokeSession).toHaveBeenCalledWith('user-123', 'sess-1', expect.any(Object));
+         expect(result.message).toBe('Session revoked successfully');
+      });
+
+      it('should revoke other sessions', async () => {
+         const mockUser: JwtPayload = { sub: 'user-123', email: 'test@example.com', tokenType: 'access' };
+         const validRefreshToken = JwtUtil.sign(
+            { sub: 'user-123', tokenType: 'refresh', jti: 'current-jti' },
+            DEFAULT_DEV_RSA_PRIVATE_KEY,
+            604800,
+         );
+         const mockRequest = {
+            cookies: {
+               [AUTH_COOKIES.REFRESH_TOKEN]: validRefreshToken,
+            },
+            headers: {},
+         } as unknown as Request;
+
+         mockAuthService.revokeOtherSessions.mockResolvedValue({
+            success: true,
+            message: 'All other sessions revoked successfully',
+            revokedCount: 2,
+         });
+
+         const result = await controller.revokeOtherSessions(mockUser, mockRequest);
+
+         expect(mockAuthService.revokeOtherSessions).toHaveBeenCalledWith(
+            'user-123',
+            'current-jti',
+            expect.any(Object),
+         );
+         expect(result.message).toBe('All other sessions revoked successfully');
+         expect(result.revokedCount).toBe(2);
+      });
+   });
+
    it('should revoke token and clear both cookies', async () => {
       const mockRequest = {
          cookies: {
             [AUTH_COOKIES.REFRESH_TOKEN]: 'token-to-revoke',
          },
+         headers: {},
       } as unknown as Request;
 
       const mockClearCookie = jest.fn();
@@ -219,7 +364,7 @@ describe('Gateway AuthController', () => {
 
       const res = await controller.revokeToken(mockRequest, mockResponse);
 
-      expect(mockAuthService.revokeToken).toHaveBeenCalledWith('token-to-revoke');
+      expect(mockAuthService.revokeToken).toHaveBeenCalledWith('token-to-revoke', expect.any(Object));
       expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.ACCESS_TOKEN, mockConfigService.clearCookieOptions);
       expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.REFRESH_TOKEN, mockConfigService.clearCookieOptions);
       expect(res.message).toBe('Token revoked and logged out successfully');
@@ -230,6 +375,7 @@ describe('Gateway AuthController', () => {
          cookies: {
             [AUTH_COOKIES.REFRESH_TOKEN]: 'token-to-logout',
          },
+         headers: {},
       } as unknown as Request;
 
       const mockClearCookie = jest.fn();
@@ -241,7 +387,7 @@ describe('Gateway AuthController', () => {
 
       const res = await controller.logout(mockRequest, mockResponse);
 
-      expect(mockAuthService.revokeToken).toHaveBeenCalledWith('token-to-logout');
+      expect(mockAuthService.revokeToken).toHaveBeenCalledWith('token-to-logout', expect.any(Object));
       expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.ACCESS_TOKEN, mockConfigService.clearCookieOptions);
       expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.REFRESH_TOKEN, mockConfigService.clearCookieOptions);
       expect(res.message).toBe('Logged out successfully');
@@ -253,6 +399,8 @@ describe('Gateway AuthController', () => {
          clearCookie: mockClearCookie,
       } as unknown as Response;
 
+      const mockRequest = { headers: {} } as unknown as Request;
+
       const user: JwtPayload = {
          sub: 'user-123',
          email: 'user@example.com',
@@ -261,9 +409,9 @@ describe('Gateway AuthController', () => {
 
       mockAuthService.logoutAll.mockResolvedValue({ success: true, message: 'All sessions logged out' });
 
-      const res = await controller.logoutAll(user, mockResponse);
+      const res = await controller.logoutAll(user, mockRequest, mockResponse);
 
-      expect(mockAuthService.logoutAll).toHaveBeenCalledWith('user-123');
+      expect(mockAuthService.logoutAll).toHaveBeenCalledWith('user-123', expect.any(Object));
       expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.ACCESS_TOKEN, mockConfigService.clearCookieOptions);
       expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.REFRESH_TOKEN, mockConfigService.clearCookieOptions);
       expect(res.message).toBe('All sessions logged out successfully');
@@ -274,6 +422,8 @@ describe('Gateway AuthController', () => {
       const mockResponse = {
          clearCookie: mockClearCookie,
       } as unknown as Response;
+
+      const mockRequest = { headers: {} } as unknown as Request;
 
       const user: JwtPayload = {
          sub: 'user-123',
@@ -291,11 +441,33 @@ describe('Gateway AuthController', () => {
          message: 'Password changed successfully. All sessions have been logged out.',
       });
 
-      const res = await controller.changePassword(user, changePasswordDto, mockResponse);
+      const res = await controller.changePassword(user, changePasswordDto, mockRequest, mockResponse);
 
-      expect(mockAuthService.changePassword).toHaveBeenCalledWith('user-123', changePasswordDto);
+      expect(mockAuthService.changePassword).toHaveBeenCalledWith('user-123', changePasswordDto, expect.any(Object));
       expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.ACCESS_TOKEN, mockConfigService.clearCookieOptions);
       expect(mockClearCookie).toHaveBeenCalledWith(AUTH_COOKIES.REFRESH_TOKEN, mockConfigService.clearCookieOptions);
       expect(res.message).toBe('Password changed successfully. All sessions have been logged out.');
+   });
+
+   it('should get security logs for authenticated user', async () => {
+      const user: JwtPayload = {
+         sub: 'user-123',
+         email: 'user@example.com',
+         tokenType: 'access',
+      };
+
+      const mockResult = {
+         data: [{ id: 'audit-1', action: 'AUTH.LOGIN_SUCCESS' }],
+         total: 1,
+         page: 1,
+         limit: 10,
+         totalPages: 1,
+      };
+
+      mockAuthService.getUserAuditLogs.mockResolvedValue(mockResult);
+
+      const res = await controller.getSecurityLogs(user, { page: 1, limit: 10 });
+      expect(mockAuthService.getUserAuditLogs).toHaveBeenCalledWith('user-123', 1, 10);
+      expect(res).toEqual(mockResult);
    });
 });

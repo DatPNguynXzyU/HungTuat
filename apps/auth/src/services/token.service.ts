@@ -1,15 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { uuidv7 } from 'uuidv7';
 import {
+   IDeviceInfo,
+   IJwksResponse,
+   IRevokeSessionResult,
    IRevokeTokenResult,
+   IUserSessionInfo,
    JwtPayload,
    JwtUtil,
+   NotFoundException,
    REDIS_KEY_PREFIX,
    RedisService,
    UnauthorizedException,
 } from '@common';
 import { AuthConfigService } from '@auth/config';
 import { AUTH_ERROR_CODES } from '@auth/constants/auth-error-codes';
+import type { UserSessionEntity } from '@auth/entities/session.entity';
+import type { ISessionRepository } from '@auth/repositories/session.repository.interface';
+import { SESSION_REPOSITORY } from '@auth/repositories/session.repository.interface';
 
 export interface TokenPair {
    accessToken: string;
@@ -20,27 +28,38 @@ export type RevokeTokenResult = IRevokeTokenResult;
 
 @Injectable()
 export class TokenService {
-   private readonly jwtSecret: string;
-   private readonly jwtRefreshSecret: string;
+   private readonly jwtPrivateKey: string;
+   private readonly jwtPublicKey: string;
+   private readonly jwtKeyId: string;
    private readonly accessTokenExpiresIn: number;
    private readonly refreshTokenExpiresIn: number;
 
    constructor(
       private readonly config: AuthConfigService,
       private readonly redisService: RedisService,
+      @Inject(SESSION_REPOSITORY)
+      private readonly sessionRepository: ISessionRepository,
    ) {
-      this.jwtSecret = this.config.jwtSecret;
-      this.jwtRefreshSecret = this.config.jwtRefreshSecret || this.config.jwtSecret;
+      this.jwtPrivateKey = this.config.jwtPrivateKey;
+      this.jwtPublicKey = this.config.jwtPublicKey;
+      this.jwtKeyId = this.config.jwtKeyId;
       this.accessTokenExpiresIn = this.config.jwtAccessTokenExpiresIn;
       this.refreshTokenExpiresIn = this.config.jwtRefreshTokenExpiresIn;
    }
 
-   async generateTokenPair(user: {
-      id: string;
-      email: string;
-      fullName?: string;
-      roles: string[];
-   }): Promise<TokenPair> {
+   getJwks(): IJwksResponse {
+      return JwtUtil.generateJwks(this.jwtPublicKey, this.jwtKeyId);
+   }
+
+   async generateTokenPair(
+      user: {
+         id: string;
+         email: string;
+         fullName?: string;
+         roles: string[];
+      },
+      deviceInfo?: IDeviceInfo,
+   ): Promise<TokenPair> {
       const accessTokenJti = uuidv7();
       const refreshTokenJti = uuidv7();
 
@@ -53,8 +72,9 @@ export class TokenService {
             tokenType: 'access',
             jti: accessTokenJti,
          },
-         this.jwtSecret,
+         this.jwtPrivateKey,
          this.accessTokenExpiresIn,
+         { keyid: this.jwtKeyId },
       );
 
       const refreshToken = JwtUtil.sign(
@@ -65,12 +85,14 @@ export class TokenService {
             tokenType: 'refresh',
             jti: refreshTokenJti,
          },
-         this.jwtRefreshSecret,
+         this.jwtPrivateKey,
          this.refreshTokenExpiresIn,
+         { keyid: this.jwtKeyId },
       );
 
       const refreshRedisKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${user.id}:${refreshTokenJti}`;
       const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${user.id}`;
+      const expiresAt = new Date(Date.now() + this.refreshTokenExpiresIn * 1000).toISOString();
 
       await Promise.all([
          this.redisService.setJson(
@@ -84,6 +106,119 @@ export class TokenService {
          ),
          this.redisService.sadd(sessionsKey, accessTokenJti, refreshTokenJti),
          this.redisService.expire(sessionsKey, this.refreshTokenExpiresIn),
+         this.sessionRepository.createSession({
+            userId: user.id,
+            refreshTokenJti,
+            deviceType: deviceInfo?.deviceType,
+            deviceName: deviceInfo?.deviceName,
+            browser: deviceInfo?.browser,
+            os: deviceInfo?.os,
+            userAgent: deviceInfo?.userAgent,
+            ipAddress: deviceInfo?.ipAddress,
+            city: deviceInfo?.city,
+            region: deviceInfo?.region,
+            country: deviceInfo?.country,
+            countryCode: deviceInfo?.countryCode,
+            expiresAt,
+         }),
+      ]);
+
+      return { accessToken, refreshToken };
+   }
+
+   async rotateTokenPair(
+      user: {
+         id: string;
+         email: string;
+         fullName?: string;
+         roles: string[];
+      },
+      oldRefreshTokenJti: string,
+      deviceInfo?: IDeviceInfo,
+      remainingTtl?: number,
+   ): Promise<TokenPair> {
+      const accessTokenJti = uuidv7();
+      const refreshTokenJti = uuidv7();
+
+      const accessToken = JwtUtil.sign(
+         {
+            sub: user.id,
+            email: user.email,
+            fullName: user.fullName,
+            roles: user.roles,
+            tokenType: 'access',
+            jti: accessTokenJti,
+         },
+         this.jwtPrivateKey,
+         this.accessTokenExpiresIn,
+         { keyid: this.jwtKeyId },
+      );
+
+      const refreshToken = JwtUtil.sign(
+         {
+            sub: user.id,
+            email: user.email,
+            roles: user.roles,
+            tokenType: 'refresh',
+            jti: refreshTokenJti,
+         },
+         this.jwtPrivateKey,
+         this.refreshTokenExpiresIn,
+         { keyid: this.jwtKeyId },
+      );
+
+      const refreshRedisKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${user.id}:${refreshTokenJti}`;
+      const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${user.id}`;
+      const expiresAt = new Date(Date.now() + this.refreshTokenExpiresIn * 1000).toISOString();
+      const nowIso = new Date().toISOString();
+
+      // Invalidate old refresh token in Redis
+      await this.invalidateRefreshToken(user.id, oldRefreshTokenJti, remainingTtl);
+
+      // Try updating existing session with new JTI and lastActiveAt; if not found, create new session
+      const existingSession = await this.sessionRepository.findByJti(oldRefreshTokenJti);
+      if (existingSession) {
+         await this.sessionRepository.updateSession(existingSession.id, {
+            refreshTokenJti,
+            lastActiveAt: nowIso,
+            expiresAt,
+            isRevoked: false,
+            ...(deviceInfo?.ipAddress ? { ipAddress: deviceInfo.ipAddress } : {}),
+            ...(deviceInfo?.city ? { city: deviceInfo.city } : {}),
+            ...(deviceInfo?.region ? { region: deviceInfo.region } : {}),
+            ...(deviceInfo?.country ? { country: deviceInfo.country } : {}),
+            ...(deviceInfo?.countryCode ? { countryCode: deviceInfo.countryCode } : {}),
+         });
+      } else {
+         await this.sessionRepository.createSession({
+            userId: user.id,
+            refreshTokenJti,
+            deviceType: deviceInfo?.deviceType,
+            deviceName: deviceInfo?.deviceName,
+            browser: deviceInfo?.browser,
+            os: deviceInfo?.os,
+            userAgent: deviceInfo?.userAgent,
+            ipAddress: deviceInfo?.ipAddress,
+            city: deviceInfo?.city,
+            region: deviceInfo?.region,
+            country: deviceInfo?.country,
+            countryCode: deviceInfo?.countryCode,
+            expiresAt,
+         });
+      }
+
+      await Promise.all([
+         this.redisService.setJson(
+            refreshRedisKey,
+            {
+               userId: user.id,
+               jti: refreshTokenJti,
+               createdAt: nowIso,
+            },
+            this.refreshTokenExpiresIn,
+         ),
+         this.redisService.sadd(sessionsKey, accessTokenJti, refreshTokenJti),
+         this.redisService.expire(sessionsKey, this.refreshTokenExpiresIn),
       ]);
 
       return { accessToken, refreshToken };
@@ -92,7 +227,7 @@ export class TokenService {
    async validateAccessToken(token: string): Promise<JwtPayload> {
       let payload: JwtPayload;
       try {
-         payload = JwtUtil.verify(token, this.jwtSecret);
+         payload = JwtUtil.verify(token, this.jwtPublicKey);
       } catch {
          throw new UnauthorizedException(AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED);
       }
@@ -126,7 +261,7 @@ export class TokenService {
 
       let payload: JwtPayload;
       try {
-         payload = JwtUtil.verify(token, this.jwtRefreshSecret);
+         payload = JwtUtil.verify(token, this.jwtPublicKey);
       } catch {
          throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_INVALID);
       }
@@ -173,6 +308,7 @@ export class TokenService {
          this.redisService.del(activeKey),
          this.redisService.srem(sessionsKey, jti),
          this.redisService.set(revokedKey, 'revoked', ttl),
+         this.sessionRepository.updateSessionByJti(jti, { isRevoked: true }),
       ]);
    }
 
@@ -188,6 +324,7 @@ export class TokenService {
       const delPromises: Promise<unknown>[] = [
          this.redisService.del(sessionsKey),
          this.redisService.set(userRevokedAtKey, String(nowInSeconds), this.refreshTokenExpiresIn),
+         this.sessionRepository.revokeAllSessions(userId),
       ];
 
       for (const jti of activeJtis) {
@@ -208,6 +345,71 @@ export class TokenService {
       await this.revokeAllUserTokens(userId);
    }
 
+   async getActiveSessions(userId: string, currentJti?: string): Promise<IUserSessionInfo[]> {
+      const sessions: UserSessionEntity[] = (await this.sessionRepository.findActiveSessionsByUserId(userId)) || [];
+      return sessions.map((s) => ({
+         id: s.id,
+         deviceType: s.deviceType,
+         deviceName: s.deviceName,
+         browser: s.browser,
+         os: s.os,
+         ipAddress: s.ipAddress,
+         city: s.city,
+         region: s.region,
+         country: s.country,
+         countryCode: s.countryCode,
+         userAgent: s.userAgent,
+         isCurrent: Boolean(currentJti && s.refreshTokenJti === currentJti),
+         lastActiveAt: s.lastActiveAt,
+         expiresAt: s.expiresAt,
+         createdAt: s.createdAt,
+      }));
+   }
+
+   async revokeSession(userId: string, sessionId: string): Promise<IRevokeSessionResult> {
+      const session: UserSessionEntity | null = await this.sessionRepository.findById(sessionId);
+      if (!session || session.userId !== userId) {
+         throw new NotFoundException(AUTH_ERROR_CODES.SESSION_NOT_FOUND);
+      }
+
+      if (session.isRevoked) {
+         return { success: true, message: 'Session already revoked' };
+      }
+
+      await this.sessionRepository.revokeSession(sessionId, userId);
+      await this.invalidateRefreshToken(userId, session.refreshTokenJti);
+
+      return {
+         success: true,
+         message: 'Session revoked successfully',
+      };
+   }
+
+   async revokeOtherSessions(userId: string, currentJti: string): Promise<IRevokeSessionResult> {
+      const revokedJtisResult: unknown = await this.sessionRepository.revokeOtherSessions(userId, currentJti);
+      const revokedJtis: string[] = Array.isArray(revokedJtisResult) ? (revokedJtisResult as string[]) : [];
+
+      const promises: Promise<unknown>[] = [];
+      for (const jti of revokedJtis) {
+         const activeKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${userId}:${jti}`;
+         const revokedKey = `${REDIS_KEY_PREFIX.REVOKED_TOKEN}${jti}`;
+         const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${userId}`;
+         promises.push(
+            this.redisService.del(activeKey),
+            this.redisService.srem(sessionsKey, jti),
+            this.redisService.set(revokedKey, 'revoked', this.refreshTokenExpiresIn),
+         );
+      }
+
+      await Promise.all(promises);
+
+      return {
+         success: true,
+         message: 'All other sessions revoked successfully',
+         revokedCount: revokedJtis.length,
+      };
+   }
+
    async revokeToken(token: string): Promise<IRevokeTokenResult> {
       if (!token) {
          return { success: true, message: 'No token provided to revoke' };
@@ -215,16 +417,12 @@ export class TokenService {
 
       let payload: JwtPayload;
       try {
-         payload = JwtUtil.verify(token, this.jwtRefreshSecret);
+         payload = JwtUtil.verify(token, this.jwtPublicKey);
       } catch {
-         try {
-            payload = JwtUtil.verify(token, this.jwtSecret);
-         } catch {
-            return {
-               success: false,
-               message: 'Invalid or expired token',
-            };
-         }
+         return {
+            success: false,
+            message: 'Invalid or expired token',
+         };
       }
 
       if (payload.jti && payload.sub) {

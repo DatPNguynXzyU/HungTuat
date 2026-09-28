@@ -1,10 +1,17 @@
 import { z } from 'zod';
+import { DEFAULT_JWT_ALGORITHM, DEFAULT_JWT_KEY_ID } from '@common/constants/jwt.constant';
 
 export const sharedEnvSchema = z.object({
    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
    SERVICE_NAME: z.string().default('omni-service'),
    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
-   JWT_SECRET: z.string().default('default-super-secret-key'),
+   JWT_PUBLIC_KEY_PATH: z.string().optional(),
+   JWT_PRIVATE_KEY_PATH: z.string().optional(),
+   JWT_PUBLIC_KEY: z.string().optional(),
+   JWT_PRIVATE_KEY: z.string().optional(),
+   JWT_KEY_ID: z.string().default(DEFAULT_JWT_KEY_ID),
+   JWT_ALGORITHM: z.string().default(DEFAULT_JWT_ALGORITHM),
+   JWT_SECRET: z.string().optional(),
    JWT_REFRESH_SECRET: z.string().optional(),
    ARGON2_SECRET: z.string().default('default-argon2-secret-key'),
    ARGON2_SALT: z.string().default('default-argon2-salt-key'),

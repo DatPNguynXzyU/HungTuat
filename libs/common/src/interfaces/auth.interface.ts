@@ -10,6 +10,37 @@ export interface IAuthUser {
    updatedAt?: string;
 }
 
+export interface IDeviceInfo {
+   deviceType?: string;
+   deviceName?: string;
+   browser?: string;
+   os?: string;
+   userAgent?: string;
+   ipAddress?: string;
+   city?: string;
+   region?: string;
+   country?: string;
+   countryCode?: string;
+}
+
+export interface IUserSessionInfo {
+   id: string;
+   deviceType?: string | null;
+   deviceName?: string | null;
+   browser?: string | null;
+   os?: string | null;
+   ipAddress?: string | null;
+   city?: string | null;
+   region?: string | null;
+   country?: string | null;
+   countryCode?: string | null;
+   userAgent?: string | null;
+   isCurrent: boolean;
+   lastActiveAt: string;
+   expiresAt: string;
+   createdAt: string;
+}
+
 export interface IAuthResult {
    user: IAuthUser;
    accessToken: string;
@@ -24,4 +55,24 @@ export interface IValidateTokenResult {
 export interface IRevokeTokenResult {
    success: boolean;
    message: string;
+}
+
+export interface IRevokeSessionResult {
+   success: boolean;
+   message: string;
+   revokedCount?: number;
+}
+
+export interface IJsonWebKey {
+   kty: string;
+   use?: string;
+   alg?: string;
+   kid?: string;
+   n?: string;
+   e?: string;
+   [key: string]: unknown;
+}
+
+export interface IJwksResponse {
+   keys: IJsonWebKey[];
 }

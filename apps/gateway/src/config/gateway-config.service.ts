@@ -18,6 +18,10 @@ export class GatewayConfigService extends CommonConfigService {
       return this.configService.get('GLOBAL_PREFIX', { infer: true });
    }
 
+   override get jwtPublicKeyPath(): string {
+      return this.configService.get('JWT_PUBLIC_KEY_PATH', { infer: true }) || 'apps/gateway/keys/public.key';
+   }
+
    get corsOrigins(): string[] {
       const raw = this.configService.get('CORS_ORIGINS', { infer: true });
       if (!raw) {

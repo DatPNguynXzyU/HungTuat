@@ -20,6 +20,7 @@ lerna-debug.log*
 .env.*
 !.env.example
 !.env.sample
+keys/
 
 # Testing & Coverage
 coverage/

@@ -5,7 +5,15 @@ import { AuthService } from '@auth/auth.service';
 import { AuthConfigModule } from '@auth/config';
 import { OutboxModule } from '@auth/outbox';
 import { PrismaModule } from '@auth/prisma';
-import { AUTH_REPOSITORY, AuthRepository } from '@auth/repositories';
+import {
+   AUDIT_LOG_REPOSITORY,
+   AuditLogRepository,
+   AUTH_REPOSITORY,
+   AuthRepository,
+   SESSION_REPOSITORY,
+   SessionRepository,
+} from '@auth/repositories';
+import { AuditLogService } from '@auth/services/audit-log.service';
 import { TokenService } from '@auth/services/token.service';
 
 @Module({
@@ -23,12 +31,34 @@ import { TokenService } from '@auth/services/token.service';
    providers: [
       AuthService,
       TokenService,
+      AuditLogService,
       {
          provide: AUTH_REPOSITORY,
          useClass: AuthRepository,
       },
       AuthRepository,
+      {
+         provide: SESSION_REPOSITORY,
+         useClass: SessionRepository,
+      },
+      SessionRepository,
+      {
+         provide: AUDIT_LOG_REPOSITORY,
+         useClass: AuditLogRepository,
+      },
+      AuditLogRepository,
    ],
-   exports: [AuthService, TokenService, AUTH_REPOSITORY, AuthRepository, OutboxModule],
+   exports: [
+      AuthService,
+      TokenService,
+      AuditLogService,
+      AUTH_REPOSITORY,
+      AuthRepository,
+      SESSION_REPOSITORY,
+      SessionRepository,
+      AUDIT_LOG_REPOSITORY,
+      AuditLogRepository,
+      OutboxModule,
+   ],
 })
 export class AuthModule {}

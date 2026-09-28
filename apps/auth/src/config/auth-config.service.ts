@@ -32,4 +32,12 @@ export class AuthConfigService extends CommonConfigService {
    get jwtExpiresIn(): number {
       return this.configService.get('JWT_EXPIRES_IN', { infer: true });
    }
+
+   override get jwtPrivateKeyPath(): string {
+      return this.configService.get('JWT_PRIVATE_KEY_PATH', { infer: true }) || 'apps/auth/keys/private.key';
+   }
+
+   override get jwtPublicKeyPath(): string {
+      return this.configService.get('JWT_PUBLIC_KEY_PATH', { infer: true }) || 'apps/auth/keys/public.key';
+   }
 }

@@ -21,6 +21,14 @@ export const AUTH_PATTERNS = {
    CHANGE_PASSWORD: 'auth.change_password',
    VALIDATE_TOKEN: 'auth.validate_token',
    GET_ROLE_PERMISSIONS: 'auth.get_role_permissions',
+   GET_JWKS: 'auth.get_jwks',
+   GET_SESSIONS: 'auth.get_sessions',
+   REVOKE_SESSION: 'auth.revoke_session',
+   REVOKE_OTHER_SESSIONS: 'auth.revoke_other_sessions',
+   GET_AUDIT_LOGS: 'auth.get_audit_logs',
+   GET_AUDIT_LOG_BY_ID: 'auth.get_audit_log_by_id',
+   GET_USER_AUDIT_LOGS: 'auth.get_user_audit_logs',
+   CREATE_AUDIT_LOG: 'auth.create_audit_log',
 } as const;
 
 export const AUTH_SECURITY = {

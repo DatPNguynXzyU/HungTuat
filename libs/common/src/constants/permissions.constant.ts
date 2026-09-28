@@ -6,6 +6,9 @@ export const PERMISSIONS = {
    USERS_DELETE: 'USERS:DELETE',
    USERS_BAN: 'USERS:BAN',
 
+   // Audit Logs Management (SOC 2, ISO 27001, GDPR compliance)
+   AUDIT_LOGS_READ: 'AUDIT_LOGS:READ',
+
    // RBAC Management
    ROLES_READ: 'ROLES:READ',
    ROLES_CREATE: 'ROLES:CREATE',

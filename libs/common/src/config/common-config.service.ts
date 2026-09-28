@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SharedEnvConfig } from '@common/config/shared-env.schema';
+import {
+   DEFAULT_DEV_RSA_PRIVATE_KEY,
+   DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_JWT_KEY_ID,
+} from '@common/constants/jwt.constant';
+import { JwtUtil } from '@common/utils/jwt.util';
 
 @Injectable()
 export class CommonConfigService {
@@ -30,12 +36,46 @@ export class CommonConfigService {
       return this.configService.get('LOG_LEVEL', { infer: true });
    }
 
+   get jwtPublicKeyPath(): string | undefined {
+      return this.configService.get('JWT_PUBLIC_KEY_PATH', { infer: true });
+   }
+
+   get jwtPrivateKeyPath(): string | undefined {
+      return this.configService.get('JWT_PRIVATE_KEY_PATH', { infer: true });
+   }
+
+   get jwtPublicKey(): string {
+      const fromFile = this.jwtPublicKeyPath ? JwtUtil.readKeyFile(this.jwtPublicKeyPath) : null;
+      if (fromFile) {
+         return fromFile;
+      }
+      const rawKey = this.configService.get('JWT_PUBLIC_KEY', { infer: true });
+      return (rawKey ? JwtUtil.formatPemKey(rawKey) : '') || DEFAULT_DEV_RSA_PUBLIC_KEY;
+   }
+
+   get jwtPrivateKey(): string {
+      const fromFile = this.jwtPrivateKeyPath ? JwtUtil.readKeyFile(this.jwtPrivateKeyPath) : null;
+      if (fromFile) {
+         return fromFile;
+      }
+      const rawKey = this.configService.get('JWT_PRIVATE_KEY', { infer: true });
+      return (rawKey ? JwtUtil.formatPemKey(rawKey) : '') || DEFAULT_DEV_RSA_PRIVATE_KEY;
+   }
+
+   get jwtKeyId(): string {
+      return this.configService.get('JWT_KEY_ID', { infer: true }) || DEFAULT_JWT_KEY_ID;
+   }
+
+   get jwtAlgorithm(): string {
+      return this.configService.get('JWT_ALGORITHM', { infer: true }) || 'RS256';
+   }
+
    get jwtSecret(): string {
-      return this.configService.get('JWT_SECRET', { infer: true });
+      return this.jwtPublicKey;
    }
 
    get jwtRefreshSecret(): string {
-      return this.configService.get('JWT_REFRESH_SECRET', { infer: true }) || this.jwtSecret;
+      return this.jwtPublicKey;
    }
 
    get argon2Secret(): string | undefined {

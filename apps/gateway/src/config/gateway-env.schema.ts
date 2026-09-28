@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { sharedEnvSchema } from '@common';
+import { DEFAULT_JWT_KEY_ID, sharedEnvSchema } from '@common';
 
 export const gatewayEnvSchema = sharedEnvSchema.extend({
    PORT: z.coerce.number().int().positive().default(8080),
@@ -12,6 +12,8 @@ export const gatewayEnvSchema = sharedEnvSchema.extend({
    THROTTLE_MEDIUM_LIMIT: z.coerce.number().int().positive().default(50),
    THROTTLE_LONG_TTL: z.coerce.number().int().positive().default(60000),
    THROTTLE_LONG_LIMIT: z.coerce.number().int().positive().default(100),
+   JWT_PUBLIC_KEY_PATH: z.string().default('apps/gateway/keys/public.key'),
+   JWT_KEY_ID: z.string().default(DEFAULT_JWT_KEY_ID),
 });
 
 export type GatewayEnvConfig = z.infer<typeof gatewayEnvSchema>;

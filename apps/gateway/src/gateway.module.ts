@@ -12,6 +12,7 @@ import {
    SERVICES,
 } from '@common';
 import { GatewayConfigModule, GatewayConfigService } from '@/config';
+import { AuditLogsModule } from '@/modules/audit-logs/audit-logs.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { HealthModule } from '@/modules/health/health.module';
 import { UsersModule } from '@/modules/users/users.module';
@@ -48,6 +49,7 @@ import { UsersModule } from '@/modules/users/users.module';
       HealthModule,
       AuthModule,
       UsersModule,
+      AuditLogsModule,
    ],
    controllers: [],
    providers: [

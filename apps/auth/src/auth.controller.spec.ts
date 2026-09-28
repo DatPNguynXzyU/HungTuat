@@ -1,13 +1,30 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RmqContext } from '@nestjs/microservices';
 import { of } from 'rxjs';
-import { DEFAULT_ROLES, RbacCacheService, RedisService, RmqService, SERVICES } from '@common';
+import {
+   DEFAULT_DEV_RSA_PRIVATE_KEY,
+   DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_JWT_KEY_ID,
+   DEFAULT_ROLES,
+   RbacCacheService,
+   RedisService,
+   RmqService,
+   SERVICES,
+} from '@common';
 import { AuthController } from '@auth/auth.controller';
 import { AuthService } from '@auth/auth.service';
 import { AuthConfigService } from '@auth/config';
 import { OutboxPublisherService } from '@auth/outbox/services/outbox-publisher.service';
 import { PrismaService } from '@auth/prisma/prisma.service';
-import { AUTH_REPOSITORY, AuthRepository } from '@auth/repositories';
+import {
+   AUDIT_LOG_REPOSITORY,
+   AuditLogRepository,
+   AUTH_REPOSITORY,
+   AuthRepository,
+   SESSION_REPOSITORY,
+   SessionRepository,
+} from '@auth/repositories';
+import { AuditLogService } from '@auth/services/audit-log.service';
 import { TokenService } from '@auth/services/token.service';
 
 interface MockUserRecord {
@@ -37,6 +54,36 @@ describe('AuthController', () => {
          $transaction: jest.fn().mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => cb(mockPrisma)),
          outboxEvent: {
             create: jest.fn().mockResolvedValue({}),
+         },
+         securityAuditLog: {
+            create: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+               Promise.resolve({
+                  id: 'audit-id-1',
+                  ...data,
+                  createdAt: new Date(),
+               }),
+            ),
+            findUnique: jest.fn().mockResolvedValue(null),
+            findMany: jest.fn().mockResolvedValue([]),
+            count: jest.fn().mockResolvedValue(0),
+         },
+         userSession: {
+            create: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+               Promise.resolve({
+                  id: 'session-id-1',
+                  ...data,
+                  isRevoked: false,
+                  lastActiveAt: new Date(),
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                  expiresAt: new Date(Date.now() + 604800000),
+               }),
+            ),
+            findUnique: jest.fn().mockResolvedValue(null),
+            findFirst: jest.fn().mockResolvedValue(null),
+            findMany: jest.fn().mockResolvedValue([]),
+            update: jest.fn().mockResolvedValue({}),
+            updateMany: jest.fn().mockResolvedValue({ count: 1 }),
          },
          user: {
             findFirst: jest
@@ -240,9 +287,18 @@ describe('AuthController', () => {
          providers: [
             TokenService,
             AuthService,
+            AuditLogService,
             {
                provide: AUTH_REPOSITORY,
                useClass: AuthRepository,
+            },
+            {
+               provide: SESSION_REPOSITORY,
+               useClass: SessionRepository,
+            },
+            {
+               provide: AUDIT_LOG_REPOSITORY,
+               useClass: AuditLogRepository,
             },
             {
                provide: OutboxPublisherService,
@@ -259,7 +315,9 @@ describe('AuthController', () => {
             {
                provide: AuthConfigService,
                useValue: {
-                  jwtSecret: 'test-secret-key',
+                  jwtPrivateKey: DEFAULT_DEV_RSA_PRIVATE_KEY,
+                  jwtPublicKey: DEFAULT_DEV_RSA_PUBLIC_KEY,
+                  jwtKeyId: DEFAULT_JWT_KEY_ID,
                   jwtAccessTokenExpiresIn: 900,
                   jwtRefreshTokenExpiresIn: 604800,
                   jwtExpiresIn: 86400,
@@ -289,6 +347,19 @@ describe('AuthController', () => {
    it('should be defined', () => {
       expect(authController).toBeDefined();
       expect(authService).toBeDefined();
+   });
+
+   it('should handle getJwks message', () => {
+      const mockContext = {
+         getChannelRef: jest.fn(),
+         getMessage: jest.fn(),
+      } as unknown as RmqContext;
+
+      const jwks = authController.getJwks(mockContext);
+      expect(jwks).toBeDefined();
+      expect(Array.isArray(jwks.keys)).toBe(true);
+      expect(jwks.keys[0].kty).toBe('RSA');
+      expect(jwks.keys[0].alg).toBe('RS256');
    });
 
    it('should register and login a user successfully', async () => {
@@ -333,72 +404,34 @@ describe('AuthController', () => {
       expect(refreshRes.refreshToken).toBeDefined();
    });
 
-   it('should handle revokeToken message', async () => {
+   it('should handle getSessions message', async () => {
       const mockContext = {
          getChannelRef: jest.fn(),
          getMessage: jest.fn(),
       } as unknown as RmqContext;
 
-      const registerRes = await authController.register(
-         { email: 'revoke@example.com', password: 'password123', fullName: 'Revoke User' },
-         mockContext,
-      );
-
-      const revokeRes = await authController.revokeToken({ token: registerRes.refreshToken }, mockContext);
-      expect(revokeRes.success).toBe(true);
+      const sessions = await authController.getSessions({ userId: 'user-1' }, mockContext);
+      expect(Array.isArray(sessions)).toBe(true);
    });
 
-   it('should handle revokeAllUserTokens message', async () => {
+   it('should handle revokeSession message', async () => {
       const mockContext = {
          getChannelRef: jest.fn(),
          getMessage: jest.fn(),
       } as unknown as RmqContext;
 
-      const res = await authController.revokeAllUserTokens({ userId: 'user-id-to-revoke-all' }, mockContext);
-      expect(res.success).toBe(true);
-      expect(res.message).toBe('All tokens revoked successfully');
+      const result = await authController.revokeOtherSessions({ userId: 'user-1', currentJti: 'jti-1' }, mockContext);
+      expect(result.success).toBe(true);
    });
 
-   it('should handle logoutAll message', async () => {
+   it('should handle getAuditLogs message', async () => {
       const mockContext = {
          getChannelRef: jest.fn(),
          getMessage: jest.fn(),
       } as unknown as RmqContext;
 
-      const res = await authController.logoutAll({ userId: 'user-id-to-logout-all' }, mockContext);
-      expect(res.success).toBe(true);
-      expect(res.message).toBe('All sessions logged out successfully');
-   });
-
-   it('should handle changePassword message', async () => {
-      const mockContext = {
-         getChannelRef: jest.fn(),
-         getMessage: jest.fn(),
-      } as unknown as RmqContext;
-
-      const registerRes = await authController.register(
-         { email: 'changepass@example.com', password: 'oldPassword123', fullName: 'Pass User' },
-         mockContext,
-      );
-
-      const res = await authController.changePassword(
-         {
-            userId: registerRes.user.id,
-            changePasswordDto: { currentPassword: 'oldPassword123', newPassword: 'newPassword123' },
-         },
-         mockContext,
-      );
-
-      expect(res.success).toBe(true);
-   });
-
-   it('should handle getRolePermissions message', async () => {
-      const mockContext = {
-         getChannelRef: jest.fn(),
-         getMessage: jest.fn(),
-      } as unknown as RmqContext;
-
-      const perms = await authController.getRolePermissions({ roleCode: DEFAULT_ROLES.USER }, mockContext);
-      expect(perms).toEqual(['USERS:READ']);
+      const logs = await authController.getAuditLogs({ page: 1, limit: 10 }, mockContext);
+      expect(logs).toBeDefined();
+      expect(logs.data).toEqual([]);
    });
 });

@@ -43,7 +43,7 @@ export class JwtAuthGuard implements CanActivate {
       }
 
       try {
-         const payload = JwtUtil.verify(token, this.config.jwtSecret);
+         const payload = JwtUtil.verify(token, this.config.jwtPublicKey);
          if (payload.tokenType && payload.tokenType !== 'access') {
             throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
                params: { reason: 'invalid_token_type' },

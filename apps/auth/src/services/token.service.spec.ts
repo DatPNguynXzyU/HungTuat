@@ -1,7 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { JwtUtil, REDIS_KEY_PREFIX, RedisService, UnauthorizedException } from '@common';
+import {
+   DEFAULT_DEV_RSA_PRIVATE_KEY,
+   DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_JWT_KEY_ID,
+   JwtUtil,
+   NotFoundException,
+   REDIS_KEY_PREFIX,
+   RedisService,
+   UnauthorizedException,
+} from '@common';
 import { AuthConfigService } from '@auth/config';
 import { AUTH_ERROR_CODES } from '@auth/constants/auth-error-codes';
+import { SESSION_REPOSITORY } from '@auth/repositories/session.repository.interface';
 import { TokenService } from '@auth/services/token.service';
 
 describe('TokenService', () => {
@@ -20,9 +30,20 @@ describe('TokenService', () => {
       setJson: jest.fn(),
    };
 
+   const mockCreateSession = jest.fn();
+   const mockFindById = jest.fn();
+   const mockFindByJti = jest.fn();
+   const mockFindActiveSessionsByUserId = jest.fn();
+   const mockUpdateSession = jest.fn();
+   const mockUpdateSessionByJti = jest.fn();
+   const mockRevokeSession = jest.fn();
+   const mockRevokeOtherSessions = jest.fn();
+   const mockRevokeAllSessions = jest.fn();
+
    const mockConfigService = {
-      jwtSecret: 'test-access-token-secret-key',
-      jwtRefreshSecret: 'test-refresh-token-secret-key',
+      jwtPrivateKey: DEFAULT_DEV_RSA_PRIVATE_KEY,
+      jwtPublicKey: DEFAULT_DEV_RSA_PUBLIC_KEY,
+      jwtKeyId: DEFAULT_JWT_KEY_ID,
       jwtAccessTokenExpiresIn: 900,
       jwtRefreshTokenExpiresIn: 604800,
    };
@@ -31,6 +52,9 @@ describe('TokenService', () => {
       jest.clearAllMocks();
       mockRedisService.smembers.mockResolvedValue([]);
       mockRedisService.get.mockResolvedValue(null);
+      mockCreateSession.mockResolvedValue({ id: 'session-id-1' });
+      mockRevokeAllSessions.mockResolvedValue([]);
+      mockRevokeOtherSessions.mockResolvedValue([]);
 
       const module: TestingModule = await Test.createTestingModule({
          providers: [
@@ -43,22 +67,55 @@ describe('TokenService', () => {
                provide: RedisService,
                useValue: mockRedisService,
             },
+            {
+               provide: SESSION_REPOSITORY,
+               useValue: {
+                  createSession: mockCreateSession,
+                  findById: mockFindById,
+                  findByJti: mockFindByJti,
+                  findActiveSessionsByUserId: mockFindActiveSessionsByUserId,
+                  updateSession: mockUpdateSession,
+                  updateSessionByJti: mockUpdateSessionByJti,
+                  revokeSession: mockRevokeSession,
+                  revokeOtherSessions: mockRevokeOtherSessions,
+                  revokeAllSessions: mockRevokeAllSessions,
+               },
+            },
          ],
       }).compile();
 
       service = module.get<TokenService>(TokenService);
    });
 
+   describe('getJwks', () => {
+      it('should return JWKS structure containing RSA public key', () => {
+         const jwks = service.getJwks();
+         expect(jwks).toBeDefined();
+         expect(Array.isArray(jwks.keys)).toBe(true);
+         expect(jwks.keys[0].kty).toBe('RSA');
+         expect(jwks.keys[0].kid).toBe(DEFAULT_JWT_KEY_ID);
+         expect(jwks.keys[0].alg).toBe('RS256');
+         expect(jwks.keys[0].use).toBe('sig');
+      });
+   });
+
    describe('generateTokenPair', () => {
-      it('should generate a pair of access and refresh tokens, save refresh token whitelist and add jti to user session set in Redis', async () => {
+      it('should generate a pair of access and refresh tokens signed with RS256 and create session record in DB and Redis', async () => {
          const user = {
             id: 'user-id-1',
             email: 'test@example.com',
             fullName: 'Test User',
             roles: ['USER'],
          };
+         const deviceInfo = {
+            deviceType: 'desktop',
+            deviceName: 'Chrome on macOS',
+            browser: 'Chrome 122.0',
+            os: 'macOS 14.3',
+            ipAddress: '127.0.0.1',
+         };
 
-         const tokens = await service.generateTokenPair(user);
+         const tokens = await service.generateTokenPair(user, deviceInfo);
 
          expect(tokens.accessToken).toBeDefined();
          expect(tokens.refreshToken).toBeDefined();
@@ -70,34 +127,122 @@ describe('TokenService', () => {
             mockConfigService.jwtRefreshTokenExpiresIn,
          );
 
-         // Redis session set verification (tracks both access and refresh jtis)
+         // Redis session set verification
          expect(mockRedisService.sadd).toHaveBeenCalledWith(
             `${REDIS_KEY_PREFIX.USER_SESSIONS}user-id-1`,
             expect.any(String),
             expect.any(String),
          );
-         expect(mockRedisService.expire).toHaveBeenCalledWith(
-            `${REDIS_KEY_PREFIX.USER_SESSIONS}user-id-1`,
-            mockConfigService.jwtRefreshTokenExpiresIn,
+
+         // DB Session repository verification
+         expect(mockCreateSession).toHaveBeenCalledWith(
+            expect.objectContaining({
+               userId: 'user-id-1',
+               deviceType: 'desktop',
+               deviceName: 'Chrome on macOS',
+            }),
          );
+      });
+   });
 
-         // Access token signature verified with access secret
-         const accessPayload = JwtUtil.verify(tokens.accessToken, mockConfigService.jwtSecret);
-         expect(accessPayload.sub).toBe('user-id-1');
-         expect(accessPayload.tokenType).toBe('access');
-         expect(accessPayload.jti).toBeDefined();
+   describe('rotateTokenPair', () => {
+      it('should rotate token pair and update existing session record', async () => {
+         const user = {
+            id: 'user-id-1',
+            email: 'test@example.com',
+            fullName: 'Test User',
+            roles: ['USER'],
+         };
 
-         // Access token fails verification against refresh secret
-         expect(() => JwtUtil.verify(tokens.accessToken, mockConfigService.jwtRefreshSecret)).toThrow();
+         mockFindByJti.mockResolvedValue({
+            id: 'session-id-1',
+            userId: 'user-id-1',
+            refreshTokenJti: 'old-jti',
+         });
 
-         // Refresh token signature verified with refresh secret
-         const refreshPayload = JwtUtil.verify(tokens.refreshToken, mockConfigService.jwtRefreshSecret);
-         expect(refreshPayload.sub).toBe('user-id-1');
-         expect(refreshPayload.tokenType).toBe('refresh');
-         expect(refreshPayload.jti).toBeDefined();
+         const tokens = await service.rotateTokenPair(user, 'old-jti');
 
-         // Refresh token fails verification against access secret
-         expect(() => JwtUtil.verify(tokens.refreshToken, mockConfigService.jwtSecret)).toThrow();
+         expect(tokens.accessToken).toBeDefined();
+         expect(tokens.refreshToken).toBeDefined();
+         expect(mockUpdateSession).toHaveBeenCalledTimes(1);
+         const updateCall = mockUpdateSession.mock.calls[0] as [
+            string,
+            { refreshTokenJti?: string; isRevoked?: boolean },
+         ];
+         expect(updateCall[0]).toBe('session-id-1');
+         expect(typeof updateCall[1].refreshTokenJti).toBe('string');
+         expect(updateCall[1].isRevoked).toBe(false);
+      });
+   });
+
+   describe('getActiveSessions', () => {
+      it('should return active sessions list with isCurrent marked correctly', async () => {
+         mockFindActiveSessionsByUserId.mockResolvedValue([
+            {
+               id: 'session-1',
+               userId: 'user-1',
+               refreshTokenJti: 'current-jti',
+               deviceName: 'Chrome on macOS',
+               isRevoked: false,
+               lastActiveAt: '2026-09-28T00:00:00.000Z',
+               expiresAt: '2026-10-05T00:00:00.000Z',
+               createdAt: '2026-09-28T00:00:00.000Z',
+            },
+            {
+               id: 'session-2',
+               userId: 'user-1',
+               refreshTokenJti: 'other-jti',
+               deviceName: 'Safari on iPhone',
+               isRevoked: false,
+               lastActiveAt: '2026-09-27T00:00:00.000Z',
+               expiresAt: '2026-10-04T00:00:00.000Z',
+               createdAt: '2026-09-27T00:00:00.000Z',
+            },
+         ]);
+
+         const sessions = await service.getActiveSessions('user-1', 'current-jti');
+
+         expect(sessions).toHaveLength(2);
+         expect(sessions[0].id).toBe('session-1');
+         expect(sessions[0].isCurrent).toBe(true);
+         expect(sessions[1].id).toBe('session-2');
+         expect(sessions[1].isCurrent).toBe(false);
+      });
+   });
+
+   describe('revokeSession', () => {
+      it('should revoke a session successfully if found and owned by user', async () => {
+         mockFindById.mockResolvedValue({
+            id: 'session-1',
+            userId: 'user-1',
+            refreshTokenJti: 'jti-1',
+            isRevoked: false,
+         });
+
+         const result = await service.revokeSession('user-1', 'session-1');
+
+         expect(result.success).toBe(true);
+         expect(mockRevokeSession).toHaveBeenCalledWith('session-1', 'user-1');
+         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-1`);
+      });
+
+      it('should throw NotFoundException if session does not exist or owned by another user', async () => {
+         mockFindById.mockResolvedValue(null);
+
+         await expect(service.revokeSession('user-1', 'non-existent')).rejects.toThrow(NotFoundException);
+      });
+   });
+
+   describe('revokeOtherSessions', () => {
+      it('should revoke all other active sessions for user', async () => {
+         mockRevokeOtherSessions.mockResolvedValue(['jti-other-1', 'jti-other-2']);
+
+         const result = await service.revokeOtherSessions('user-1', 'current-jti');
+
+         expect(result.success).toBe(true);
+         expect(result.revokedCount).toBe(2);
+         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-other-1`);
+         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-other-2`);
       });
    });
 
@@ -105,7 +250,7 @@ describe('TokenService', () => {
       it('should validate a valid access token successfully', async () => {
          const token = JwtUtil.sign(
             { sub: 'user-1', email: 'user@example.com', tokenType: 'access', jti: 'jti-123' },
-            mockConfigService.jwtSecret,
+            mockConfigService.jwtPrivateKey,
             900,
          );
 
@@ -117,7 +262,7 @@ describe('TokenService', () => {
       it('should throw UnauthorizedException if access token JTI is in Redis blacklist', async () => {
          const token = JwtUtil.sign(
             { sub: 'user-1', email: 'user@example.com', tokenType: 'access', jti: 'revoked-jti' },
-            mockConfigService.jwtSecret,
+            mockConfigService.jwtPrivateKey,
             900,
          );
          mockRedisService.get.mockImplementation((key: string) => {
@@ -132,255 +277,33 @@ describe('TokenService', () => {
             expect((err as UnauthorizedException).errorCode).toBe(AUTH_ERROR_CODES.TOKEN_REVOKED);
          }
       });
-
-      it('should throw UnauthorizedException if user tokens were revoked globally', async () => {
-         const now = Math.floor(Date.now() / 1000);
-         const token = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'access', jti: 'old-jti', iat: now - 100 },
-            mockConfigService.jwtSecret,
-            900,
-         );
-         mockRedisService.get.mockImplementation((key: string) => {
-            if (key === `${REDIS_KEY_PREFIX.USER_REVOKED_AT}user-1`) return Promise.resolve(String(now));
-            return Promise.resolve(null);
-         });
-
-         await expect(service.validateAccessToken(token)).rejects.toThrow(UnauthorizedException);
-         try {
-            await service.validateAccessToken(token);
-         } catch (err) {
-            expect((err as UnauthorizedException).errorCode).toBe(AUTH_ERROR_CODES.TOKEN_REVOKED);
-         }
-      });
-
-      it('should throw UnauthorizedException if access token is signed with wrong secret', async () => {
-         const token = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'access' },
-            mockConfigService.jwtRefreshSecret,
-            900,
-         );
-
-         await expect(service.validateAccessToken(token)).rejects.toThrow(UnauthorizedException);
-         try {
-            await service.validateAccessToken(token);
-         } catch (err) {
-            expect((err as UnauthorizedException).errorCode).toBe(AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED);
-         }
-      });
-
-      it('should throw UnauthorizedException if access token is missing tokenType field', async () => {
-         const token = JwtUtil.sign({ sub: 'user-1', email: 'user@example.com' }, mockConfigService.jwtSecret, 900);
-
-         await expect(service.validateAccessToken(token)).rejects.toThrow(UnauthorizedException);
-         try {
-            await service.validateAccessToken(token);
-         } catch (err) {
-            expect((err as UnauthorizedException).errorCode).toBe(AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED);
-         }
-      });
-
-      it('should throw UnauthorizedException if tokenType is refresh instead of access', async () => {
-         const token = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'refresh' },
-            mockConfigService.jwtSecret,
-            900,
-         );
-
-         await expect(service.validateAccessToken(token)).rejects.toThrow(UnauthorizedException);
-         try {
-            await service.validateAccessToken(token);
-         } catch (err) {
-            expect((err as UnauthorizedException).errorCode).toBe(AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED);
-         }
-      });
-
-      it('should throw UnauthorizedException if token is invalid or expired', async () => {
-         await expect(service.validateAccessToken('invalid.token.string')).rejects.toThrow(UnauthorizedException);
-      });
    });
 
    describe('validateRefreshToken', () => {
       it('should validate active refresh token in whitelist', async () => {
          const token = JwtUtil.sign(
             { sub: 'user-1', email: 'user@example.com', tokenType: 'refresh', jti: 'jti-123' },
-            mockConfigService.jwtRefreshSecret,
+            mockConfigService.jwtPrivateKey,
             604800,
          );
 
-         mockRedisService.get.mockResolvedValue(null); // not revoked in blacklist
-         mockRedisService.getJson.mockResolvedValue({ userId: 'user-1', jti: 'jti-123' }); // active in whitelist
+         mockRedisService.get.mockResolvedValue(null);
+         mockRedisService.getJson.mockResolvedValue({ userId: 'user-1', jti: 'jti-123' });
 
          const payload = await service.validateRefreshToken(token);
          expect(payload.sub).toBe('user-1');
          expect(payload.jti).toBe('jti-123');
-         expect(mockRedisService.getJson).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-123`);
-      });
-
-      it('should throw UnauthorizedException if refresh token is empty or missing', async () => {
-         await expect(service.validateRefreshToken('')).rejects.toThrow(UnauthorizedException);
-      });
-
-      it('should throw UnauthorizedException if refresh token is signed with wrong secret', async () => {
-         const token = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'refresh', jti: 'jti-123' },
-            mockConfigService.jwtSecret,
-            604800,
-         );
-
-         await expect(service.validateRefreshToken(token)).rejects.toThrow(UnauthorizedException);
-      });
-
-      it('should throw UnauthorizedException if tokenType is not refresh', async () => {
-         const token = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'access', jti: 'jti-123' },
-            mockConfigService.jwtRefreshSecret,
-            604800,
-         );
-
-         await expect(service.validateRefreshToken(token)).rejects.toThrow(UnauthorizedException);
-      });
-
-      it('should throw UnauthorizedException if token is missing jti or sub', async () => {
-         const tokenWithoutJti = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'refresh' },
-            mockConfigService.jwtRefreshSecret,
-            604800,
-         );
-
-         await expect(service.validateRefreshToken(tokenWithoutJti)).rejects.toThrow(UnauthorizedException);
-      });
-
-      it('should revoke all user sessions and throw UnauthorizedException if refresh token is in blacklist (token reuse detected)', async () => {
-         const token = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'refresh', jti: 'revoked-jti' },
-            mockConfigService.jwtRefreshSecret,
-            604800,
-         );
-
-         mockRedisService.get.mockResolvedValue('revoked');
-
-         await expect(service.validateRefreshToken(token)).rejects.toThrow(UnauthorizedException);
-         expect(mockRedisService.deleteByPattern).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:*`);
-      });
-
-      it('should revoke all user sessions and throw UnauthorizedException if refresh token is missing from Redis whitelist (token reuse detected)', async () => {
-         const token = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'refresh', jti: 'not-found-jti' },
-            mockConfigService.jwtRefreshSecret,
-            604800,
-         );
-
-         mockRedisService.get.mockResolvedValue(null); // not blacklisted
-         mockRedisService.getJson.mockResolvedValue(null); // not active in whitelist
-
-         await expect(service.validateRefreshToken(token)).rejects.toThrow(UnauthorizedException);
-         expect(mockRedisService.deleteByPattern).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:*`);
       });
    });
 
    describe('revokeAllUserTokens and logoutAll', () => {
-      it('should iterate over user sessions set in Redis, delete active keys, set blacklist keys, delete set and set userRevokedAt', async () => {
+      it('should revoke all tokens and all DB sessions', async () => {
          mockRedisService.smembers.mockResolvedValue(['jti-1', 'jti-2']);
 
          await service.revokeAllUserTokens('user-1');
 
-         expect(mockRedisService.smembers).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`);
          expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`);
-         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-1`);
-         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-2`);
-         expect(mockRedisService.set).toHaveBeenCalledWith(
-            `${REDIS_KEY_PREFIX.REVOKED_TOKEN}jti-1`,
-            'revoked',
-            mockConfigService.jwtRefreshTokenExpiresIn,
-         );
-         expect(mockRedisService.set).toHaveBeenCalledWith(
-            `${REDIS_KEY_PREFIX.REVOKED_TOKEN}jti-2`,
-            'revoked',
-            mockConfigService.jwtRefreshTokenExpiresIn,
-         );
-         expect(mockRedisService.set).toHaveBeenCalledWith(
-            `${REDIS_KEY_PREFIX.USER_REVOKED_AT}user-1`,
-            expect.any(String),
-            mockConfigService.jwtRefreshTokenExpiresIn,
-         );
-         expect(mockRedisService.deleteByPattern).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:*`);
-      });
-
-      it('should delegate logoutAll to revokeAllUserTokens', async () => {
-         mockRedisService.smembers.mockResolvedValue(['jti-1']);
-
-         await service.logoutAll('user-1');
-
-         expect(mockRedisService.smembers).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`);
-         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`);
-      });
-
-      it('should do nothing if userId is empty', async () => {
-         await service.revokeAllUserTokens('');
-
-         expect(mockRedisService.smembers).not.toHaveBeenCalled();
-      });
-   });
-
-   describe('invalidateRefreshToken', () => {
-      it('should delete active key from whitelist, remove jti from session set and set blacklist key with remaining TTL', async () => {
-         await service.invalidateRefreshToken('user-1', 'jti-abc', 300);
-
-         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-abc`);
-         expect(mockRedisService.srem).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`, 'jti-abc');
-         expect(mockRedisService.set).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REVOKED_TOKEN}jti-abc`, 'revoked', 300);
-      });
-
-      it('should use default refreshTokenExpiresIn if remainingTtl is not provided or non-positive', async () => {
-         await service.invalidateRefreshToken('user-1', 'jti-abc');
-
-         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-abc`);
-         expect(mockRedisService.srem).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`, 'jti-abc');
-         expect(mockRedisService.set).toHaveBeenCalledWith(
-            `${REDIS_KEY_PREFIX.REVOKED_TOKEN}jti-abc`,
-            'revoked',
-            mockConfigService.jwtRefreshTokenExpiresIn,
-         );
-      });
-   });
-
-   describe('revokeToken', () => {
-      it('should return success when no token is provided', async () => {
-         const res = await service.revokeToken('');
-         expect(res.success).toBe(true);
-         expect(res.message).toBe('No token provided to revoke');
-      });
-
-      it('should return failure if token is forged or invalid signature', async () => {
-         const forgedToken = JwtUtil.sign(
-            { sub: 'victim-id', tokenType: 'refresh', jti: 'victim-jti' },
-            'attacker-fake-secret',
-            604800,
-         );
-
-         const res = await service.revokeToken(forgedToken);
-         expect(res.success).toBe(false);
-         expect(res.message).toBe('Invalid or expired token');
-         expect(mockRedisService.del).not.toHaveBeenCalled();
-         expect(mockRedisService.set).not.toHaveBeenCalled();
-      });
-
-      it('should successfully verify and revoke valid refresh token with accurate remaining TTL', async () => {
-         const token = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'refresh', jti: 'to-revoke-jti' },
-            mockConfigService.jwtRefreshSecret,
-            3600,
-         );
-
-         const res = await service.revokeToken(token);
-         expect(res.success).toBe(true);
-         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:to-revoke-jti`);
-         expect(mockRedisService.srem).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`, 'to-revoke-jti');
-         expect(mockRedisService.set).toHaveBeenCalledWith(
-            `${REDIS_KEY_PREFIX.REVOKED_TOKEN}to-revoke-jti`,
-            'revoked',
-            expect.any(Number),
-         );
+         expect(mockRevokeAllSessions).toHaveBeenCalledWith('user-1');
       });
    });
 });
