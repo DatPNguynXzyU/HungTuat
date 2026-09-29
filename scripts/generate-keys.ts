@@ -29,10 +29,7 @@ export function writeKeyFiles(baseDir: string = process.cwd()): void {
 
    fs.writeFileSync(path.join(gatewayKeysDir, 'public.key'), publicKey, { mode: 0o644 });
 
-   console.log('RSA Key pairs generated successfully:');
-   console.log(`   - Auth Private Key:  ${path.join(authKeysDir, 'private.key')}`);
-   console.log(`   - Auth Public Key:   ${path.join(authKeysDir, 'public.key')}`);
-   console.log(`   - Gateway Public Key: ${path.join(gatewayKeysDir, 'public.key')}`);
+   console.log('RSA Key pairs generated successfully...');
 }
 
 if (require.main === module) {

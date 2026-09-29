@@ -15,12 +15,12 @@ export const sharedEnvSchema = z.object({
    JWT_REFRESH_SECRET: z.string().optional(),
    ARGON2_SECRET: z.string().default('default-argon2-secret-key'),
    ARGON2_SALT: z.string().default('default-argon2-salt-key'),
-   JWT_ACCESS_TOKEN_EXPIRES_IN: z.coerce.number().int().positive().default(900), // 15 minutes (900 seconds)
-   JWT_REFRESH_TOKEN_EXPIRES_IN: z.coerce.number().int().positive().default(604800), // 7 days (604800 seconds)
+   JWT_ACCESS_TOKEN_EXPIRES_IN: z.coerce.number().int().positive().default(900),
+   JWT_REFRESH_TOKEN_EXPIRES_IN: z.coerce.number().int().positive().default(604800),
    JWT_EXPIRES_IN: z.coerce.number().int().positive().default(900),
    COOKIE_NAME: z.string().default('access_token'),
-   COOKIE_ACCESS_TOKEN_MAX_AGE: z.coerce.number().int().positive().default(900000), // 15 minutes in ms
-   COOKIE_REFRESH_TOKEN_MAX_AGE: z.coerce.number().int().positive().default(604800000), // 7 days in ms
+   COOKIE_ACCESS_TOKEN_MAX_AGE: z.coerce.number().int().positive().default(900000),
+   COOKIE_REFRESH_TOKEN_MAX_AGE: z.coerce.number().int().positive().default(604800000),
    RABBIT_MQ_URI: z.string().default('amqp://guest:guest@localhost:5672'),
    RABBITMQ_URI: z.string().optional(),
    RABBIT_MQ_AUTH_SERVICE_QUEUE: z.string().default('auth_queue'),
@@ -30,6 +30,11 @@ export const sharedEnvSchema = z.object({
    REDIS_HOST: z.string().default('localhost'),
    REDIS_PORT: z.coerce.number().int().positive().default(6379),
    REDIS_PASSWORD: z.string().optional(),
+   NEBULA_GRAPHD_HOST: z.string().default('localhost'),
+   NEBULA_GRAPHD_PORT: z.coerce.number().int().positive().default(9669),
+   NEBULA_USERNAME: z.string().default('root'),
+   NEBULA_PASSWORD: z.string().default('nebula'),
+   NEBULA_SPACE: z.string().default('social_graph'),
 });
 
 export type SharedEnvConfig = z.infer<typeof sharedEnvSchema>;

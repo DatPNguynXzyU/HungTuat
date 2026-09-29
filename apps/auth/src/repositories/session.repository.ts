@@ -3,7 +3,7 @@ import { uuidv7 } from 'uuidv7';
 import type { CreateSessionData, UserSessionEntity } from '@auth/entities/session.entity';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import type { ISessionRepository } from '@auth/repositories/session.repository.interface';
-import type { UserSession } from '@prisma/client';
+import type { UserSession } from '@auth/prisma-client';
 
 @Injectable()
 export class SessionRepository implements ISessionRepository {

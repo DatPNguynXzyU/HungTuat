@@ -1,5 +1,5 @@
 import type { CreateOutboxEventData, OutboxEventEntity } from '@auth/outbox/entities/outbox-event.entity';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@auth/prisma-client';
 
 export const OUTBOX_REPOSITORY = Symbol('OUTBOX_REPOSITORY');
 

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuditStatus } from '@prisma/client';
+import { AuditStatus } from '@auth/prisma-client';
 import { AUDIT_LOG_REPOSITORY } from '@auth/repositories/audit-log.repository.interface';
 import { AuditLogService } from '@auth/services/audit-log.service';
 

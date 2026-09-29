@@ -1,5 +1,5 @@
 import { Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
-import { PrismaClient } from '@prisma/notification-client';
+import { PrismaClient } from '@notification/prisma-client';
 import { NotificationConfigService } from '@notification/config';
 
 @Injectable()

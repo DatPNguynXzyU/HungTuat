@@ -1,0 +1,148 @@
+name: omni-services
+
+services:
+   user-postgres:
+      image: postgres:17-alpine
+      container_name: omni-services-user
+      command: ['postgres', '-p', '5439']
+      restart: unless-stopped
+      environment:
+         POSTGRES_USER: ${POSTGRES_USER:-postgres}
+         POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+         POSTGRES_DB: ${POSTGRES_DB:-omni_service_user}
+         PGPORT: ${POSTGRES_PORT:-5439}
+      ports:
+         - '${POSTGRES_PORT:-5439}:${POSTGRES_PORT:-5439}'
+      volumes:
+         - user_postgres_data:/var/lib/postgresql/data
+      healthcheck:
+         test: ['CMD-SHELL', 'pg_isready -p ${POSTGRES_PORT:-5439} -U ${POSTGRES_USER:-postgres}']
+         interval: 10s
+         timeout: 5s
+         retries: 5
+      networks:
+         - omni-network
+
+   nebula-metad:
+      image: vesoft/nebula-metad:v3.8.0
+      container_name: omni-services-user-nebula-metad
+      restart: unless-stopped
+      environment:
+         USER: root
+      command:
+         - --meta_server_addrs=nebula-metad:9559
+         - --local_ip=nebula-metad
+         - --ws_ip=0.0.0.0
+         - --port=9559
+         - --ws_http_port=19559
+         - --data_path=/data/meta
+         - --log_dir=/logs
+         - --v=0
+         - --minloglevel=0
+      ports:
+         - '${NEBULA_METAD_PORT:-9559}:9559'
+         - '${NEBULA_METAD_HTTP_PORT:-19559}:19559'
+      volumes:
+         - nebula_metad_data:/data/meta
+         - nebula_metad_logs:/logs
+      healthcheck:
+         test: ['CMD', 'curl', '-f', 'http://127.0.0.1:19559/status']
+         interval: 10s
+         timeout: 5s
+         retries: 5
+      networks:
+         - omni-network
+
+   nebula-storaged:
+      image: vesoft/nebula-storaged:v3.8.0
+      container_name: omni-services-user-nebula-storaged
+      restart: unless-stopped
+      environment:
+         USER: root
+      command:
+         - --meta_server_addrs=nebula-metad:9559
+         - --local_ip=nebula-storaged
+         - --ws_ip=0.0.0.0
+         - --port=9779
+         - --ws_http_port=19779
+         - --data_path=/data/storage
+         - --log_dir=/logs
+         - --v=0
+         - --minloglevel=0
+      ports:
+         - '${NEBULA_STORAGED_PORT:-9779}:9779'
+         - '${NEBULA_STORAGED_HTTP_PORT:-19779}:19779'
+      depends_on:
+         nebula-metad:
+            condition: service_healthy
+      volumes:
+         - nebula_storaged_data:/data/storage
+         - nebula_storaged_logs:/logs
+      healthcheck:
+         test: ['CMD', 'curl', '-f', 'http://127.0.0.1:19779/status']
+         interval: 10s
+         timeout: 5s
+         retries: 5
+      networks:
+         - omni-network
+
+   nebula-graphd:
+      image: vesoft/nebula-graphd:v3.8.0
+      container_name: omni-services-user-nebula-graphd
+      restart: unless-stopped
+      environment:
+         USER: root
+      command:
+         - --meta_server_addrs=nebula-metad:9559
+         - --local_ip=nebula-graphd
+         - --ws_ip=0.0.0.0
+         - --port=9669
+         - --ws_http_port=19669
+         - --log_dir=/logs
+         - --v=0
+         - --minloglevel=0
+      ports:
+         - '${NEBULA_GRAPHD_PORT:-9669}:9669'
+         - '${NEBULA_GRAPHD_HTTP_PORT:-19669}:19669'
+      depends_on:
+         nebula-storaged:
+            condition: service_healthy
+      volumes:
+         - nebula_graphd_logs:/logs
+      healthcheck:
+         test: ['CMD', 'curl', '-f', 'http://127.0.0.1:19669/status']
+         interval: 10s
+         timeout: 5s
+         retries: 5
+      networks:
+         - omni-network
+
+   nebula-studio:
+      image: vesoft/nebula-graph-studio:v3.8.0
+      container_name: omni-services-user-nebula-studio
+      restart: unless-stopped
+      ports:
+         - '${NEBULA_STUDIO_PORT:-7001}:7001'
+      depends_on:
+         nebula-graphd:
+            condition: service_healthy
+      networks:
+         - omni-network
+
+volumes:
+   user_postgres_data:
+      driver: local
+   nebula_metad_data:
+      driver: local
+   nebula_metad_logs:
+      driver: local
+   nebula_storaged_data:
+      driver: local
+   nebula_storaged_logs:
+      driver: local
+   nebula_graphd_logs:
+      driver: local
+
+networks:
+   omni-network:
+      driver: bridge

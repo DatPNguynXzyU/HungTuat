@@ -22,30 +22,21 @@
       "strictBindCallApply": true,
       "noFallthroughCasesInSwitch": true,
       "paths": {
-         "@/*": [
-            "apps/gateway/src/*"
-         ],
-         "@gateway/*": [
-            "apps/gateway/src/*"
-         ],
-         "@auth/*": [
-            "apps/auth/src/*"
-         ],
-         "@common": [
-            "libs/common/src"
-         ],
-         "@common/*": [
-            "libs/common/src/*"
-         ],
-         "@app/common": [
-            "libs/common/src"
-         ],
-         "@app/common/*": [
-            "libs/common/src/*"
-         ],
-         "@notification/*": [
-            "apps/notification/src/*"
-         ]
+         "@/*": ["apps/gateway/src/*"],
+         "@gateway/*": ["apps/gateway/src/*"],
+         "@auth/*": ["apps/auth/src/*"],
+         "@auth/prisma-client": ["apps/auth/src/generated/prisma-client"],
+         "@auth/prisma-client/*": ["apps/auth/src/generated/prisma-client/*"],
+         "@user/*": ["apps/user/src/*"],
+         "@user/prisma-client": ["apps/user/src/generated/prisma-client"],
+         "@user/prisma-client/*": ["apps/user/src/generated/prisma-client/*"],
+         "@common": ["libs/common/src"],
+         "@common/*": ["libs/common/src/*"],
+         "@app/common": ["libs/common/src"],
+         "@app/common/*": ["libs/common/src/*"],
+         "@notification/*": ["apps/notification/src/*"],
+         "@notification/prisma-client": ["apps/notification/src/generated/prisma-client"],
+         "@notification/prisma-client/*": ["apps/notification/src/generated/prisma-client/*"]
       },
       "jsx": "react-jsx"
    }

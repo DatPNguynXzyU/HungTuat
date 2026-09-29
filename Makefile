@@ -3,33 +3,29 @@ install:
 	pnpm install
 	npx -y @colbymchenry/codegraph install
 
-.PHONY: build
-build:
-	pnpm run build
-
-.PHONY: build-gateway
-build-gateway:
-	pnpm run build:gateway
-
-.PHONY: build-auth
-build-auth:
-	pnpm run build:auth
-
-.PHONY: dev
-dev:
-	pnpm run start:gateway
+.PHONY: prisma-generate
+prisma-generate:
+	pnpm run prisma:generate
 
 .PHONY: start-gateway
 start-gateway:
-	pnpm run start:gateway
+	pnpm --filter @omni/gateway run start
 
 .PHONY: start-auth
 start-auth:
-	pnpm run start:auth
+	pnpm --filter @omni/auth run start
 
-.PHONY: start-prod
-start-prod:
-	pnpm run start:prod
+.PHONY: start-user
+start-user:
+	pnpm --filter @omni/user run start
+
+.PHONY: start-notification
+start-notification:
+	pnpm --filter @omni/notification run start
+
+.PHONY: build
+build:
+	pnpm -r run build
 
 .PHONY: lint
 lint:
@@ -45,12 +41,15 @@ test:
 
 .PHONY: test-e2e
 test-e2e:
-	pnpm exec jest --config ./apps/gateway/test/jest-e2e.json
-	pnpm exec jest --config ./apps/auth/test/jest-e2e.json
+	pnpm run test:e2e
 
 .PHONY: clean
 clean:
-	rm -rf dist
+	rm -rf dist build coverage .nyc_output logs
+	rm -rf apps/*/dist apps/*/logs
+	rm -rf apps/*/src/generated libs/*/src/generated
+	rm -rf node_modules apps/*/node_modules libs/*/node_modules
+	rm -rf .pnpm-store *.tsbuildinfo *.log
 
 .PHONY: docker-clean
 docker-clean:
@@ -59,4 +58,3 @@ docker-clean:
 .PHONY: codegraph-sync
 codegraph-sync:
 	npx -y @colbymchenry/codegraph sync
-

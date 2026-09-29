@@ -11,7 +11,7 @@ import {
 } from '@common';
 import { PrismaService } from '@notification/prisma/prisma.service';
 import { ResendService, SendEmailResult } from '@notification/services/resend.service';
-import type { Prisma } from '@prisma/notification-client';
+import type { Prisma } from '@notification/prisma-client';
 
 @Injectable()
 export class NotificationService {

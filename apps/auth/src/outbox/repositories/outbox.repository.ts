@@ -3,7 +3,7 @@ import { uuidv7 } from 'uuidv7';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import type { CreateOutboxEventData, OutboxEventEntity } from '@auth/outbox/entities/outbox-event.entity';
 import type { IOutboxRepository } from '@auth/outbox/repositories/outbox.repository.interface';
-import type { OutboxEvent, Prisma } from '@prisma/client';
+import type { OutboxEvent, Prisma } from '@auth/prisma-client';
 
 @Injectable()
 export class OutboxRepository implements IOutboxRepository {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuditStatus, Prisma, type SecurityAuditLog } from '@prisma/client';
+import { AuditStatus, Prisma, type SecurityAuditLog } from '@auth/prisma-client';
 import { uuidv7 } from 'uuidv7';
 import { AuditSanitizerUtil, type IAuditLogListResult, type IAuditLogQuery } from '@common';
 import type { CreateAuditLogData, SecurityAuditLogEntity } from '@auth/entities/audit-log.entity';

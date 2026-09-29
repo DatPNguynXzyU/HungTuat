@@ -2,6 +2,7 @@
 /dist
 /build
 *.tsbuildinfo
+**/src/generated/
 
 # Logs
 logs/

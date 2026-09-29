@@ -4,7 +4,7 @@ import type { CreateUserData, RoleEntity, UserEntity } from '@auth/entities/user
 import type { CreateOutboxEventData } from '@auth/outbox/entities/outbox-event.entity';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import type { IAuthRepository } from '@auth/repositories/auth.repository.interface';
-import type { Prisma, Role, User, UserStatus } from '@prisma/client';
+import type { Prisma, Role, User, UserStatus } from '@auth/prisma-client';
 
 type UserWithRoles = User & {
    userRoles?: Array<{

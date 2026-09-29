@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@auth/prisma-client';
 import Redis from 'ioredis';
 import { DEFAULT_ROLES, PERMISSIONS, REDIS_KEY_PREFIX, REDIS_TTL } from '@common/constants';
 

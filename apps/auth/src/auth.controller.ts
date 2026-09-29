@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { AuditStatus } from '@prisma/client';
+import { AuditStatus } from '@auth/prisma-client';
 import {
    AUTH_PATTERNS,
    ChangePasswordDto,

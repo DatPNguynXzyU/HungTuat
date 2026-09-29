@@ -1,0 +1,33 @@
+{
+   "name": "@omni/auth",
+   "version": "0.0.1",
+   "private": true,
+   "scripts": {
+      "start": "nest start auth --watch",
+      "build": "nest build auth",
+      "prisma:generate": "dotenv -e .env -- prisma generate --schema=prisma/schema.prisma",
+      "prisma:migrate": "dotenv -e .env -- prisma migrate dev --schema=prisma/schema.prisma",
+      "prisma:push": "dotenv -e .env -- prisma db push --schema=prisma/schema.prisma",
+      "prisma:studio": "dotenv -e .env -- prisma studio --schema=prisma/schema.prisma",
+      "prisma:seed": "dotenv -e .env -- ts-node -r tsconfig-paths/register prisma/seed.ts",
+      "lint": "eslint \"src/**/*.ts\" --fix"
+   },
+   "dependencies": {
+      "@common": "workspace:*",
+      "@nestjs/common": "^11.0.1",
+      "@nestjs/config": "^4.0.4",
+      "@nestjs/core": "^11.0.1",
+      "@nestjs/microservices": "^11.2.6",
+      "argon2": "^0.45.1",
+      "ioredis": "^6.0.0",
+      "jsonwebtoken": "^9.0.3",
+      "reflect-metadata": "^0.2.2",
+      "rxjs": "^7.8.1",
+      "uuidv7": "^1.2.1"
+   },
+   "devDependencies": {
+      "@types/jsonwebtoken": "^9.0.10",
+      "prisma": "6.19.3",
+      "@prisma/client": "6.19.3"
+   }
+}

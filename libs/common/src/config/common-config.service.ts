@@ -142,4 +142,14 @@ export class CommonConfigService {
          },
       };
    }
+
+   get nebula() {
+      return {
+         graphAddress: this.configService.get('NEBULA_GRAPHD_HOST', { infer: true }),
+         graphPort: this.configService.get('NEBULA_GRAPHD_PORT', { infer: true }),
+         username: this.configService.get('NEBULA_USERNAME', { infer: true }),
+         password: this.configService.get('NEBULA_PASSWORD', { infer: true }),
+         space: this.configService.get('NEBULA_SPACE', { infer: true }),
+      };
+   }
 }

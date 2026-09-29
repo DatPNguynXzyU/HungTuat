@@ -5,7 +5,7 @@ datasource db {
 
 generator client {
    provider = "prisma-client-js"
-   output   = "../../../node_modules/@prisma/notification-client"
+   output   = "../src/generated/prisma-client"
 }
 
 enum NotificationStatus {

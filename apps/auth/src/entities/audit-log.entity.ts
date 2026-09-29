@@ -1,4 +1,4 @@
-import type { AuditStatus } from '@prisma/client';
+import type { AuditStatus } from '@auth/prisma-client';
 
 export interface SecurityAuditLogEntity {
    id: string;
