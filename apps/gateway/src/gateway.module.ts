@@ -1,16 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
-import {
-   CustomThrottlerGuard,
-   JwtAuthGuard,
-   LoggerModule,
-   PermissionsGuard,
-   RedisModule,
-   RmqModule,
-   RolesGuard,
-   SERVICES,
-} from '@common';
+import { CustomThrottlerGuard, JwtAuthGuard, LoggerModule, RedisModule, RmqModule, SERVICES } from '@common';
 import { GatewayConfigModule, GatewayConfigService } from '@/config';
 import { AuditLogsModule } from '@/modules/audit-logs/audit-logs.module';
 import { AuthModule } from '@/modules/auth/auth.module';
@@ -53,6 +44,8 @@ import { UsersModule } from '@/modules/users/users.module';
    ],
    controllers: [],
    providers: [
+      // Global guards: Only authentication and rate limiting
+      // Authorization (roles/permissions) is now handled by individual microservices
       {
          provide: APP_GUARD,
          useClass: CustomThrottlerGuard,
@@ -60,14 +53,6 @@ import { UsersModule } from '@/modules/users/users.module';
       {
          provide: APP_GUARD,
          useClass: JwtAuthGuard,
-      },
-      {
-         provide: APP_GUARD,
-         useClass: RolesGuard,
-      },
-      {
-         provide: APP_GUARD,
-         useClass: PermissionsGuard,
       },
    ],
 })

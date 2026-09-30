@@ -83,19 +83,19 @@
       "moduleNameMapper": {
          "^@/(.*)$": "<rootDir>/apps/gateway/src/$1",
          "^@gateway/(.*)$": "<rootDir>/apps/gateway/src/$1",
-         "^@auth/(.*)$": "<rootDir>/apps/auth/src/$1",
          "^@auth/prisma-client$": "<rootDir>/apps/auth/src/generated/prisma-client",
          "^@auth/prisma-client/(.*)$": "<rootDir>/apps/auth/src/generated/prisma-client/$1",
+         "^@auth/(.*)$": "<rootDir>/apps/auth/src/$1",
          "^@common$": "<rootDir>/libs/common/src",
          "^@common/(.*)$": "<rootDir>/libs/common/src/$1",
          "^@app/common$": "<rootDir>/libs/common/src",
          "^@app/common/(.*)$": "<rootDir>/libs/common/src/$1",
-         "^@notification/(.*)$": "<rootDir>/apps/notification/src/$1",
          "^@notification/prisma-client$": "<rootDir>/apps/notification/src/generated/prisma-client",
          "^@notification/prisma-client/(.*)$": "<rootDir>/apps/notification/src/generated/prisma-client/$1",
+         "^@notification/(.*)$": "<rootDir>/apps/notification/src/$1",
          "^@user/prisma-client$": "<rootDir>/apps/user/src/generated/prisma-client",
          "^@user/prisma-client/(.*)$": "<rootDir>/apps/user/src/generated/prisma-client/$1",
-         "@user/(.*)$": "<rootDir>/apps/user/src/$1"
+         "^@user/(.*)$": "<rootDir>/apps/user/src/$1"
       }
    }
 }

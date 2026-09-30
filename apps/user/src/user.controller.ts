@@ -2,6 +2,8 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { UserService } from '@user/user.service';
 import { Gender, FollowStatus } from '@user/entities';
+import { checkOwnershipOrAdmin } from '@common';
+import type { IServiceMessage } from '@common';
 
 @Controller()
 export class UserController {
@@ -22,8 +24,9 @@ export class UserController {
    }
 
    @MessagePattern({ cmd: 'get_user_by_id' })
-   async getUserById(@Payload() data: { id: string }) {
-      return this.userService.getUserById(data.id);
+   async getUserById(@Payload() message: IServiceMessage<{ id: string }>) {
+      // Public endpoint - no authorization needed
+      return this.userService.getUserById(message.data.id);
    }
 
    @MessagePattern({ cmd: 'get_user_by_user_id' })
@@ -39,7 +42,7 @@ export class UserController {
    @MessagePattern({ cmd: 'update_user_profile' })
    async updateUserProfile(
       @Payload()
-      data: {
+      message: IServiceMessage<{
          id: string;
          displayName?: string;
          bio?: string;
@@ -49,9 +52,16 @@ export class UserController {
          location?: string;
          dateOfBirth?: Date;
          gender?: string;
-      },
+      }>,
    ) {
-      const { id, gender, ...updateData } = data;
+      const { id, gender, ...updateData } = message.data;
+
+      // Authorization: User can only update their own profile OR admin can update any profile
+      const user = await this.userService.getUserById(id);
+      if (user) {
+         checkOwnershipOrAdmin(message, user.userId);
+      }
+
       return this.userService.updateUserProfile(id, {
          ...updateData,
          ...(gender && { gender: gender as Gender }),
@@ -59,13 +69,25 @@ export class UserController {
    }
 
    @MessagePattern({ cmd: 'update_username' })
-   async updateUsername(@Payload() data: { id: string; username: string }) {
-      return this.userService.updateUsername(data.id, data.username);
+   async updateUsername(@Payload() message: IServiceMessage<{ id: string; username: string }>) {
+      // Authorization: User can only update their own username OR admin can update any username
+      const user = await this.userService.getUserById(message.data.id);
+      if (user) {
+         checkOwnershipOrAdmin(message, user.userId);
+      }
+
+      return this.userService.updateUsername(message.data.id, message.data.username);
    }
 
    @MessagePattern({ cmd: 'delete_user' })
-   async deleteUser(@Payload() data: { id: string }) {
-      return this.userService.deleteUser(data.id);
+   async deleteUser(@Payload() message: IServiceMessage<{ id: string }>) {
+      // Authorization: User can only delete their own account OR admin can delete any account
+      const user = await this.userService.getUserById(message.data.id);
+      if (user) {
+         checkOwnershipOrAdmin(message, user.userId);
+      }
+
+      return this.userService.deleteUser(message.data.id);
    }
 
    @MessagePattern({ cmd: 'restore_user' })
@@ -75,23 +97,31 @@ export class UserController {
 
    // Follow Operations
    @MessagePattern({ cmd: 'follow_user' })
-   async followUser(@Payload() data: { followerId: string; followingId: string }) {
-      return this.userService.followUser(data.followerId, data.followingId);
+   async followUser(@Payload() message: IServiceMessage<{ followerId: string; followingId: string }>) {
+      // Authorization: User can only follow as themselves
+      checkOwnershipOrAdmin(message, message.data.followerId);
+
+      return this.userService.followUser(message.data.followerId, message.data.followingId);
    }
 
    @MessagePattern({ cmd: 'unfollow_user' })
-   async unfollowUser(@Payload() data: { followerId: string; followingId: string }) {
-      await this.userService.unfollowUser(data.followerId, data.followingId);
+   async unfollowUser(@Payload() message: IServiceMessage<{ followerId: string; followingId: string }>) {
+      // Authorization: User can only unfollow as themselves
+      checkOwnershipOrAdmin(message, message.data.followerId);
+
+      await this.userService.unfollowUser(message.data.followerId, message.data.followingId);
       return { success: true };
    }
 
    @MessagePattern({ cmd: 'accept_follow_request' })
    async acceptFollowRequest(@Payload() data: { followId: string }) {
+      // TODO: Add authorization check - only the followed user can accept
       return this.userService.acceptFollowRequest(data.followId);
    }
 
    @MessagePattern({ cmd: 'reject_follow_request' })
    async rejectFollowRequest(@Payload() data: { followId: string }) {
+      // TODO: Add authorization check - only the followed user can reject
       return this.userService.rejectFollowRequest(data.followId);
    }
 
@@ -105,6 +135,7 @@ export class UserController {
          take?: number;
       },
    ) {
+      // Public endpoint - anyone can view followers
       return this.userService.getFollowers(data.userId, data.status as FollowStatus | undefined, data.skip, data.take);
    }
 
@@ -118,6 +149,7 @@ export class UserController {
          take?: number;
       },
    ) {
+      // Public endpoint - anyone can view following
       return this.userService.getFollowing(data.userId, data.status as FollowStatus | undefined, data.skip, data.take);
    }
 

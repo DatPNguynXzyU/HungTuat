@@ -5,12 +5,15 @@ import {
    AUTH_PATTERNS,
    ChangePasswordDto,
    CreateAuditLogDto,
+   DEFAULT_ROLES,
    IDeviceInfo,
    LoginDto,
    QueryAuditLogDto,
    RegisterDto,
    RmqService,
+   checkRoles,
 } from '@common';
+import type { IServiceMessage } from '@common';
 import { AuthService } from '@auth/auth.service';
 import { AuditLogService } from '@auth/services/audit-log.service';
 
@@ -191,9 +194,12 @@ export class AuthController {
    }
 
    @MessagePattern({ cmd: AUTH_PATTERNS.GET_AUDIT_LOGS })
-   async getAuditLogs(@Payload() data: QueryAuditLogDto, @Ctx() context: RmqContext) {
+   async getAuditLogs(@Payload() message: IServiceMessage<QueryAuditLogDto>, @Ctx() context: RmqContext) {
       try {
-         const result = await this.auditLogService.getAuditLogs(data);
+         // Authorization check: Only admin can view all audit logs
+         checkRoles(message, [DEFAULT_ROLES.ADMIN]);
+
+         const result = await this.auditLogService.getAuditLogs(message.data);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -203,9 +209,12 @@ export class AuthController {
    }
 
    @MessagePattern({ cmd: AUTH_PATTERNS.GET_AUDIT_LOG_BY_ID })
-   async getAuditLogById(@Payload() data: { id: string }, @Ctx() context: RmqContext) {
+   async getAuditLogById(@Payload() message: IServiceMessage<{ id: string }>, @Ctx() context: RmqContext) {
       try {
-         const result = await this.auditLogService.getAuditLogById(data.id);
+         // Authorization check: Only admin can view audit log details
+         checkRoles(message, [DEFAULT_ROLES.ADMIN]);
+
+         const result = await this.auditLogService.getAuditLogById(message.data.id);
          this.rmqService.ack(context);
          return result;
       } catch (error) {

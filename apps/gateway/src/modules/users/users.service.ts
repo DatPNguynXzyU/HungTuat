@@ -1,29 +1,72 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { SERVICES, UpdateUserDto } from '@common';
+import { SERVICES, UpdateUserDto, IServiceMessage } from '@common';
 import { firstValueFrom } from 'rxjs';
+import type { JwtPayload } from '@common/utils/jwt.util';
 
 @Injectable()
 export class UsersService {
-   constructor(@Inject(SERVICES.USER_SERVICE) private readonly userClient: ClientProxy) {
-      // NQHxZeion
-   }
+   constructor(@Inject(SERVICES.USER_SERVICE) private readonly userClient: ClientProxy) {}
 
-   async getUserById(id: string): Promise<unknown> {
-      return firstValueFrom(this.userClient.send<unknown, { id: string }>({ cmd: 'users.get_by_id' }, { id }));
-   }
+   async getUserById(id: string, user?: JwtPayload): Promise<unknown> {
+      const message: IServiceMessage<{ id: string }> = {
+         data: { id },
+         user: user
+            ? {
+                 userId: user.sub,
+                 email: user.email,
+                 roles: user.roles || [],
+                 permissions: [],
+                 sessionId: user.jti,
+              }
+            : undefined,
+      };
 
-   async getAllUsers(page = 1, limit = 10): Promise<unknown> {
       return firstValueFrom(
-         this.userClient.send<unknown, { page: number; limit: number }>({ cmd: 'users.get_all' }, { page, limit }),
+         this.userClient.send<unknown, IServiceMessage<{ id: string }>>({ cmd: 'get_user_by_id' }, message),
       );
    }
 
-   async updateUser(id: string, updateUserDto: UpdateUserDto): Promise<unknown> {
+   async getAllUsers(page = 1, limit = 10, user?: JwtPayload): Promise<unknown> {
+      const message: IServiceMessage<{ page: number; limit: number }> = {
+         data: { page, limit },
+         user: user
+            ? {
+                 userId: user.sub,
+                 email: user.email,
+                 roles: user.roles || [],
+                 permissions: [],
+                 sessionId: user.jti,
+              }
+            : undefined,
+      };
+
       return firstValueFrom(
-         this.userClient.send<unknown, { id: string } & UpdateUserDto>(
-            { cmd: 'users.update' },
-            { id, ...updateUserDto },
+         this.userClient.send<unknown, IServiceMessage<{ page: number; limit: number }>>(
+            { cmd: 'users.get_all' },
+            message,
+         ),
+      );
+   }
+
+   async updateUser(id: string, updateUserDto: UpdateUserDto, user?: JwtPayload): Promise<unknown> {
+      const message: IServiceMessage<{ id: string } & UpdateUserDto> = {
+         data: { id, ...updateUserDto },
+         user: user
+            ? {
+                 userId: user.sub,
+                 email: user.email,
+                 roles: user.roles || [],
+                 permissions: [],
+                 sessionId: user.jti,
+              }
+            : undefined,
+      };
+
+      return firstValueFrom(
+         this.userClient.send<unknown, IServiceMessage<{ id: string } & UpdateUserDto>>(
+            { cmd: 'update_user_profile' },
+            message,
          ),
       );
    }

@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from './user.service';
 import { UserRepository, FollowRepository } from './repositories';
 import { OutboxService } from './outbox';
+import { GraphFollowRepository } from '@user/graph';
+import { UserGraphSyncService } from '@user/services';
 
 describe('UserService', () => {
    let service: UserService;
@@ -20,6 +22,14 @@ describe('UserService', () => {
             },
             {
                provide: OutboxService,
+               useValue: {},
+            },
+            {
+               provide: GraphFollowRepository,
+               useValue: {},
+            },
+            {
+               provide: UserGraphSyncService,
                useValue: {},
             },
          ],

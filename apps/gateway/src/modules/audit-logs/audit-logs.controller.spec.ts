@@ -1,12 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuditLogsController } from '@/modules/audit-logs/audit-logs.controller';
 import { AuditLogsService } from '@/modules/audit-logs/audit-logs.service';
+import type { JwtPayload } from '@common';
 
 describe('AuditLogsController', () => {
    let controller: AuditLogsController;
    const mockAuditLogsService = {
       getAuditLogs: jest.fn(),
       getAuditLogById: jest.fn(),
+   };
+   const mockUser: JwtPayload = {
+      sub: 'user-admin-1',
+      email: 'admin@example.com',
+      roles: ['admin'],
    };
 
    beforeEach(async () => {
@@ -39,8 +45,8 @@ describe('AuditLogsController', () => {
       };
       mockAuditLogsService.getAuditLogs.mockResolvedValue(mockResult);
 
-      const result = await controller.getAuditLogs({ page: 1, limit: 10 });
-      expect(mockAuditLogsService.getAuditLogs).toHaveBeenCalledWith({ page: 1, limit: 10 });
+      const result = await controller.getAuditLogs({ page: 1, limit: 10 }, mockUser);
+      expect(mockAuditLogsService.getAuditLogs).toHaveBeenCalledWith({ page: 1, limit: 10 }, mockUser);
       expect(result).toEqual(mockResult);
    });
 
@@ -48,8 +54,8 @@ describe('AuditLogsController', () => {
       const mockLog = { id: 'audit-1', action: 'AUTH.LOGIN_SUCCESS' };
       mockAuditLogsService.getAuditLogById.mockResolvedValue(mockLog);
 
-      const result = await controller.getAuditLogById('audit-1');
-      expect(mockAuditLogsService.getAuditLogById).toHaveBeenCalledWith('audit-1');
+      const result = await controller.getAuditLogById('audit-1', mockUser);
+      expect(mockAuditLogsService.getAuditLogById).toHaveBeenCalledWith('audit-1', mockUser);
       expect(result).toEqual(mockLog);
    });
 });

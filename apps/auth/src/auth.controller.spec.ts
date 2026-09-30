@@ -424,14 +424,47 @@ describe('AuthController', () => {
       expect(result.success).toBe(true);
    });
 
-   it('should handle getAuditLogs message', async () => {
+   it('should handle getAuditLogs message with admin role', async () => {
       const mockContext = {
          getChannelRef: jest.fn(),
          getMessage: jest.fn(),
       } as unknown as RmqContext;
 
-      const logs = await authController.getAuditLogs({ page: 1, limit: 10 }, mockContext);
+      const logs = await authController.getAuditLogs(
+         {
+            data: { page: 1, limit: 10 },
+            user: {
+               userId: 'admin-1',
+               email: 'admin@example.com',
+               roles: [DEFAULT_ROLES.ADMIN],
+               permissions: [],
+            },
+         },
+         mockContext,
+      );
       expect(logs).toBeDefined();
       expect(logs.data).toEqual([]);
+   });
+
+   it('should reject getAuditLogs without admin role', async () => {
+      const mockContext = {
+         getChannelRef: jest.fn(),
+         getMessage: jest.fn(),
+      } as unknown as RmqContext;
+
+      await expect(
+         authController.getAuditLogs(
+            {
+               data: { page: 1, limit: 10 },
+               user: {
+                  userId: 'user-1',
+                  email: 'user@example.com',
+                  roles: [DEFAULT_ROLES.USER],
+                  permissions: [],
+               },
+            },
+            mockContext,
+         ),
+      ).rejects.toThrow();
    });
 });
