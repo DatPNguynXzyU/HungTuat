@@ -1,11 +1,11 @@
 import { IsEnum, IsObject, IsOptional, IsString } from 'class-validator';
-import { AUDIT_STATUS } from '@common/constants/audit-log.constant';
+import { AUDIT_LOG_ERROR_CODES, AUDIT_STATUS, type AuditStatus } from '@common/constants/audit-log.constant';
 import type { ICreateAuditLog } from '@common/interfaces/audit-log.interface';
 
 export class CreateAuditLogDto implements ICreateAuditLog {
    @IsOptional()
    @IsString()
-   userId?: string | null;
+   accountId?: string | null;
 
    @IsOptional()
    @IsString()
@@ -15,8 +15,8 @@ export class CreateAuditLogDto implements ICreateAuditLog {
    action: string;
 
    @IsOptional()
-   @IsEnum(AUDIT_STATUS)
-   status?: string;
+   @IsEnum(AUDIT_STATUS, { message: AUDIT_LOG_ERROR_CODES.INVALID_STATUS })
+   status?: AuditStatus;
 
    @IsOptional()
    @IsString()

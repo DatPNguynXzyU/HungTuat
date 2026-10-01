@@ -8,9 +8,10 @@ describe('AuthRepository', () => {
    let repository: AuthRepository;
    let prismaService: {
       $transaction: jest.Mock;
-      user: {
+      account: {
          findFirst: jest.Mock;
          findUnique: jest.Mock;
+         findMany: jest.Mock;
          create: jest.Mock;
          update: jest.Mock;
          delete: jest.Mock;
@@ -22,7 +23,7 @@ describe('AuthRepository', () => {
       outboxEvent: {
          create: jest.Mock;
       };
-      userRole: {
+      accountRole: {
          upsert: jest.Mock;
       };
    };
@@ -30,9 +31,10 @@ describe('AuthRepository', () => {
    beforeEach(async () => {
       prismaService = {
          $transaction: jest.fn().mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => cb(prismaService)),
-         user: {
+         account: {
             findFirst: jest.fn(),
             findUnique: jest.fn(),
+            findMany: jest.fn(),
             create: jest.fn(),
             update: jest.fn(),
             delete: jest.fn(),
@@ -44,7 +46,7 @@ describe('AuthRepository', () => {
          outboxEvent: {
             create: jest.fn(),
          },
-         userRole: {
+         accountRole: {
             upsert: jest.fn(),
          },
       };
@@ -67,16 +69,11 @@ describe('AuthRepository', () => {
    });
 
    it('should create a user with a valid UUIDv7 id and enterprise defaults and optional outbox event in transaction', async () => {
-      prismaService.user.create.mockImplementation(
-         ({
-            data,
-         }: {
-            data: { id: string; email: string; fullName: string; passwordHash: string; createdAt?: Date };
-         }) =>
+      prismaService.account.create.mockImplementation(
+         ({ data }: { data: { id: string; email: string; passwordHash: string; createdAt?: Date } }) =>
             Promise.resolve({
                id: data.id,
                email: data.email,
-               fullName: data.fullName,
                passwordHash: data.passwordHash,
                status: 'ACTIVE',
                isEmailVerified: false,
@@ -89,16 +86,15 @@ describe('AuthRepository', () => {
       );
       prismaService.outboxEvent.create.mockResolvedValue({});
 
-      const user = await repository.createUser(
+      const user = await repository.createAccount(
          {
             email: 'test@example.com',
-            fullName: 'Test User',
             passwordHash: 'hashed_password',
          },
          {
             aggregateType: 'USER',
             eventType: 'USER_REGISTERED',
-            payload: { email: 'test@example.com', fullName: 'Test User' },
+            payload: { email: 'test@example.com' },
          },
       );
 
@@ -106,19 +102,32 @@ describe('AuthRepository', () => {
       expect(user.id).toBeDefined();
       expect(UUID_V7_REGEX.test(user.id)).toBe(true);
       expect(user.email).toBe('test@example.com');
-      expect(user.fullName).toBe('Test User');
       expect(user.status).toBe('ACTIVE');
       expect(user.isEmailVerified).toBe(false);
       expect(user.version).toBe(1);
-      expect(prismaService.user.create).toHaveBeenCalledTimes(1);
+      expect(prismaService.account.create).toHaveBeenCalledTimes(1);
       expect(prismaService.outboxEvent.create).toHaveBeenCalledTimes(1);
    });
 
+   it('should return list of all active user emails', async () => {
+      prismaService.account.findMany.mockResolvedValue([
+         { email: 'user1@example.com' },
+         { email: 'user2@example.com' },
+      ]);
+
+      const emails = await repository.findAllEmails();
+
+      expect(prismaService.account.findMany).toHaveBeenCalledWith({
+         where: { deletedAt: null },
+         select: { email: true },
+      });
+      expect(emails).toEqual(['user1@example.com', 'user2@example.com']);
+   });
+
    it('should find user by email with case-insensitivity and deletedAt null check', async () => {
-      prismaService.user.findFirst.mockResolvedValue({
+      prismaService.account.findFirst.mockResolvedValue({
          id: 'test-id',
          email: 'user@example.com',
-         fullName: 'User Example',
          passwordHash: 'hash',
          status: 'ACTIVE',
          isEmailVerified: true,
@@ -127,7 +136,7 @@ describe('AuthRepository', () => {
          deletedAt: null,
          createdAt: new Date('2026-09-27T00:00:00.000Z'),
          updatedAt: new Date('2026-09-27T00:00:00.000Z'),
-         userRoles: [
+         accountRoles: [
             {
                role: {
                   id: 'role-1',
@@ -144,13 +153,13 @@ describe('AuthRepository', () => {
       });
 
       const found = await repository.findByEmail('USER@EXAMPLE.COM');
-      expect(prismaService.user.findFirst).toHaveBeenCalledWith({
+      expect(prismaService.account.findFirst).toHaveBeenCalledWith({
          where: {
             email: 'user@example.com',
             deletedAt: null,
          },
          include: {
-            userRoles: {
+            accountRoles: {
                include: {
                   role: true,
                },
@@ -166,16 +175,16 @@ describe('AuthRepository', () => {
    });
 
    it('should return null when finding user by email if user is soft deleted', async () => {
-      prismaService.user.findFirst.mockResolvedValue(null);
+      prismaService.account.findFirst.mockResolvedValue(null);
 
       const found = await repository.findByEmail('deleted@example.com');
-      expect(prismaService.user.findFirst).toHaveBeenCalledWith({
+      expect(prismaService.account.findFirst).toHaveBeenCalledWith({
          where: {
             email: 'deleted@example.com',
             deletedAt: null,
          },
          include: {
-            userRoles: {
+            accountRoles: {
                include: {
                   role: true,
                },
@@ -186,10 +195,9 @@ describe('AuthRepository', () => {
    });
 
    it('should find user by id filtering deletedAt null', async () => {
-      prismaService.user.findFirst.mockResolvedValue({
+      prismaService.account.findFirst.mockResolvedValue({
          id: 'user-id-123',
          email: 'user2@example.com',
-         fullName: 'User Two',
          passwordHash: 'hash',
          status: 'ACTIVE',
          isEmailVerified: false,
@@ -198,17 +206,17 @@ describe('AuthRepository', () => {
          deletedAt: null,
          createdAt: new Date('2026-09-27T00:00:00.000Z'),
          updatedAt: new Date('2026-09-27T00:00:00.000Z'),
-         userRoles: [],
+         accountRoles: [],
       });
 
       const found = await repository.findById('user-id-123');
-      expect(prismaService.user.findFirst).toHaveBeenCalledWith({
+      expect(prismaService.account.findFirst).toHaveBeenCalledWith({
          where: {
             id: 'user-id-123',
             deletedAt: null,
          },
          include: {
-            userRoles: {
+            accountRoles: {
                include: {
                   role: true,
                },
@@ -221,16 +229,16 @@ describe('AuthRepository', () => {
    });
 
    it('should return null when finding user by id if user is soft deleted', async () => {
-      prismaService.user.findFirst.mockResolvedValue(null);
+      prismaService.account.findFirst.mockResolvedValue(null);
 
       const found = await repository.findById('deleted-id');
-      expect(prismaService.user.findFirst).toHaveBeenCalledWith({
+      expect(prismaService.account.findFirst).toHaveBeenCalledWith({
          where: {
             id: 'deleted-id',
             deletedAt: null,
          },
          include: {
-            userRoles: {
+            accountRoles: {
                include: {
                   role: true,
                },

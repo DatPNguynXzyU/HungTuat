@@ -29,15 +29,15 @@ describe('GatewayController (e2e)', () => {
             });
          }
          if (pattern.cmd === 'auth.register') {
-            const dto = data as { email: string; fullName: string };
+            const dto = data as { email: string };
             return of({
                user: {
                   id: 'usr_mock_123',
                   email: dto.email,
-                  fullName: dto.fullName,
                   createdAt: new Date().toISOString(),
                },
                accessToken: 'mock.access.token',
+               refreshToken: 'mock.refresh.token',
             });
          }
          if (pattern.cmd === 'auth.login') {
@@ -46,10 +46,10 @@ describe('GatewayController (e2e)', () => {
                user: {
                   id: 'usr_mock_123',
                   email: dto.email,
-                  fullName: 'Mock User',
                   createdAt: new Date().toISOString(),
                },
                accessToken: 'mock.access.token',
+               refreshToken: 'mock.refresh.token',
             });
          }
          return of(null);
@@ -106,26 +106,88 @@ describe('GatewayController (e2e)', () => {
       expect(body.keys[0].kty).toBe('RSA');
    });
 
-   it('/auth/register (POST) - public route should set access_token cookie for auto-login', async () => {
-      const res = await request(app.getHttpServer() as App)
-         .post('/auth/register')
-         .send({
-            email: 'john@example.com',
-            password: 'password123',
-            fullName: 'John Doe',
-         })
-         .expect(201);
+   describe('Dual-mode authentication (cookies + response body tokens)', () => {
+      it('/auth/register (POST) - should return tokens in both cookies and response body', async () => {
+         const res = await request(app.getHttpServer() as App)
+            .post('/auth/register')
+            .send({
+               email: 'john@example.com',
+               password: 'password123',
+               confirmPassword: 'password123',
+            })
+            .expect(201);
 
-      const cookies = res.headers['set-cookie'] as string[] | undefined;
-      expect(cookies).toBeDefined();
-      expect(cookies?.some((c) => c.includes('access_token='))).toBe(true);
-      expect(cookies?.some((c) => c.includes('HttpOnly'))).toBe(true);
+         // Verify cookies are set
+         const cookies = res.headers['set-cookie'] as string[] | undefined;
+         expect(cookies).toBeDefined();
+         expect(cookies?.some((c) => c.includes('access_token='))).toBe(true);
+         expect(cookies?.some((c) => c.includes('refresh_token='))).toBe(true);
+         expect(cookies?.some((c) => c.includes('HttpOnly'))).toBe(true);
 
-      const body = res.body as { user: { email: string; fullName: string } };
-      expect(body.user.email).toBe('john@example.com');
+         // Verify response body contains user and tokens
+         const body = res.body as {
+            user: { email: string };
+            tokens: { accessToken: string; refreshToken: string; tokenType: string; expiresIn: number };
+         };
+         expect(body.user.email).toBe('john@example.com');
+         expect(body.tokens).toBeDefined();
+         expect(body.tokens.accessToken).toBe('mock.access.token');
+         expect(body.tokens.refreshToken).toBe('mock.refresh.token');
+         expect(body.tokens.tokenType).toBe('Bearer');
+         expect(body.tokens.expiresIn).toBeGreaterThan(0);
+      });
+
+      it('/auth/login (POST) - should return tokens in both cookies and response body', async () => {
+         const res = await request(app.getHttpServer() as App)
+            .post('/auth/login')
+            .send({
+               email: 'john@example.com',
+               password: 'password123',
+            })
+            .expect(200);
+
+         // Verify cookies
+         const cookies = res.headers['set-cookie'] as string[] | undefined;
+         expect(cookies).toBeDefined();
+         expect(cookies?.some((c) => c.includes('access_token='))).toBe(true);
+         expect(cookies?.some((c) => c.includes('refresh_token='))).toBe(true);
+
+         // Verify response body
+         const body = res.body as {
+            user: { email: string };
+            tokens: { accessToken: string; refreshToken: string; tokenType: string };
+         };
+         expect(body.user.email).toBe('john@example.com');
+         expect(body.tokens).toBeDefined();
+         expect(body.tokens.accessToken).toBeDefined();
+         expect(body.tokens.refreshToken).toBeDefined();
+         expect(body.tokens.tokenType).toBe('Bearer');
+      });
+
+      it('/auth/register (POST) - mobile client should use tokens from response body', async () => {
+         const res = await request(app.getHttpServer() as App)
+            .post('/auth/register')
+            .set('X-Client-Type', 'ios')
+            .set('X-Device-Id', 'device-uuid-123')
+            .send({
+               email: 'mobile@example.com',
+               password: 'password123',
+               confirmPassword: 'password123',
+            })
+            .expect(201);
+
+         const body = res.body as {
+            tokens: { accessToken: string; refreshToken: string; tokenType: string };
+         };
+
+         // Mobile client can extract and use these tokens
+         expect(body.tokens.accessToken).toBeDefined();
+         expect(body.tokens.refreshToken).toBeDefined();
+         expect(body.tokens.tokenType).toBe('Bearer');
+      });
    });
 
-   it('/auth/logout (POST) - public route should clear access_token cookie', async () => {
+   it('/auth/logout (POST) - public route should clear both auth cookies', async () => {
       const res = await request(app.getHttpServer() as App)
          .post('/auth/logout')
          .expect(200);
@@ -133,6 +195,7 @@ describe('GatewayController (e2e)', () => {
       const cookies = res.headers['set-cookie'] as string[] | undefined;
       expect(cookies).toBeDefined();
       expect(cookies?.some((c) => c.includes('access_token=;'))).toBe(true);
+      expect(cookies?.some((c) => c.includes('refresh_token=;'))).toBe(true);
    });
 
    it('/auth/me (GET) - protected route should reject without token (401)', async () => {
@@ -159,5 +222,26 @@ describe('GatewayController (e2e)', () => {
       const body = res.body as { sub: string; email: string };
       expect(body.sub).toBe('usr_mock_123');
       expect(body.email).toBe('john@example.com');
+   });
+
+   it('/auth/me (GET) - mobile client should use Bearer token from response body', async () => {
+      const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_RSA_PRIVATE_KEY;
+
+      const token = JwtUtil.sign(
+         { sub: 'usr_mobile_456', email: 'mobile@example.com', roles: ['USER'], tokenType: 'access' },
+         privateKey,
+         3600,
+         { keyid: configService.jwtKeyId },
+      );
+
+      const res = await request(app.getHttpServer() as App)
+         .get('/auth/me')
+         .set('Authorization', `Bearer ${token}`)
+         .set('X-Client-Type', 'android')
+         .expect(200);
+
+      const body = res.body as { sub: string; email: string };
+      expect(body.sub).toBe('usr_mobile_456');
+      expect(body.email).toBe('mobile@example.com');
    });
 });

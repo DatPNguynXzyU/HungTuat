@@ -7,7 +7,7 @@ describe('SessionRepository', () => {
 
    const sampleSession = {
       id: 'session-id-1',
-      userId: 'user-id-1',
+      accountId: 'user-id-1',
       refreshTokenJti: 'jti-1',
       deviceType: 'desktop',
       deviceName: 'Chrome on macOS',
@@ -19,6 +19,9 @@ describe('SessionRepository', () => {
       region: 'SG',
       country: 'Vietnam',
       countryCode: 'VN',
+      deviceId: 'dev-1',
+      clientType: 'web',
+      appVersion: '1.0.0',
       isRevoked: false,
       lastActiveAt: new Date('2026-09-28T00:00:00.000Z'),
       expiresAt: new Date('2026-10-05T00:00:00.000Z'),
@@ -26,23 +29,23 @@ describe('SessionRepository', () => {
       updatedAt: new Date('2026-09-28T00:00:00.000Z'),
    };
 
-   const mockUserSessionCreate = jest.fn();
-   const mockUserSessionFindUnique = jest.fn();
-   const mockUserSessionFindFirst = jest.fn();
-   const mockUserSessionFindMany = jest.fn();
-   const mockUserSessionUpdate = jest.fn();
-   const mockUserSessionUpdateMany = jest.fn();
-   const mockUserSessionDelete = jest.fn();
+   const mockAccountSessionCreate = jest.fn();
+   const mockAccountSessionFindUnique = jest.fn();
+   const mockAccountSessionFindFirst = jest.fn();
+   const mockAccountSessionFindMany = jest.fn();
+   const mockAccountSessionUpdate = jest.fn();
+   const mockAccountSessionUpdateMany = jest.fn();
+   const mockAccountSessionDelete = jest.fn();
 
    const mockPrismaService = {
-      userSession: {
-         create: mockUserSessionCreate,
-         findUnique: mockUserSessionFindUnique,
-         findFirst: mockUserSessionFindFirst,
-         findMany: mockUserSessionFindMany,
-         update: mockUserSessionUpdate,
-         updateMany: mockUserSessionUpdateMany,
-         delete: mockUserSessionDelete,
+      accountSession: {
+         create: mockAccountSessionCreate,
+         findUnique: mockAccountSessionFindUnique,
+         findFirst: mockAccountSessionFindFirst,
+         findMany: mockAccountSessionFindMany,
+         update: mockAccountSessionUpdate,
+         updateMany: mockAccountSessionUpdateMany,
+         delete: mockAccountSessionDelete,
       },
    };
 
@@ -63,10 +66,10 @@ describe('SessionRepository', () => {
    });
 
    it('should create a new session entity', async () => {
-      mockUserSessionCreate.mockResolvedValue(sampleSession);
+      mockAccountSessionCreate.mockResolvedValue(sampleSession);
 
       const result = await repository.createSession({
-         userId: 'user-id-1',
+         accountId: 'user-id-1',
          refreshTokenJti: 'jti-1',
          deviceType: 'desktop',
          deviceName: 'Chrome on macOS',
@@ -74,60 +77,62 @@ describe('SessionRepository', () => {
       });
 
       expect(result.id).toBe('session-id-1');
-      expect(result.userId).toBe('user-id-1');
-      expect(mockUserSessionCreate).toHaveBeenCalled();
+      expect(result.accountId).toBe('user-id-1');
+      expect(mockAccountSessionCreate).toHaveBeenCalled();
    });
 
    it('should find session by ID', async () => {
-      mockUserSessionFindUnique.mockResolvedValue(sampleSession);
+      mockAccountSessionFindUnique.mockResolvedValue(sampleSession);
 
       const result = await repository.findById('session-id-1');
 
       expect(result?.id).toBe('session-id-1');
-      expect(mockUserSessionFindUnique).toHaveBeenCalledWith({
+      expect(mockAccountSessionFindUnique).toHaveBeenCalledWith({
          where: { id: 'session-id-1' },
       });
    });
 
-   it('should find active sessions by userId', async () => {
-      mockUserSessionFindMany.mockResolvedValue([sampleSession]);
+   it('should find active sessions by accountId', async () => {
+      mockAccountSessionFindMany.mockResolvedValue([sampleSession]);
 
-      const result = await repository.findActiveSessionsByUserId('user-id-1');
+      const result = await repository.findActiveSessionsByAccountId('user-id-1');
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('session-id-1');
-      expect(mockUserSessionFindMany).toHaveBeenCalledTimes(1);
-      const findArgs = mockUserSessionFindMany.mock.calls[0] as [{ where?: { userId?: string; isRevoked?: boolean } }];
-      expect(findArgs[0]?.where?.userId).toBe('user-id-1');
+      expect(mockAccountSessionFindMany).toHaveBeenCalledTimes(1);
+      const findArgs = mockAccountSessionFindMany.mock.calls[0] as [
+         { where?: { accountId?: string; isRevoked?: boolean } },
+      ];
+      expect(findArgs[0]?.where?.accountId).toBe('user-id-1');
       expect(findArgs[0]?.where?.isRevoked).toBe(false);
    });
 
-   it('should revoke a session by id and userId', async () => {
-      mockUserSessionFindFirst.mockResolvedValue(sampleSession);
-      mockUserSessionUpdate.mockResolvedValue({ ...sampleSession, isRevoked: true });
+   it('should revoke a session by id and accountId', async () => {
+      mockAccountSessionFindFirst.mockResolvedValue(sampleSession);
+      mockAccountSessionUpdate.mockResolvedValue({ ...sampleSession, isRevoked: true });
 
       const result = await repository.revokeSession('session-id-1', 'user-id-1');
 
       expect(result?.isRevoked).toBe(true);
-      expect(mockUserSessionUpdate).toHaveBeenCalledWith({
+      expect(mockAccountSessionUpdate).toHaveBeenCalledWith({
          where: { id: 'session-id-1' },
          data: { isRevoked: true },
       });
    });
 
    it('should revoke all other sessions and return revoked JTIs', async () => {
-      mockUserSessionFindMany.mockResolvedValue([
+      mockAccountSessionFindMany.mockResolvedValue([
          { refreshTokenJti: 'jti-other-1' },
          { refreshTokenJti: 'jti-other-2' },
       ]);
-      mockUserSessionUpdateMany.mockResolvedValue({ count: 2 });
+      mockAccountSessionUpdateMany.mockResolvedValue({ count: 2 });
 
       const jtis = await repository.revokeOtherSessions('user-id-1', 'current-jti');
 
       expect(jtis).toEqual(['jti-other-1', 'jti-other-2']);
-      expect(mockUserSessionUpdateMany).toHaveBeenCalledWith({
+      expect(mockAccountSessionUpdateMany).toHaveBeenCalledWith({
          where: {
-            userId: 'user-id-1',
+            accountId: 'user-id-1',
             refreshTokenJti: { not: 'current-jti' },
             isRevoked: false,
          },
@@ -136,15 +141,15 @@ describe('SessionRepository', () => {
    });
 
    it('should revoke all sessions for a user', async () => {
-      mockUserSessionFindMany.mockResolvedValue([{ refreshTokenJti: 'jti-1' }]);
-      mockUserSessionUpdateMany.mockResolvedValue({ count: 1 });
+      mockAccountSessionFindMany.mockResolvedValue([{ refreshTokenJti: 'jti-1' }]);
+      mockAccountSessionUpdateMany.mockResolvedValue({ count: 1 });
 
       const jtis = await repository.revokeAllSessions('user-id-1');
 
       expect(jtis).toEqual(['jti-1']);
-      expect(mockUserSessionUpdateMany).toHaveBeenCalledWith({
+      expect(mockAccountSessionUpdateMany).toHaveBeenCalledWith({
          where: {
-            userId: 'user-id-1',
+            accountId: 'user-id-1',
             isRevoked: false,
          },
          data: { isRevoked: true },

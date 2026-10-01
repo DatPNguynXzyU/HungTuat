@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { uuidv7 } from 'uuidv7';
+import { uuidv7 } from '@common';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import type { CreateOutboxEventData, OutboxEventEntity } from '@auth/outbox/entities/outbox-event.entity';
 import type { IOutboxRepository } from '@auth/outbox/repositories/outbox.repository.interface';
-import type { OutboxEvent, Prisma } from '@auth/prisma-client';
+import { type OutboxEvent, type Prisma, OutboxStatus } from '@auth/prisma-client';
 
 @Injectable()
 export class OutboxRepository implements IOutboxRepository {
@@ -35,7 +35,7 @@ export class OutboxRepository implements IOutboxRepository {
             aggregateId: data.aggregateId || id,
             eventType: data.eventType,
             payload: data.payload as Prisma.InputJsonValue,
-            status: 'PENDING',
+            status: OutboxStatus.PENDING,
          },
       });
 
@@ -46,7 +46,7 @@ export class OutboxRepository implements IOutboxRepository {
       const events = await this.prisma.outboxEvent.findMany({
          where: {
             status: {
-               in: ['PENDING', 'PROCESSING'],
+               in: [OutboxStatus.PENDING, OutboxStatus.PROCESSING],
             },
          },
          orderBy: {
@@ -62,7 +62,7 @@ export class OutboxRepository implements IOutboxRepository {
       if (ids.length === 0) return;
       await this.prisma.outboxEvent.updateMany({
          where: { id: { in: ids } },
-         data: { status: 'PROCESSING' },
+         data: { status: OutboxStatus.PROCESSING },
       });
    }
 
@@ -70,7 +70,7 @@ export class OutboxRepository implements IOutboxRepository {
       await this.prisma.outboxEvent.update({
          where: { id },
          data: {
-            status: 'PUBLISHED',
+            status: OutboxStatus.PUBLISHED,
             processedAt: new Date(),
             lastError: null,
          },
@@ -82,7 +82,7 @@ export class OutboxRepository implements IOutboxRepository {
       if (!event) return;
 
       const newRetryCount = event.retryCount + 1;
-      const nextStatus = newRetryCount >= maxRetries ? 'FAILED' : 'PENDING';
+      const nextStatus = newRetryCount >= maxRetries ? OutboxStatus.FAILED : OutboxStatus.PENDING;
 
       await this.prisma.outboxEvent.update({
          where: { id },
@@ -90,7 +90,7 @@ export class OutboxRepository implements IOutboxRepository {
             status: nextStatus,
             retryCount: newRetryCount,
             lastError: error.slice(0, 1000),
-            ...(nextStatus === 'FAILED' ? { processedAt: new Date() } : {}),
+            ...(nextStatus === OutboxStatus.FAILED ? { processedAt: new Date() } : {}),
          },
       });
    }

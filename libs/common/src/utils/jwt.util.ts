@@ -12,7 +12,6 @@ import type { IJwksResponse, IJsonWebKey } from '@common/interfaces/auth.interfa
 export interface JwtPayload {
    sub: string;
    email: string;
-   fullName?: string;
    roles?: string[];
    tokenType?: 'access' | 'refresh';
    jti?: string;

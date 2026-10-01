@@ -37,28 +37,12 @@ enum Gender {
    PREFER_NOT_TO_SAY
 }
 
-// User Profile Model
+// User Core Identity Model
 model User {
    id                String         @id @default(uuid())
-   userId            String         @unique // Reference to Auth service user
-   email             String?        @unique
+   userId            String         @unique // Reference to Auth service user ID
    username          String?        @unique
-   displayName       String?
-   bio               String?        @db.Text
-   avatar            String?
-   coverImage        String?
-   website           String?
-   location          String?
-   dateOfBirth       DateTime?
-   gender            Gender?
-   isVerified        Boolean        @default(false)
-   isPrivate         Boolean        @default(false)
    status            UserStatus     @default(ACTIVE)
-
-   // Social counts (denormalized for performance)
-   followersCount    Int            @default(0)
-   followingCount    Int            @default(0)
-   postsCount        Int            @default(0)
 
    // Soft delete
    deletedAt         DateTime?
@@ -68,31 +52,91 @@ model User {
    updatedAt         DateTime       @updatedAt
    lastActiveAt      DateTime?
 
-   // Relations
+   // 1-to-1 Sub-tables
+   profile           UserProfile?
+   stats             UserStats?
+   settings          UserSettings?
+
+   // Social Relations
    followers         Follow[]       @relation("UserFollowers")
    following         Follow[]       @relation("UserFollowing")
 
-   @@index([email])
    @@index([username])
    @@index([userId])
+   @@index([status])
    @@index([createdAt])
    @@index([deletedAt])
    @@map("users")
 }
 
+// User Profile Model (Personal / Public Info)
+model UserProfile {
+   id                String         @id @default(uuid())
+   userId            String         @unique @map("user_id")
+   displayName       String?        @map("display_name")
+   bio               String?        @db.Text
+   avatar            String?
+   coverImage        String?        @map("cover_image")
+   website           String?
+   location          String?
+   dateOfBirth       DateTime?      @map("date_of_birth")
+   gender            Gender?
+
+   // Timestamps
+   createdAt         DateTime       @default(now()) @map("created_at")
+   updatedAt         DateTime       @updatedAt @map("updated_at")
+
+   user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+   @@map("user_profiles")
+}
+
+// User Social Stats Model (Counters & Metrics)
+model UserStats {
+   id                String         @id @default(uuid())
+   userId            String         @unique @map("user_id")
+   followersCount    Int            @default(0) @map("followers_count")
+   followingCount    Int            @default(0) @map("following_count")
+   postsCount        Int            @default(0) @map("posts_count")
+
+   // Timestamps
+   createdAt         DateTime       @default(now()) @map("created_at")
+   updatedAt         DateTime       @updatedAt @map("updated_at")
+
+   user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+   @@map("user_stats")
+}
+
+// User Settings Model (Preferences & Privacy)
+model UserSettings {
+   id                String         @id @default(uuid())
+   userId            String         @unique @map("user_id")
+   isVerified        Boolean        @default(false) @map("is_verified")
+   isPrivate         Boolean        @default(false) @map("is_private")
+
+   // Timestamps
+   createdAt         DateTime       @default(now()) @map("created_at")
+   updatedAt         DateTime       @updatedAt @map("updated_at")
+
+   user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+   @@map("user_settings")
+}
+
 // Follow/Social Connection Model
 model Follow {
    id                String         @id @default(uuid())
-   followerId        String         // User who follows
-   followingId       String         // User being followed
+   followerId        String         @map("follower_id")
+   followingId       String         @map("following_id")
    status            FollowStatus   @default(PENDING)
 
    // Soft delete
-   deletedAt         DateTime?
+   deletedAt         DateTime?      @map("deleted_at")
 
    // Timestamps
-   createdAt         DateTime       @default(now())
-   updatedAt         DateTime       @updatedAt
+   createdAt         DateTime       @default(now()) @map("created_at")
+   updatedAt         DateTime       @updatedAt @map("updated_at")
 
    // Relations
    follower          User           @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
@@ -110,19 +154,19 @@ model Follow {
 // Outbox Pattern for Event-Driven Architecture
 model Outbox {
    id                String         @id @default(uuid())
-   aggregateId       String
-   aggregateType     String
-   eventType         String
+   aggregateId       String         @map("aggregate_id")
+   aggregateType     String         @map("aggregate_type")
+   eventType         String         @map("event_type")
    payload           String         @db.Text
    status            OutboxStatus   @default(PENDING)
-   retryCount        Int            @default(0)
-   maxRetries        Int            @default(3)
+   retryCount        Int            @default(0) @map("retry_count")
+   maxRetries        Int            @default(3) @map("max_retries")
    error             String?        @db.Text
 
    // Timestamps
-   createdAt         DateTime       @default(now())
-   updatedAt         DateTime       @updatedAt
-   publishedAt       DateTime?
+   createdAt         DateTime       @default(now()) @map("created_at")
+   updatedAt         DateTime       @updatedAt @map("updated_at")
+   publishedAt       DateTime?      @map("published_at")
 
    @@index([status, createdAt])
    @@index([aggregateId])

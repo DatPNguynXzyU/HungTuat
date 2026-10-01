@@ -17,7 +17,7 @@ export class AuditLogService {
          return await this.auditLogRepository.createAuditLog(data);
       } catch (error) {
          this.logger.error(
-            `Failed to record security audit log for action ${data.action} (actor: ${data.actorEmail || data.userId || 'unknown'}): ${error instanceof Error ? error.message : String(error)}`,
+            `Failed to record security audit log for action ${data.action} (actor: ${data.actorEmail || data.accountId || 'unknown'}): ${error instanceof Error ? error.message : String(error)}`,
          );
          return null;
       }
@@ -31,7 +31,7 @@ export class AuditLogService {
       return this.auditLogRepository.findById(id);
    }
 
-   async getUserAuditLogs(userId: string, page = 1, limit = 10): Promise<IAuditLogListResult> {
-      return this.auditLogRepository.findUserAuditLogs(userId, page, limit);
+   async getAccountAuditLogs(accountId: string, page = 1, limit = 10): Promise<IAuditLogListResult> {
+      return this.auditLogRepository.findAccountAuditLogs(accountId, page, limit);
    }
 }

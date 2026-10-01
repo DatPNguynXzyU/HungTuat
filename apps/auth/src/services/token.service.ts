@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { uuidv7 } from 'uuidv7';
+import { uuidv7 } from '@common';
 import {
+   AUTH_ERROR_CODES,
    IDeviceInfo,
    IJwksResponse,
    IRevokeSessionResult,
@@ -14,8 +15,7 @@ import {
    UnauthorizedException,
 } from '@common';
 import { AuthConfigService } from '@auth/config';
-import { AUTH_ERROR_CODES } from '@auth/constants/auth-error-codes';
-import type { UserSessionEntity } from '@auth/entities/session.entity';
+import type { SessionEntity } from '@auth/entities/session.entity';
 import type { ISessionRepository } from '@auth/repositories/session.repository.interface';
 import { SESSION_REPOSITORY } from '@auth/repositories/session.repository.interface';
 
@@ -52,10 +52,9 @@ export class TokenService {
    }
 
    async generateTokenPair(
-      user: {
+      account: {
          id: string;
          email: string;
-         fullName?: string;
          roles: string[];
       },
       deviceInfo?: IDeviceInfo,
@@ -65,10 +64,9 @@ export class TokenService {
 
       const accessToken = JwtUtil.sign(
          {
-            sub: user.id,
-            email: user.email,
-            fullName: user.fullName,
-            roles: user.roles,
+            sub: account.id,
+            email: account.email,
+            roles: account.roles,
             tokenType: 'access',
             jti: accessTokenJti,
          },
@@ -79,9 +77,9 @@ export class TokenService {
 
       const refreshToken = JwtUtil.sign(
          {
-            sub: user.id,
-            email: user.email,
-            roles: user.roles,
+            sub: account.id,
+            email: account.email,
+            roles: account.roles,
             tokenType: 'refresh',
             jti: refreshTokenJti,
          },
@@ -90,15 +88,15 @@ export class TokenService {
          { keyid: this.jwtKeyId },
       );
 
-      const refreshRedisKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${user.id}:${refreshTokenJti}`;
-      const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${user.id}`;
+      const refreshRedisKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${account.id}:${refreshTokenJti}`;
+      const sessionsKey = `${REDIS_KEY_PREFIX.ACCOUNT_SESSIONS}${account.id}`;
       const expiresAt = new Date(Date.now() + this.refreshTokenExpiresIn * 1000).toISOString();
 
       await Promise.all([
          this.redisService.setJson(
             refreshRedisKey,
             {
-               userId: user.id,
+               accountId: account.id,
                jti: refreshTokenJti,
                createdAt: new Date().toISOString(),
             },
@@ -107,7 +105,7 @@ export class TokenService {
          this.redisService.sadd(sessionsKey, accessTokenJti, refreshTokenJti),
          this.redisService.expire(sessionsKey, this.refreshTokenExpiresIn),
          this.sessionRepository.createSession({
-            userId: user.id,
+            accountId: account.id,
             refreshTokenJti,
             deviceType: deviceInfo?.deviceType,
             deviceName: deviceInfo?.deviceName,
@@ -119,6 +117,9 @@ export class TokenService {
             region: deviceInfo?.region,
             country: deviceInfo?.country,
             countryCode: deviceInfo?.countryCode,
+            deviceId: deviceInfo?.deviceId,
+            clientType: deviceInfo?.clientType,
+            appVersion: deviceInfo?.appVersion,
             expiresAt,
          }),
       ]);
@@ -127,10 +128,9 @@ export class TokenService {
    }
 
    async rotateTokenPair(
-      user: {
+      account: {
          id: string;
          email: string;
-         fullName?: string;
          roles: string[];
       },
       oldRefreshTokenJti: string,
@@ -142,10 +142,9 @@ export class TokenService {
 
       const accessToken = JwtUtil.sign(
          {
-            sub: user.id,
-            email: user.email,
-            fullName: user.fullName,
-            roles: user.roles,
+            sub: account.id,
+            email: account.email,
+            roles: account.roles,
             tokenType: 'access',
             jti: accessTokenJti,
          },
@@ -156,9 +155,9 @@ export class TokenService {
 
       const refreshToken = JwtUtil.sign(
          {
-            sub: user.id,
-            email: user.email,
-            roles: user.roles,
+            sub: account.id,
+            email: account.email,
+            roles: account.roles,
             tokenType: 'refresh',
             jti: refreshTokenJti,
          },
@@ -167,13 +166,13 @@ export class TokenService {
          { keyid: this.jwtKeyId },
       );
 
-      const refreshRedisKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${user.id}:${refreshTokenJti}`;
-      const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${user.id}`;
+      const refreshRedisKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${account.id}:${refreshTokenJti}`;
+      const sessionsKey = `${REDIS_KEY_PREFIX.ACCOUNT_SESSIONS}${account.id}`;
       const expiresAt = new Date(Date.now() + this.refreshTokenExpiresIn * 1000).toISOString();
       const nowIso = new Date().toISOString();
 
       // Invalidate old refresh token in Redis
-      await this.invalidateRefreshToken(user.id, oldRefreshTokenJti, remainingTtl);
+      await this.invalidateRefreshToken(account.id, oldRefreshTokenJti, remainingTtl);
 
       // Try updating existing session with new JTI and lastActiveAt; if not found, create new session
       const existingSession = await this.sessionRepository.findByJti(oldRefreshTokenJti);
@@ -191,7 +190,7 @@ export class TokenService {
          });
       } else {
          await this.sessionRepository.createSession({
-            userId: user.id,
+            accountId: account.id,
             refreshTokenJti,
             deviceType: deviceInfo?.deviceType,
             deviceName: deviceInfo?.deviceName,
@@ -203,6 +202,9 @@ export class TokenService {
             region: deviceInfo?.region,
             country: deviceInfo?.country,
             countryCode: deviceInfo?.countryCode,
+            deviceId: deviceInfo?.deviceId,
+            clientType: deviceInfo?.clientType,
+            appVersion: deviceInfo?.appVersion,
             expiresAt,
          });
       }
@@ -211,7 +213,7 @@ export class TokenService {
          this.redisService.setJson(
             refreshRedisKey,
             {
-               userId: user.id,
+               accountId: account.id,
                jti: refreshTokenJti,
                createdAt: nowIso,
             },
@@ -244,8 +246,8 @@ export class TokenService {
       }
 
       if (payload.sub && payload.iat) {
-         const userRevokedAtKey = `${REDIS_KEY_PREFIX.USER_REVOKED_AT}${payload.sub}`;
-         const revokedAt = await this.redisService.get(userRevokedAtKey);
+         const accountRevokedAtKey = `${REDIS_KEY_PREFIX.ACCOUNT_REVOKED_AT}${payload.sub}`;
+         const revokedAt = await this.redisService.get(accountRevokedAtKey);
          if (revokedAt && payload.iat <= Number(revokedAt)) {
             throw new UnauthorizedException(AUTH_ERROR_CODES.TOKEN_REVOKED);
          }
@@ -277,7 +279,7 @@ export class TokenService {
       const isRevoked = await this.isTokenRevoked(payload.jti);
       if (isRevoked) {
          // Token reuse detected: Revoke all active sessions for this user to mitigate breach
-         await this.revokeAllUserTokens(payload.sub);
+         await this.revokeAllAccountTokens(payload.sub);
          throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_REVOKED);
       }
 
@@ -285,7 +287,7 @@ export class TokenService {
       const activeToken = await this.redisService.getJson(activeKey);
       if (!activeToken) {
          // Token reuse detected or not active: Revoke all active sessions for this user
-         await this.revokeAllUserTokens(payload.sub);
+         await this.revokeAllAccountTokens(payload.sub);
          throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_REVOKED);
       }
 
@@ -298,9 +300,9 @@ export class TokenService {
       return Boolean(revoked);
    }
 
-   async invalidateRefreshToken(userId: string, jti: string, remainingTtl?: number): Promise<void> {
-      const activeKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${userId}:${jti}`;
-      const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${userId}`;
+   async invalidateRefreshToken(accountId: string, jti: string, remainingTtl?: number): Promise<void> {
+      const activeKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${accountId}:${jti}`;
+      const sessionsKey = `${REDIS_KEY_PREFIX.ACCOUNT_SESSIONS}${accountId}`;
       const revokedKey = `${REDIS_KEY_PREFIX.REVOKED_TOKEN}${jti}`;
       const ttl = typeof remainingTtl === 'number' && remainingTtl > 0 ? remainingTtl : this.refreshTokenExpiresIn;
 
@@ -312,23 +314,23 @@ export class TokenService {
       ]);
    }
 
-   async revokeAllUserTokens(userId: string): Promise<void> {
-      if (!userId) {
+   async revokeAllAccountTokens(accountId: string): Promise<void> {
+      if (!accountId) {
          return;
       }
       const nowInSeconds = Math.floor(Date.now() / 1000);
-      const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${userId}`;
-      const userRevokedAtKey = `${REDIS_KEY_PREFIX.USER_REVOKED_AT}${userId}`;
+      const sessionsKey = `${REDIS_KEY_PREFIX.ACCOUNT_SESSIONS}${accountId}`;
+      const accountRevokedAtKey = `${REDIS_KEY_PREFIX.ACCOUNT_REVOKED_AT}${accountId}`;
       const activeJtis = await this.redisService.smembers(sessionsKey);
 
       const delPromises: Promise<unknown>[] = [
          this.redisService.del(sessionsKey),
-         this.redisService.set(userRevokedAtKey, String(nowInSeconds), this.refreshTokenExpiresIn),
-         this.sessionRepository.revokeAllSessions(userId),
+         this.redisService.set(accountRevokedAtKey, String(nowInSeconds), this.refreshTokenExpiresIn),
+         this.sessionRepository.revokeAllSessions(accountId),
       ];
 
       for (const jti of activeJtis) {
-         const activeKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${userId}:${jti}`;
+         const activeKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${accountId}:${jti}`;
          const revokedKey = `${REDIS_KEY_PREFIX.REVOKED_TOKEN}${jti}`;
          delPromises.push(
             this.redisService.del(activeKey),
@@ -336,17 +338,17 @@ export class TokenService {
          );
       }
 
-      delPromises.push(this.redisService.deleteByPattern(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}${userId}:*`));
+      delPromises.push(this.redisService.deleteByPattern(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}${accountId}:*`));
 
       await Promise.all(delPromises);
    }
 
-   async logoutAll(userId: string): Promise<void> {
-      await this.revokeAllUserTokens(userId);
+   async logoutAll(accountId: string): Promise<void> {
+      await this.revokeAllAccountTokens(accountId);
    }
 
-   async getActiveSessions(userId: string, currentJti?: string): Promise<IUserSessionInfo[]> {
-      const sessions: UserSessionEntity[] = (await this.sessionRepository.findActiveSessionsByUserId(userId)) || [];
+   async getActiveSessions(accountId: string, currentJti?: string): Promise<IUserSessionInfo[]> {
+      const sessions: SessionEntity[] = (await this.sessionRepository.findActiveSessionsByAccountId(accountId)) || [];
       return sessions.map((s) => ({
          id: s.id,
          deviceType: s.deviceType,
@@ -366,34 +368,29 @@ export class TokenService {
       }));
    }
 
-   async revokeSession(userId: string, sessionId: string): Promise<IRevokeSessionResult> {
-      const session: UserSessionEntity | null = await this.sessionRepository.findById(sessionId);
-      if (!session || session.userId !== userId) {
+   async revokeSession(accountId: string, sessionId: string): Promise<void> {
+      const session: SessionEntity | null = await this.sessionRepository.findById(sessionId);
+      if (!session || session.accountId !== accountId) {
          throw new NotFoundException(AUTH_ERROR_CODES.SESSION_NOT_FOUND);
       }
 
       if (session.isRevoked) {
-         return { success: true, message: 'Session already revoked' };
+         return;
       }
 
-      await this.sessionRepository.revokeSession(sessionId, userId);
-      await this.invalidateRefreshToken(userId, session.refreshTokenJti);
-
-      return {
-         success: true,
-         message: 'Session revoked successfully',
-      };
+      await this.sessionRepository.revokeSession(sessionId, accountId);
+      await this.invalidateRefreshToken(accountId, session.refreshTokenJti);
    }
 
-   async revokeOtherSessions(userId: string, currentJti: string): Promise<IRevokeSessionResult> {
-      const revokedJtisResult: unknown = await this.sessionRepository.revokeOtherSessions(userId, currentJti);
+   async revokeOtherSessions(accountId: string, currentJti: string): Promise<IRevokeSessionResult> {
+      const revokedJtisResult: unknown = await this.sessionRepository.revokeOtherSessions(accountId, currentJti);
       const revokedJtis: string[] = Array.isArray(revokedJtisResult) ? (revokedJtisResult as string[]) : [];
 
       const promises: Promise<unknown>[] = [];
       for (const jti of revokedJtis) {
-         const activeKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${userId}:${jti}`;
+         const activeKey = `${REDIS_KEY_PREFIX.REFRESH_TOKEN}${accountId}:${jti}`;
          const revokedKey = `${REDIS_KEY_PREFIX.REVOKED_TOKEN}${jti}`;
-         const sessionsKey = `${REDIS_KEY_PREFIX.USER_SESSIONS}${userId}`;
+         const sessionsKey = `${REDIS_KEY_PREFIX.ACCOUNT_SESSIONS}${accountId}`;
          promises.push(
             this.redisService.del(activeKey),
             this.redisService.srem(sessionsKey, jti),
@@ -404,25 +401,20 @@ export class TokenService {
       await Promise.all(promises);
 
       return {
-         success: true,
-         message: 'All other sessions revoked successfully',
          revokedCount: revokedJtis.length,
       };
    }
 
-   async revokeToken(token: string): Promise<IRevokeTokenResult> {
+   async revokeToken(token: string): Promise<void> {
       if (!token) {
-         return { success: true, message: 'No token provided to revoke' };
+         return;
       }
 
       let payload: JwtPayload;
       try {
          payload = JwtUtil.verify(token, this.jwtPublicKey);
       } catch {
-         return {
-            success: false,
-            message: 'Invalid or expired token',
-         };
+         throw new UnauthorizedException(AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED);
       }
 
       if (payload.jti && payload.sub) {
@@ -430,10 +422,5 @@ export class TokenService {
          const remainingTtl = payload.exp ? Math.max(payload.exp - nowInSeconds, 0) : this.refreshTokenExpiresIn;
          await this.invalidateRefreshToken(payload.sub, payload.jti, remainingTtl);
       }
-
-      return {
-         success: true,
-         message: 'Token revoked successfully',
-      };
    }
 }

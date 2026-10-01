@@ -2,8 +2,16 @@ import { UAParser } from 'ua-parser-js';
 import geoip from 'geoip-lite';
 import { IDeviceInfo } from '@common/interfaces/auth.interface';
 
+export interface DeviceHeaders {
+   userAgent?: string;
+   'x-client-type'?: string;
+   'x-device-id'?: string;
+   'x-device-name'?: string;
+   'x-app-version'?: string;
+}
+
 export class DeviceDetectorUtil {
-   static parse(userAgent?: string, ipAddress?: string): IDeviceInfo {
+   static parse(userAgent?: string, ipAddress?: string, headers?: DeviceHeaders): IDeviceInfo {
       const ua = (userAgent || '').trim();
       const ip = (ipAddress || '127.0.0.1').trim();
 
@@ -20,8 +28,10 @@ export class DeviceDetectorUtil {
 
       const rawDeviceType = parsedUa.device.type;
       let deviceType: string = rawDeviceType || 'desktop';
+
+      // Enhanced mobile client detection
       if (!rawDeviceType) {
-         if (/mobile|iphone|ipod|android.*mobile/i.test(ua)) {
+         if (this.isMobileUserAgent(ua)) {
             deviceType = 'mobile';
          } else if (/tablet|ipad|android(?!.*mobile)/i.test(ua)) {
             deviceType = 'tablet';
@@ -55,6 +65,17 @@ export class DeviceDetectorUtil {
          }
       }
 
+      // Extract custom headers for multi-platform support
+      const deviceId = headers?.['x-device-id'];
+      const clientType = this.parseClientType(headers?.['x-client-type']);
+      const appVersion = headers?.['x-app-version'];
+      const customDeviceName = headers?.['x-device-name'];
+
+      // Override deviceName if custom header provided
+      if (customDeviceName) {
+         deviceName = customDeviceName;
+      }
+
       return {
          deviceType,
          deviceName,
@@ -66,7 +87,39 @@ export class DeviceDetectorUtil {
          region,
          country,
          countryCode,
+         deviceId,
+         clientType,
+         appVersion,
       };
+   }
+
+   private static isMobileUserAgent(ua: string): boolean {
+      // Enhanced mobile detection for various mobile frameworks and clients
+      const mobilePatterns = [
+         /mobile|iphone|ipod|android.*mobile/i,
+         /dart\/[\d.]+/i, // Dart/Flutter
+         /flutter/i, // Flutter
+         /react.*native/i, // React Native
+         /okhttp/i, // OkHttp (Android)
+         /cfnetwork/i, // CFNetwork (iOS)
+         /expo/i, // Expo
+         /capacitor/i, // Capacitor
+         /cordova/i, // Cordova
+         /ionic/i, // Ionic
+      ];
+
+      return mobilePatterns.some((pattern) => pattern.test(ua));
+   }
+
+   private static parseClientType(clientType?: string): 'web' | 'mobile' | 'desktop' | undefined {
+      if (!clientType) return undefined;
+
+      const normalized = clientType.toLowerCase().trim();
+      if (normalized === 'web' || normalized === 'mobile' || normalized === 'desktop') {
+         return normalized;
+      }
+
+      return undefined;
    }
 
    private static isPrivateIp(ip: string): boolean {

@@ -8,6 +8,7 @@ import {
    SendResetPasswordEmailDto,
    SendVerificationEmailDto,
    SendWelcomeEmailDto,
+   SendChangePasswordOtpEmailDto,
 } from '@common';
 import { PrismaService } from '@notification/prisma/prisma.service';
 import { ResendService, SendEmailResult } from '@notification/services/resend.service';
@@ -131,6 +132,17 @@ export class NotificationService {
          NOTIFICATION_TEMPLATES.OTP_EMAIL,
          dto as unknown as Record<string, unknown>,
          () => this.resendService.sendOtpEmail(dto),
+         eventId,
+      );
+   }
+
+   async sendChangePasswordOtpEmail(dto: SendChangePasswordOtpEmailDto, eventId?: string): Promise<SendEmailResult> {
+      this.logger.log(`Processing change password OTP email notification for: ${dto.to}`);
+      return this.logNotification(
+         dto.to,
+         NOTIFICATION_TEMPLATES.CHANGE_PASSWORD_OTP_EMAIL,
+         dto as unknown as Record<string, unknown>,
+         () => this.resendService.sendChangePasswordOtpEmail(dto),
          eventId,
       );
    }

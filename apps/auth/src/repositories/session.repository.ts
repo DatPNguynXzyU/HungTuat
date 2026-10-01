@@ -1,18 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { uuidv7 } from 'uuidv7';
-import type { CreateSessionData, UserSessionEntity } from '@auth/entities/session.entity';
+import { uuidv7 } from '@common';
+import type { SessionEntity, CreateSessionData } from '@auth/entities/session.entity';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import type { ISessionRepository } from '@auth/repositories/session.repository.interface';
-import type { UserSession } from '@auth/prisma-client';
+import type { AccountSession } from '@auth/prisma-client';
 
 @Injectable()
 export class SessionRepository implements ISessionRepository {
    constructor(private readonly prisma: PrismaService) {}
 
-   private toEntity(session: UserSession): UserSessionEntity {
+   private toEntity(session: AccountSession): SessionEntity {
       return {
          id: session.id,
-         userId: session.userId,
+         accountId: session.accountId,
          refreshTokenJti: session.refreshTokenJti,
          deviceType: session.deviceType,
          deviceName: session.deviceName,
@@ -24,6 +24,9 @@ export class SessionRepository implements ISessionRepository {
          region: session.region,
          country: session.country,
          countryCode: session.countryCode,
+         deviceId: session.deviceId,
+         clientType: session.clientType,
+         appVersion: session.appVersion,
          isRevoked: session.isRevoked,
          lastActiveAt: session.lastActiveAt.toISOString(),
          expiresAt: session.expiresAt.toISOString(),
@@ -32,12 +35,12 @@ export class SessionRepository implements ISessionRepository {
       };
    }
 
-   async createSession(data: CreateSessionData): Promise<UserSessionEntity> {
+   async createSession(data: CreateSessionData): Promise<SessionEntity> {
       const id = data.id || uuidv7();
-      const session = await this.prisma.userSession.create({
+      const session = await this.prisma.accountSession.create({
          data: {
             id,
-            userId: data.userId,
+            accountId: data.accountId,
             refreshTokenJti: data.refreshTokenJti,
             deviceType: data.deviceType,
             deviceName: data.deviceName,
@@ -49,6 +52,9 @@ export class SessionRepository implements ISessionRepository {
             region: data.region,
             country: data.country,
             countryCode: data.countryCode,
+            deviceId: data.deviceId,
+            clientType: data.clientType,
+            appVersion: data.appVersion,
             isRevoked: data.isRevoked ?? false,
             expiresAt: new Date(data.expiresAt),
             ...(data.lastActiveAt ? { lastActiveAt: new Date(data.lastActiveAt) } : {}),
@@ -59,24 +65,24 @@ export class SessionRepository implements ISessionRepository {
       return this.toEntity(session);
    }
 
-   async findById(id: string): Promise<UserSessionEntity | null> {
-      const session = await this.prisma.userSession.findUnique({
+   async findById(id: string): Promise<SessionEntity | null> {
+      const session = await this.prisma.accountSession.findUnique({
          where: { id },
       });
       return session ? this.toEntity(session) : null;
    }
 
-   async findByJti(refreshTokenJti: string): Promise<UserSessionEntity | null> {
-      const session = await this.prisma.userSession.findUnique({
+   async findByJti(refreshTokenJti: string): Promise<SessionEntity | null> {
+      const session = await this.prisma.accountSession.findUnique({
          where: { refreshTokenJti },
       });
       return session ? this.toEntity(session) : null;
    }
 
-   async findActiveSessionsByUserId(userId: string): Promise<UserSessionEntity[]> {
-      const sessions = await this.prisma.userSession.findMany({
+   async findActiveSessionsByAccountId(accountId: string): Promise<SessionEntity[]> {
+      const sessions = await this.prisma.accountSession.findMany({
          where: {
-            userId,
+            accountId,
             isRevoked: false,
             expiresAt: {
                gt: new Date(),
@@ -90,9 +96,9 @@ export class SessionRepository implements ISessionRepository {
       return sessions.map((s) => this.toEntity(s));
    }
 
-   async updateSession(id: string, data: Partial<UserSessionEntity>): Promise<UserSessionEntity | null> {
+   async updateSession(id: string, data: Partial<SessionEntity>): Promise<SessionEntity | null> {
       try {
-         const session = await this.prisma.userSession.update({
+         const session = await this.prisma.accountSession.update({
             where: { id },
             data: {
                ...(data.refreshTokenJti ? { refreshTokenJti: data.refreshTokenJti } : {}),
@@ -106,6 +112,9 @@ export class SessionRepository implements ISessionRepository {
                ...(data.region !== undefined ? { region: data.region } : {}),
                ...(data.country !== undefined ? { country: data.country } : {}),
                ...(data.countryCode !== undefined ? { countryCode: data.countryCode } : {}),
+               ...(data.deviceId !== undefined ? { deviceId: data.deviceId } : {}),
+               ...(data.clientType !== undefined ? { clientType: data.clientType } : {}),
+               ...(data.appVersion !== undefined ? { appVersion: data.appVersion } : {}),
                ...(typeof data.isRevoked === 'boolean' ? { isRevoked: data.isRevoked } : {}),
                ...(data.lastActiveAt ? { lastActiveAt: new Date(data.lastActiveAt) } : {}),
                ...(data.expiresAt ? { expiresAt: new Date(data.expiresAt) } : {}),
@@ -118,12 +127,9 @@ export class SessionRepository implements ISessionRepository {
       }
    }
 
-   async updateSessionByJti(
-      refreshTokenJti: string,
-      data: Partial<UserSessionEntity>,
-   ): Promise<UserSessionEntity | null> {
+   async updateSessionByJti(refreshTokenJti: string, data: Partial<SessionEntity>): Promise<SessionEntity | null> {
       try {
-         const session = await this.prisma.userSession.update({
+         const session = await this.prisma.accountSession.update({
             where: { refreshTokenJti },
             data: {
                ...(data.refreshTokenJti ? { refreshTokenJti: data.refreshTokenJti } : {}),
@@ -137,6 +143,9 @@ export class SessionRepository implements ISessionRepository {
                ...(data.region !== undefined ? { region: data.region } : {}),
                ...(data.country !== undefined ? { country: data.country } : {}),
                ...(data.countryCode !== undefined ? { countryCode: data.countryCode } : {}),
+               ...(data.deviceId !== undefined ? { deviceId: data.deviceId } : {}),
+               ...(data.clientType !== undefined ? { clientType: data.clientType } : {}),
+               ...(data.appVersion !== undefined ? { appVersion: data.appVersion } : {}),
                ...(typeof data.isRevoked === 'boolean' ? { isRevoked: data.isRevoked } : {}),
                ...(data.lastActiveAt ? { lastActiveAt: new Date(data.lastActiveAt) } : {}),
                ...(data.expiresAt ? { expiresAt: new Date(data.expiresAt) } : {}),
@@ -149,14 +158,14 @@ export class SessionRepository implements ISessionRepository {
       }
    }
 
-   async revokeSession(id: string, userId: string): Promise<UserSessionEntity | null> {
+   async revokeSession(id: string, accountId: string): Promise<SessionEntity | null> {
       try {
-         const existing = await this.prisma.userSession.findFirst({
-            where: { id, userId },
+         const existing = await this.prisma.accountSession.findFirst({
+            where: { id, accountId },
          });
          if (!existing) return null;
 
-         const updated = await this.prisma.userSession.update({
+         const updated = await this.prisma.accountSession.update({
             where: { id },
             data: {
                isRevoked: true,
@@ -169,10 +178,41 @@ export class SessionRepository implements ISessionRepository {
       }
    }
 
-   async revokeOtherSessions(userId: string, currentJti: string): Promise<string[]> {
-      const result: unknown = await this.prisma.userSession.findMany({
+   async revokeSessionsByDeviceId(accountId: string, deviceId: string): Promise<string[]> {
+      const result: unknown = await this.prisma.accountSession.findMany({
          where: {
-            userId,
+            accountId,
+            deviceId,
+            isRevoked: false,
+         },
+         select: {
+            refreshTokenJti: true,
+         },
+      });
+
+      const sessions = Array.isArray(result) ? (result as Array<{ refreshTokenJti: string }>) : [];
+      const jtis: string[] = sessions.map((s) => String(s.refreshTokenJti));
+
+      if (jtis.length > 0) {
+         await this.prisma.accountSession.updateMany({
+            where: {
+               accountId,
+               deviceId,
+               isRevoked: false,
+            },
+            data: {
+               isRevoked: true,
+            },
+         });
+      }
+
+      return jtis;
+   }
+
+   async revokeOtherSessions(accountId: string, currentJti: string): Promise<string[]> {
+      const result: unknown = await this.prisma.accountSession.findMany({
+         where: {
+            accountId,
             refreshTokenJti: { not: currentJti },
             isRevoked: false,
          },
@@ -185,9 +225,9 @@ export class SessionRepository implements ISessionRepository {
       const jtis: string[] = otherSessions.map((s) => String(s.refreshTokenJti));
 
       if (jtis.length > 0) {
-         await this.prisma.userSession.updateMany({
+         await this.prisma.accountSession.updateMany({
             where: {
-               userId,
+               accountId,
                refreshTokenJti: { not: currentJti },
                isRevoked: false,
             },
@@ -200,10 +240,10 @@ export class SessionRepository implements ISessionRepository {
       return jtis;
    }
 
-   async revokeAllSessions(userId: string): Promise<string[]> {
-      const result: unknown = await this.prisma.userSession.findMany({
+   async revokeAllSessions(accountId: string): Promise<string[]> {
+      const result: unknown = await this.prisma.accountSession.findMany({
          where: {
-            userId,
+            accountId,
             isRevoked: false,
          },
          select: {
@@ -215,9 +255,9 @@ export class SessionRepository implements ISessionRepository {
       const jtis: string[] = sessions.map((s) => String(s.refreshTokenJti));
 
       if (jtis.length > 0) {
-         await this.prisma.userSession.updateMany({
+         await this.prisma.accountSession.updateMany({
             where: {
-               userId,
+               accountId,
                isRevoked: false,
             },
             data: {

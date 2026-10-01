@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { OtpEmail, ResetPasswordEmail, VerificationEmail, WelcomeEmail } from '@notification/templates';
+import {
+   OtpEmail,
+   ResetPasswordEmail,
+   VerificationEmail,
+   WelcomeEmail,
+   ChangePasswordOtpEmail,
+} from '@notification/templates';
 
 @Injectable()
 export class EmailTemplateService {
@@ -58,6 +64,14 @@ export class EmailTemplateService {
       text: string;
    } {
       const element = React.createElement(OtpEmail, params);
+      return this.renderElement(element);
+   }
+
+   renderChangePasswordOtpEmail(params: { fullName?: string; otpCode?: string; expiresInMinutes?: number }): {
+      html: string;
+      text: string;
+   } {
+      const element = React.createElement(ChangePasswordOtpEmail, params);
       return this.renderElement(element);
    }
 }

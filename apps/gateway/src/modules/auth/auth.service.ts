@@ -3,6 +3,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import {
    AUTH_PATTERNS,
    ChangePasswordDto,
+   ChangePasswordResponseDto,
    IAuditLogListResult,
    IAuthResult,
    IDeviceInfo,
@@ -13,7 +14,13 @@ import {
    IValidateTokenResult,
    LoginDto,
    RegisterDto,
+   SendRegisterOtpDto,
+   SendRegisterOtpResponseDto,
    SERVICES,
+   VerifyChangePasswordOtpDto,
+   VerifyChangePasswordOtpResponseDto,
+   VerifyRegisterOtpDto,
+   VerifyRegisterOtpResponseDto,
 } from '@common';
 import { firstValueFrom } from 'rxjs';
 
@@ -28,6 +35,33 @@ export class AuthService {
    async getJwks(): Promise<IJwksResponse> {
       return firstValueFrom(
          this.authClient.send<IJwksResponse, Record<string, never>>({ cmd: AUTH_PATTERNS.GET_JWKS }, {}),
+      );
+   }
+
+   async checkEmail(email: string): Promise<{ available: boolean; email: string }> {
+      return firstValueFrom(
+         this.authClient.send<{ available: boolean; email: string }, { email: string }>(
+            { cmd: AUTH_PATTERNS.CHECK_EMAIL },
+            { email },
+         ),
+      );
+   }
+
+   async sendRegisterOtp(dto: SendRegisterOtpDto, deviceInfo?: IDeviceInfo): Promise<SendRegisterOtpResponseDto> {
+      return firstValueFrom(
+         this.authClient.send<SendRegisterOtpResponseDto, SendRegisterOtpDto & { deviceInfo?: IDeviceInfo }>(
+            { cmd: AUTH_PATTERNS.SEND_REGISTER_OTP },
+            { ...dto, deviceInfo },
+         ),
+      );
+   }
+
+   async verifyRegisterOtp(dto: VerifyRegisterOtpDto, deviceInfo?: IDeviceInfo): Promise<VerifyRegisterOtpResponseDto> {
+      return firstValueFrom(
+         this.authClient.send<VerifyRegisterOtpResponseDto, VerifyRegisterOtpDto & { deviceInfo?: IDeviceInfo }>(
+            { cmd: AUTH_PATTERNS.VERIFY_REGISTER_OTP },
+            { ...dto, deviceInfo },
+         ),
       );
    }
 
@@ -67,9 +101,9 @@ export class AuthService {
       );
    }
 
-   async revokeSession(userId: string, sessionId: string, deviceInfo?: IDeviceInfo): Promise<IRevokeSessionResult> {
+   async revokeSession(userId: string, sessionId: string, deviceInfo?: IDeviceInfo): Promise<void> {
       return firstValueFrom(
-         this.authClient.send<IRevokeSessionResult, { userId: string; sessionId: string; deviceInfo?: IDeviceInfo }>(
+         this.authClient.send<void, { userId: string; sessionId: string; deviceInfo?: IDeviceInfo }>(
             { cmd: AUTH_PATTERNS.REVOKE_SESSION },
             { userId, sessionId, deviceInfo },
          ),
@@ -89,27 +123,27 @@ export class AuthService {
       );
    }
 
-   async revokeToken(token: string, deviceInfo?: IDeviceInfo): Promise<IRevokeTokenResult> {
+   async revokeToken(token: string, deviceInfo?: IDeviceInfo): Promise<void> {
       return firstValueFrom(
-         this.authClient.send<IRevokeTokenResult, { token: string; deviceInfo?: IDeviceInfo }>(
+         this.authClient.send<void, { token: string; deviceInfo?: IDeviceInfo }>(
             { cmd: AUTH_PATTERNS.REVOKE_TOKEN },
             { token, deviceInfo },
          ),
       );
    }
 
-   async revokeAllUserTokens(userId: string, deviceInfo?: IDeviceInfo): Promise<{ success: boolean; message: string }> {
+   async revokeAllUserTokens(userId: string, deviceInfo?: IDeviceInfo): Promise<void> {
       return firstValueFrom(
-         this.authClient.send<{ success: boolean; message: string }, { userId: string; deviceInfo?: IDeviceInfo }>(
+         this.authClient.send<void, { userId: string; deviceInfo?: IDeviceInfo }>(
             { cmd: AUTH_PATTERNS.REVOKE_ALL_USER_TOKENS },
             { userId, deviceInfo },
          ),
       );
    }
 
-   async logoutAll(userId: string, deviceInfo?: IDeviceInfo): Promise<{ success: boolean; message: string }> {
+   async logoutAll(userId: string, deviceInfo?: IDeviceInfo): Promise<void> {
       return firstValueFrom(
-         this.authClient.send<{ success: boolean; message: string }, { userId: string; deviceInfo?: IDeviceInfo }>(
+         this.authClient.send<void, { userId: string; deviceInfo?: IDeviceInfo }>(
             { cmd: AUTH_PATTERNS.LOGOUT_ALL },
             { userId, deviceInfo },
          ),
@@ -120,12 +154,25 @@ export class AuthService {
       userId: string,
       changePasswordDto: ChangePasswordDto,
       deviceInfo?: IDeviceInfo,
-   ): Promise<{ success: boolean; message: string }> {
+   ): Promise<ChangePasswordResponseDto> {
       return firstValueFrom(
          this.authClient.send<
-            { success: boolean; message: string },
+            ChangePasswordResponseDto,
             { userId: string; changePasswordDto: ChangePasswordDto; deviceInfo?: IDeviceInfo }
          >({ cmd: AUTH_PATTERNS.CHANGE_PASSWORD }, { userId, changePasswordDto, deviceInfo }),
+      );
+   }
+
+   async verifyChangePasswordOtp(
+      userId: string,
+      dto: VerifyChangePasswordOtpDto,
+      deviceInfo?: IDeviceInfo,
+   ): Promise<VerifyChangePasswordOtpResponseDto> {
+      return firstValueFrom(
+         this.authClient.send<
+            VerifyChangePasswordOtpResponseDto,
+            { userId: string; dto: VerifyChangePasswordOtpDto; deviceInfo?: IDeviceInfo }
+         >({ cmd: AUTH_PATTERNS.VERIFY_CHANGE_PASSWORD_OTP }, { userId, dto, deviceInfo }),
       );
    }
 

@@ -2,7 +2,7 @@ import type { AuditStatus } from '@auth/prisma-client';
 
 export interface SecurityAuditLogEntity {
    id: string;
-   userId?: string | null;
+   accountId?: string | null;
    actorEmail?: string | null;
    action: string;
    status: AuditStatus;

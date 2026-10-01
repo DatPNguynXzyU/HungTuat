@@ -36,6 +36,14 @@ describe('UsersService', () => {
       expect(service).toBeDefined();
    });
 
+   it('should send check_username message pattern', async () => {
+      mockUserClient.send.mockReturnValue(of({ available: true, username: 'john_doe' }));
+
+      const result = await service.checkUsername('john_doe');
+      expect(mockUserClient.send).toHaveBeenCalledWith({ cmd: 'check_username' }, { username: 'john_doe' });
+      expect(result).toEqual({ available: true, username: 'john_doe' });
+   });
+
    it('should send get_user_by_id message with user context', async () => {
       mockUserClient.send.mockReturnValue(of({ id: 'u1' }));
 
@@ -94,5 +102,25 @@ describe('UsersService', () => {
          },
       );
       expect(result).toEqual({ id: 'u1', displayName: 'New Name' });
+   });
+
+   it('should update current user profile via updateMyProfile delegating to updateUser', async () => {
+      mockUserClient.send.mockReturnValue(of({ id: 'auth-user-1', displayName: 'Self Name' }));
+
+      const result = await service.updateMyProfile({ displayName: 'Self Name' }, mockUser);
+      expect(mockUserClient.send).toHaveBeenCalledWith(
+         { cmd: 'update_user_profile' },
+         {
+            data: { id: 'auth-user-1', displayName: 'Self Name' },
+            user: {
+               userId: mockUser.sub,
+               email: mockUser.email,
+               roles: mockUser.roles,
+               permissions: [],
+               sessionId: mockUser.jti,
+            },
+         },
+      );
+      expect(result).toEqual({ id: 'auth-user-1', displayName: 'Self Name' });
    });
 });

@@ -11,6 +11,9 @@ import { OutboxPublisherService } from '@auth/outbox/services/outbox-publisher.s
       RmqModule.register({
          name: SERVICES.NOTIFICATION_SERVICE,
       }),
+      RmqModule.register({
+         name: SERVICES.USER_SERVICE,
+      }),
    ],
    providers: [
       {

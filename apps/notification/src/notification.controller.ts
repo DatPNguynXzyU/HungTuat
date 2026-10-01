@@ -1,5 +1,5 @@
 import { Controller, Logger } from '@nestjs/common';
-import { Ctx, EventPattern, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
+import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import {
    NOTIFICATION_EVENTS,
    NOTIFICATION_PATTERNS,
@@ -9,6 +9,7 @@ import {
    SendResetPasswordEmailDto,
    SendVerificationEmailDto,
    SendWelcomeEmailDto,
+   SendChangePasswordOtpEmailDto,
 } from '@common';
 import { NotificationService } from '@notification/notification.service';
 
@@ -21,7 +22,6 @@ export class NotificationController {
       private readonly rmqService: RmqService,
    ) {}
 
-   @MessagePattern({ cmd: NOTIFICATION_PATTERNS.SEND_EMAIL })
    @EventPattern(NOTIFICATION_PATTERNS.SEND_EMAIL)
    async sendEmail(@Payload() data: SendEmailDto, @Ctx() context: RmqContext) {
       this.logger.log(`Received sendEmail message for: ${Array.isArray(data.to) ? data.to.join(', ') : data.to}`);
@@ -35,7 +35,6 @@ export class NotificationController {
       }
    }
 
-   @MessagePattern({ cmd: NOTIFICATION_PATTERNS.SEND_WELCOME_EMAIL })
    @EventPattern(NOTIFICATION_PATTERNS.SEND_WELCOME_EMAIL)
    async sendWelcomeEmail(@Payload() data: SendWelcomeEmailDto, @Ctx() context: RmqContext) {
       this.logger.log(`Received sendWelcomeEmail message for: ${data.to}`);
@@ -49,7 +48,6 @@ export class NotificationController {
       }
    }
 
-   @MessagePattern({ cmd: NOTIFICATION_PATTERNS.SEND_VERIFICATION_EMAIL })
    @EventPattern(NOTIFICATION_PATTERNS.SEND_VERIFICATION_EMAIL)
    async sendVerificationEmail(@Payload() data: SendVerificationEmailDto, @Ctx() context: RmqContext) {
       this.logger.log(`Received sendVerificationEmail message for: ${data.to}`);
@@ -63,7 +61,6 @@ export class NotificationController {
       }
    }
 
-   @MessagePattern({ cmd: NOTIFICATION_PATTERNS.SEND_RESET_PASSWORD_EMAIL })
    @EventPattern(NOTIFICATION_PATTERNS.SEND_RESET_PASSWORD_EMAIL)
    async sendResetPasswordEmail(@Payload() data: SendResetPasswordEmailDto, @Ctx() context: RmqContext) {
       this.logger.log(`Received sendResetPasswordEmail message for: ${data.to}`);
@@ -77,7 +74,6 @@ export class NotificationController {
       }
    }
 
-   @MessagePattern({ cmd: NOTIFICATION_PATTERNS.SEND_OTP_EMAIL })
    @EventPattern(NOTIFICATION_PATTERNS.SEND_OTP_EMAIL)
    async sendOtpEmail(@Payload() data: SendOtpEmailDto, @Ctx() context: RmqContext) {
       this.logger.log(`Received sendOtpEmail message for: ${data.to}`);
@@ -91,8 +87,20 @@ export class NotificationController {
       }
    }
 
+   @EventPattern(NOTIFICATION_PATTERNS.SEND_CHANGE_PASSWORD_OTP_EMAIL)
+   async sendChangePasswordOtpEmail(@Payload() data: SendChangePasswordOtpEmailDto, @Ctx() context: RmqContext) {
+      this.logger.log(`Received sendChangePasswordOtpEmail message for: ${data.to}`);
+      try {
+         const result = await this.notificationService.sendChangePasswordOtpEmail(data);
+         this.rmqService.ack(context);
+         return result;
+      } catch (error) {
+         this.rmqService.ack(context);
+         throw error;
+      }
+   }
+
    @EventPattern(NOTIFICATION_EVENTS.USER_REGISTERED)
-   @MessagePattern({ cmd: NOTIFICATION_EVENTS.USER_REGISTERED })
    async handleUserRegistered(@Payload() data: { email: string; fullName: string }, @Ctx() context: RmqContext) {
       this.logger.log(`Received USER_REGISTERED event for email: ${data?.email} (${data?.fullName})`);
       try {

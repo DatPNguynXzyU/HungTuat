@@ -1,4 +1,11 @@
-export type OutboxStatusType = 'PENDING' | 'PROCESSING' | 'PUBLISHED' | 'FAILED';
+export const OUTBOX_STATUS = {
+   PENDING: 'PENDING',
+   PROCESSING: 'PROCESSING',
+   PUBLISHED: 'PUBLISHED',
+   FAILED: 'FAILED',
+} as const;
+
+export type OutboxStatusType = (typeof OUTBOX_STATUS)[keyof typeof OUTBOX_STATUS];
 
 export interface OutboxEventEntity {
    id: string;

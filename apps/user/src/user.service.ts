@@ -1,29 +1,34 @@
-import { Injectable } from '@nestjs/common';
-import { NotFoundException, ConflictException, BadRequestException } from '@common';
+import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException, USER_ERROR_CODES } from '@common';
 import { UserRepository, FollowRepository } from '@user/repositories';
 import { UserEntity, FollowEntity, FollowStatus, Gender } from '@user/entities';
 import { OutboxService } from '@user/outbox';
-import { USER_ERROR_CODES } from '@user/constants';
 import { GraphFollowRepository } from '@user/graph';
-import { UserGraphSyncService } from '@user/services';
+import { UserGraphSyncService, UsernameBloomFilterService } from '@user/services';
+import { UserSearchService } from '@user/search';
 
 @Injectable()
 export class UserService {
+   private readonly logger = new Logger(UserService.name);
+
    constructor(
       private readonly userRepository: UserRepository,
       private readonly followRepository: FollowRepository,
       private readonly outboxService: OutboxService,
       private readonly graphFollowRepository: GraphFollowRepository,
       private readonly userGraphSyncService: UserGraphSyncService,
+      private readonly usernameBloomFilterService: UsernameBloomFilterService,
+      private readonly userSearchService: UserSearchService,
    ) {}
 
+   async checkUsername(username: string): Promise<{ available: boolean; username: string }> {
+      const normalizedUsername = username.toLowerCase().trim();
+      const available = await this.usernameBloomFilterService.isUsernameAvailable(normalizedUsername);
+      return { available, username: normalizedUsername };
+   }
+
    // User Profile Management
-   async createUser(data: {
-      userId: string;
-      email?: string;
-      username?: string;
-      displayName?: string;
-   }): Promise<UserEntity> {
+   async createUser(data: { userId: string; username?: string; displayName?: string }): Promise<UserEntity> {
       // Check if user already exists
       const existingUser = await this.userRepository.findByUserId(data.userId);
       if (existingUser) {
@@ -32,39 +37,95 @@ export class UserService {
          });
       }
 
-      // Check username uniqueness
+      // Check username uniqueness using Bloom Filter first
       if (data.username) {
-         const existingUsername = await this.userRepository.findByUsername(data.username);
-         if (existingUsername) {
-            throw new ConflictException(USER_ERROR_CODES.USERNAME_ALREADY_TAKEN, {
-               params: { username: data.username },
-            });
+         const normalizedUsername = data.username.toLowerCase().trim();
+         const mightExist = await this.usernameBloomFilterService.mightContain(normalizedUsername);
+         if (mightExist) {
+            const existingUsername = await this.userRepository.findByUsername(normalizedUsername);
+            if (existingUsername) {
+               throw new ConflictException(USER_ERROR_CODES.USERNAME_ALREADY_TAKEN, {
+                  params: { username: data.username },
+               });
+            }
          }
       }
 
       // Create user
       const user = await this.userRepository.create({
          userId: data.userId,
-         email: data.email,
          username: data.username,
          displayName: data.displayName,
       });
 
+      // Register username in Bloom Filter
+      if (user.username) {
+         await this.usernameBloomFilterService.addUsername(user.username);
+      }
+
       // Sync user to graph
-      await this.userGraphSyncService.syncUserToGraph(user);
+      try {
+         await this.userGraphSyncService.syncUserToGraph(user);
+      } catch (err) {
+         this.logger.warn(`Failed to sync newly created user ${user.id} to graph: ${String(err)}`);
+      }
+
+      // Sync user to Elasticsearch
+      try {
+         await this.userSearchService.indexUser(user);
+      } catch (err) {
+         this.logger.warn(`Failed to sync newly created user ${user.id} to Elasticsearch: ${String(err)}`);
+      }
 
       // Publish event
       await this.outboxService.createOutboxEvent(user.id, 'User', 'UserCreated', {
          userId: user.userId,
-         email: user.email,
          username: user.username,
       });
 
       return user;
    }
 
+   async handleUserRegistered(data: {
+      userId?: string;
+      accountId?: string;
+      email?: string;
+   }): Promise<UserEntity | null> {
+      const targetUserId = data.userId || data.accountId;
+      if (!targetUserId) {
+         return null;
+      }
+      const existing = await this.userRepository.findByUserId(targetUserId);
+      if (existing) {
+         return existing;
+      }
+
+      let username: string | undefined;
+      const displayName = data.email ? data.email.split('@')[0] : undefined;
+
+      if (displayName) {
+         const baseUsername = displayName.toLowerCase().trim();
+         const isAvailable = await this.usernameBloomFilterService.isUsernameAvailable(baseUsername);
+         if (isAvailable) {
+            username = baseUsername;
+         } else {
+            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+            username = `${baseUsername}_${randomSuffix}`;
+         }
+      }
+
+      return this.createUser({
+         userId: targetUserId,
+         username,
+         displayName,
+      });
+   }
+
    async getUserById(id: string): Promise<UserEntity> {
-      const user = await this.userRepository.findById(id);
+      let user = await this.userRepository.findById(id);
+      if (!user) {
+         user = await this.userRepository.findByUserId(id);
+      }
       if (!user) {
          throw new NotFoundException(USER_ERROR_CODES.USER_NOT_FOUND, {
             params: { id },
@@ -96,6 +157,7 @@ export class UserService {
    async updateUserProfile(
       id: string,
       data: {
+         username?: string;
          displayName?: string;
          bio?: string;
          avatar?: string;
@@ -106,12 +168,94 @@ export class UserService {
          gender?: Gender;
       },
    ): Promise<UserEntity> {
-      const user = await this.getUserById(id);
+      let user = await this.userRepository.findById(id);
+      if (!user) {
+         user = await this.userRepository.findByUserId(id);
+      }
 
-      const updatedUser = await this.userRepository.update(id, data);
+      // If user does not exist in User service DB yet, auto-create it with the provided profile data!
+      if (!user) {
+         this.logger.log(`User ${id} not found during profile update; auto-creating initial user and profile`);
+         if (data.username) {
+            const normalizedUsername = data.username.toLowerCase().trim();
+            const mightExist = await this.usernameBloomFilterService.mightContain(normalizedUsername);
+            if (mightExist) {
+               const existingUsername = await this.userRepository.findByUsername(normalizedUsername);
+               if (existingUsername) {
+                  throw new ConflictException(USER_ERROR_CODES.USERNAME_ALREADY_TAKEN, {
+                     params: { username: data.username },
+                  });
+               }
+            }
+         }
+
+         user = await this.userRepository.create({
+            userId: id,
+            username: data.username,
+            displayName: data.displayName,
+            bio: data.bio,
+            avatar: data.avatar,
+            coverImage: data.coverImage,
+            website: data.website,
+            location: data.location,
+            dateOfBirth: data.dateOfBirth,
+            gender: data.gender,
+         });
+
+         if (user.username) {
+            await this.usernameBloomFilterService.addUsername(user.username);
+         }
+
+         // Sync to graph
+         try {
+            await this.userGraphSyncService.syncUserToGraph(user);
+         } catch (err) {
+            this.logger.warn(`Failed to sync newly created user ${user.id} to graph: ${String(err)}`);
+         }
+
+         // Sync to Elasticsearch
+         try {
+            await this.userSearchService.indexUser(user);
+         } catch (err) {
+            this.logger.warn(`Failed to sync newly created user ${user.id} to Elasticsearch: ${String(err)}`);
+         }
+
+         return user;
+      }
+
+      // If user exists, check username conflict using Bloom filter
+      if (data.username && data.username.toLowerCase().trim() !== user.username?.toLowerCase().trim()) {
+         const normalizedUsername = data.username.toLowerCase().trim();
+         const mightExist = await this.usernameBloomFilterService.mightContain(normalizedUsername);
+         if (mightExist) {
+            const existingUsername = await this.userRepository.findByUsername(normalizedUsername);
+            if (existingUsername && existingUsername.id !== user.id) {
+               throw new ConflictException(USER_ERROR_CODES.USERNAME_ALREADY_TAKEN, {
+                  params: { username: data.username },
+               });
+            }
+         }
+      }
+
+      const updatedUser = await this.userRepository.update(user.id, data);
+
+      if (updatedUser.username) {
+         await this.usernameBloomFilterService.addUsername(updatedUser.username);
+      }
 
       // Sync updated user to graph
-      await this.userGraphSyncService.syncUserToGraph(updatedUser);
+      try {
+         await this.userGraphSyncService.syncUserToGraph(updatedUser);
+      } catch (err) {
+         this.logger.warn(`Failed to sync updated user ${user.id} to graph: ${String(err)}`);
+      }
+
+      // Sync updated user to Elasticsearch
+      try {
+         await this.userSearchService.indexUser(updatedUser);
+      } catch (err) {
+         this.logger.warn(`Failed to sync updated user ${user.id} to Elasticsearch: ${String(err)}`);
+      }
 
       // Publish event
       await this.outboxService.createOutboxEvent(user.id, 'User', 'UserProfileUpdated', {
@@ -123,17 +267,40 @@ export class UserService {
    }
 
    async updateUsername(id: string, username: string): Promise<UserEntity> {
-      const existingUsername = await this.userRepository.findByUsername(username);
-      if (existingUsername && existingUsername.id !== id) {
-         throw new ConflictException(USER_ERROR_CODES.USERNAME_ALREADY_TAKEN, {
-            params: { username },
-         });
+      const user = await this.getUserById(id);
+      const normalizedUsername = username.toLowerCase().trim();
+
+      if (normalizedUsername !== user.username?.toLowerCase().trim()) {
+         const mightExist = await this.usernameBloomFilterService.mightContain(normalizedUsername);
+         if (mightExist) {
+            const existingUsername = await this.userRepository.findByUsername(normalizedUsername);
+            if (existingUsername && existingUsername.id !== user.id) {
+               throw new ConflictException(USER_ERROR_CODES.USERNAME_ALREADY_TAKEN, {
+                  params: { username },
+               });
+            }
+         }
       }
 
-      const updatedUser = await this.userRepository.update(id, { username });
+      const updatedUser = await this.userRepository.update(user.id, { username });
+
+      if (updatedUser.username) {
+         await this.usernameBloomFilterService.addUsername(updatedUser.username);
+      }
 
       // Sync updated user to graph
-      await this.userGraphSyncService.syncUserToGraph(updatedUser);
+      try {
+         await this.userGraphSyncService.syncUserToGraph(updatedUser);
+      } catch (err) {
+         this.logger.warn(`Failed to sync updated username for ${user.id} to graph: ${String(err)}`);
+      }
+
+      // Sync updated user to Elasticsearch
+      try {
+         await this.userSearchService.indexUser(updatedUser);
+      } catch (err) {
+         this.logger.warn(`Failed to sync updated username for ${user.id} to Elasticsearch: ${String(err)}`);
+      }
 
       return updatedUser;
    }
@@ -141,7 +308,14 @@ export class UserService {
    async deleteUser(id: string): Promise<UserEntity> {
       const user = await this.getUserById(id);
 
-      const deletedUser = await this.userRepository.softDelete(id);
+      const deletedUser = await this.userRepository.softDelete(user.id);
+
+      // Remove from Elasticsearch
+      try {
+         await this.userSearchService.deleteUser(user.id);
+      } catch (err) {
+         this.logger.warn(`Failed to delete user ${user.id} from Elasticsearch: ${String(err)}`);
+      }
 
       // Publish event
       await this.outboxService.createOutboxEvent(user.id, 'User', 'UserDeleted', {
@@ -153,6 +327,13 @@ export class UserService {
 
    async restoreUser(id: string): Promise<UserEntity> {
       const restoredUser = await this.userRepository.restore(id);
+
+      // Re-index to Elasticsearch
+      try {
+         await this.userSearchService.indexUser(restoredUser);
+      } catch (err) {
+         this.logger.warn(`Failed to re-index restored user ${restoredUser.id} to Elasticsearch: ${String(err)}`);
+      }
 
       // Publish event
       await this.outboxService.createOutboxEvent(restoredUser.id, 'User', 'UserRestored', {
@@ -173,7 +354,7 @@ export class UserService {
       const following = await this.getUserById(followingId);
 
       // Check if already following in graph
-      const existingFollow = await this.graphFollowRepository.findFollow(followerId, followingId);
+      const existingFollow = await this.graphFollowRepository.findFollow(follower.id, following.id);
       if (existingFollow) {
          throw new ConflictException(USER_ERROR_CODES.ALREADY_FOLLOWING, {
             params: { followerId, followingId },
@@ -184,18 +365,18 @@ export class UserService {
 
       // Create follow in PostgreSQL (for backward compatibility)
       const follow = await this.followRepository.create({
-         follower: { connect: { id: followerId } },
-         following: { connect: { id: followingId } },
+         follower: { connect: { id: follower.id } },
+         following: { connect: { id: following.id } },
          status,
       });
 
       // Create follow in NebulaGraph
-      await this.graphFollowRepository.createFollow(followerId, followingId, status);
+      await this.graphFollowRepository.createFollow(follower.id, following.id, status);
 
       // Update counts if accepted
       if (status === FollowStatus.ACCEPTED) {
-         await this.userRepository.incrementFollowingCount(followerId);
-         await this.userRepository.incrementFollowersCount(followingId);
+         await this.userRepository.incrementFollowingCount(follower.id);
+         await this.userRepository.incrementFollowersCount(following.id);
       }
 
       // Publish event
@@ -209,7 +390,10 @@ export class UserService {
    }
 
    async unfollowUser(followerId: string, followingId: string): Promise<void> {
-      const follow = await this.followRepository.findByFollowerAndFollowing(followerId, followingId);
+      const follower = await this.getUserById(followerId);
+      const following = await this.getUserById(followingId);
+
+      const follow = await this.followRepository.findByFollowerAndFollowing(follower.id, following.id);
       if (!follow) {
          throw new NotFoundException(USER_ERROR_CODES.FOLLOW_NOT_FOUND, {
             params: { followerId, followingId },
@@ -220,18 +404,15 @@ export class UserService {
       await this.followRepository.softDelete(follow.id);
 
       // Delete in NebulaGraph
-      await this.graphFollowRepository.deleteFollow(followerId, followingId);
+      await this.graphFollowRepository.deleteFollow(follower.id, following.id);
 
       // Update counts if was accepted
       if (follow.status === FollowStatus.ACCEPTED) {
-         await this.userRepository.decrementFollowingCount(followerId);
-         await this.userRepository.decrementFollowersCount(followingId);
+         await this.userRepository.decrementFollowingCount(follower.id);
+         await this.userRepository.decrementFollowersCount(following.id);
       }
 
       // Publish event
-      const follower = await this.getUserById(followerId);
-      const following = await this.getUserById(followingId);
-
       await this.outboxService.createOutboxEvent(follow.id, 'Follow', 'UserUnfollowed', {
          followerId: follower.userId,
          followingId: following.userId,
@@ -302,10 +483,10 @@ export class UserService {
 
    // Get followers/following - Now using NebulaGraph for queries
    async getFollowers(userId: string, status?: FollowStatus, skip = 0, take = 20): Promise<FollowEntity[]> {
-      await this.getUserById(userId);
+      const user = await this.getUserById(userId);
 
       // Query from NebulaGraph for better performance
-      const graphResults = await this.graphFollowRepository.getFollowers(userId, status, skip, take);
+      const graphResults = await this.graphFollowRepository.getFollowers(user.id, status, skip, take);
 
       // Convert graph results to FollowEntity format
       return graphResults.map((result) => {
@@ -323,10 +504,10 @@ export class UserService {
    }
 
    async getFollowing(userId: string, status?: FollowStatus, skip = 0, take = 20): Promise<FollowEntity[]> {
-      await this.getUserById(userId);
+      const user = await this.getUserById(userId);
 
       // Query from NebulaGraph for better performance
-      const graphResults = await this.graphFollowRepository.getFollowing(userId, status, skip, take);
+      const graphResults = await this.graphFollowRepository.getFollowing(user.id, status, skip, take);
 
       // Convert graph results to FollowEntity format
       return graphResults.map((result) => {
@@ -344,24 +525,29 @@ export class UserService {
    }
 
    async getFollowersCount(userId: string, status?: FollowStatus): Promise<number> {
-      await this.getUserById(userId);
-      return this.graphFollowRepository.countFollowers(userId, status);
+      const user = await this.getUserById(userId);
+      return this.graphFollowRepository.countFollowers(user.id, status);
    }
 
    async getFollowingCount(userId: string, status?: FollowStatus): Promise<number> {
-      await this.getUserById(userId);
-      return this.graphFollowRepository.countFollowing(userId, status);
+      const user = await this.getUserById(userId);
+      return this.graphFollowRepository.countFollowing(user.id, status);
    }
 
    // Advanced graph queries
    async getMutualFollowers(userId1: string, userId2: string): Promise<string[]> {
-      await this.getUserById(userId1);
-      await this.getUserById(userId2);
-      return this.graphFollowRepository.getMutualFollowers(userId1, userId2);
+      const user1 = await this.getUserById(userId1);
+      const user2 = await this.getUserById(userId2);
+      return this.graphFollowRepository.getMutualFollowers(user1.id, user2.id);
    }
 
    async getFollowSuggestions(userId: string, limit = 10): Promise<string[]> {
-      await this.getUserById(userId);
-      return this.graphFollowRepository.getFollowSuggestions(userId, limit);
+      const user = await this.getUserById(userId);
+      return this.graphFollowRepository.getFollowSuggestions(user.id, limit);
+   }
+
+   // Elasticsearch User Search
+   async searchUsers(query: string, limit = 10, skip = 0) {
+      return this.userSearchService.searchUsers(query, limit, skip);
    }
 }

@@ -4,6 +4,7 @@ export const NOTIFICATION_PATTERNS = {
    SEND_VERIFICATION_EMAIL: 'notification.send_verification_email',
    SEND_RESET_PASSWORD_EMAIL: 'notification.send_reset_password_email',
    SEND_OTP_EMAIL: 'notification.send_otp_email',
+   SEND_CHANGE_PASSWORD_OTP_EMAIL: 'notification.send_change_password_otp_email',
 } as const;
 
 export const NOTIFICATION_EVENTS = {
@@ -25,6 +26,7 @@ export const NOTIFICATION_TEMPLATES = {
    VERIFICATION_EMAIL: 'VERIFICATION_EMAIL',
    RESET_PASSWORD_EMAIL: 'RESET_PASSWORD_EMAIL',
    OTP_EMAIL: 'OTP_EMAIL',
+   CHANGE_PASSWORD_OTP_EMAIL: 'CHANGE_PASSWORD_OTP_EMAIL',
 } as const;
 
 export const NOTIFICATION_STATUS = {
@@ -33,8 +35,15 @@ export const NOTIFICATION_STATUS = {
    FAILED: 'FAILED',
 } as const;
 
+export const NOTIFICATION_ERROR_CODES = {
+   EMAIL_SEND_FAILED: 'NOTIFICATION.EMAIL_SEND_FAILED',
+   TEMPLATE_NOT_FOUND: 'NOTIFICATION.TEMPLATE_NOT_FOUND',
+   INVALID_RECIPIENT: 'NOTIFICATION.INVALID_RECIPIENT',
+} as const;
+
 export type NotificationPattern = (typeof NOTIFICATION_PATTERNS)[keyof typeof NOTIFICATION_PATTERNS];
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[keyof typeof NOTIFICATION_EVENTS];
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[keyof typeof NOTIFICATION_CHANNELS];
 export type NotificationTemplate = (typeof NOTIFICATION_TEMPLATES)[keyof typeof NOTIFICATION_TEMPLATES];
 export type NotificationStatus = (typeof NOTIFICATION_STATUS)[keyof typeof NOTIFICATION_STATUS];
+export type NotificationErrorCode = (typeof NOTIFICATION_ERROR_CODES)[keyof typeof NOTIFICATION_ERROR_CODES];

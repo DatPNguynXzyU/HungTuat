@@ -1,6 +1,6 @@
-export interface UserSessionEntity {
+export interface SessionEntity {
    id: string;
-   userId: string;
+   accountId: string;
    refreshTokenJti: string;
    deviceType?: string | null;
    deviceName?: string | null;
@@ -12,6 +12,9 @@ export interface UserSessionEntity {
    region?: string | null;
    country?: string | null;
    countryCode?: string | null;
+   deviceId?: string | null;
+   clientType?: string | null;
+   appVersion?: string | null;
    isRevoked: boolean;
    lastActiveAt: string;
    expiresAt: string;
@@ -19,10 +22,7 @@ export interface UserSessionEntity {
    updatedAt?: string;
 }
 
-export type CreateSessionData = Omit<
-   UserSessionEntity,
-   'id' | 'createdAt' | 'updatedAt' | 'isRevoked' | 'lastActiveAt'
-> & {
+export type CreateSessionData = Omit<SessionEntity, 'id' | 'createdAt' | 'updatedAt' | 'isRevoked' | 'lastActiveAt'> & {
    id?: string;
    isRevoked?: boolean;
    lastActiveAt?: string;

@@ -1,6 +1,6 @@
 import { Module, DynamicModule, Global } from '@nestjs/common';
-import { NebulaService } from './nebula.service';
-import { NebulaConfig, getNebulaConfig } from './nebula.config';
+import { NebulaService } from '@common/nebula/nebula.service';
+import { NebulaConfig, getNebulaConfig } from '@common/nebula/nebula.config';
 import { CommonConfigService } from '@common/config/common-config.service';
 
 @Global()

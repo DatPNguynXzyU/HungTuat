@@ -199,8 +199,12 @@ export class AllRpcExceptionsFilter implements RpcExceptionFilter {
          payload.message = payload.errorCode || COMMON_ERROR_CODES.INTERNAL_SERVER_ERROR;
       }
 
-      this.logger.error(`RPC Exception caught: [${payload.statusCode}] ${payload.errorCode}`);
+      if (payload.statusCode >= 500) {
+         this.logger.error(`RPC Exception caught: [${payload.statusCode}] ${payload.errorCode}`);
+      } else {
+         this.logger.warn(`RPC Exception caught: [${payload.statusCode}] ${payload.errorCode}`);
+      }
 
-      return throwError(() => new RpcException(JSON.stringify(payload)));
+      return throwError(() => new RpcException(payload));
    }
 }

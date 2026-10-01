@@ -1,6 +1,6 @@
 export interface ISecurityAuditLog {
    id: string;
-   userId?: string | null;
+   accountId?: string | null;
    actorEmail?: string | null;
    action: string;
    status: string;
@@ -18,7 +18,7 @@ export interface ISecurityAuditLog {
 }
 
 export interface ICreateAuditLog {
-   userId?: string | null;
+   accountId?: string | null;
    actorEmail?: string | null;
    action: string;
    status?: string;
@@ -35,7 +35,7 @@ export interface ICreateAuditLog {
 }
 
 export interface IAuditLogQuery {
-   userId?: string;
+   accountId?: string;
    actorEmail?: string;
    action?: string;
    status?: string;

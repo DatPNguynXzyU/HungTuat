@@ -18,6 +18,8 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
       private readonly outboxRepository: IOutboxRepository,
       @Inject(SERVICES.NOTIFICATION_SERVICE)
       private readonly notificationClient: ClientProxy,
+      @Inject(SERVICES.USER_SERVICE)
+      private readonly userClient: ClientProxy,
    ) {}
 
    onModuleInit(): void {
@@ -66,7 +68,10 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
          let successCount = 0;
          for (const event of pendingEvents) {
             try {
-               await firstValueFrom(this.notificationClient.emit(event.eventType, event.payload));
+               await Promise.allSettled([
+                  firstValueFrom(this.notificationClient.emit(event.eventType, event.payload)),
+                  firstValueFrom(this.userClient.emit(event.eventType, event.payload)),
+               ]);
                await this.outboxRepository.markAsPublished(event.id);
                this.logger.log(`Outbox event published successfully: [${event.eventType}] ID: ${event.id}`);
                successCount++;

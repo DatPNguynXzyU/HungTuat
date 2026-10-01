@@ -7,6 +7,7 @@ import {
    SendResetPasswordEmailDto,
    SendVerificationEmailDto,
    SendWelcomeEmailDto,
+   SendChangePasswordOtpEmailDto,
 } from '@common';
 import { NotificationConfigService } from '@notification/config';
 import { NOTIFICATION_ERROR_CODES } from '@notification/constants';
@@ -139,6 +140,21 @@ export class ResendService {
       return this.sendEmail({
          to: dto.to,
          subject: `${dto.otpCode} is your OmniServices verification code`,
+         html,
+         text,
+      });
+   }
+
+   async sendChangePasswordOtpEmail(dto: SendChangePasswordOtpEmailDto): Promise<SendEmailResult> {
+      const { html, text } = this.templateService.renderChangePasswordOtpEmail({
+         fullName: dto.fullName,
+         otpCode: dto.otpCode,
+         expiresInMinutes: dto.expiresInMinutes,
+      });
+
+      return this.sendEmail({
+         to: dto.to,
+         subject: `${dto.otpCode} is your password change verification code`,
          html,
          text,
       });

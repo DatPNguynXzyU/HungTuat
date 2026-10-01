@@ -1,12 +1,38 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { SERVICES, UpdateUserDto, IServiceMessage } from '@common';
+import { CreateUserProfileDto, IServiceMessage, SERVICES, UpdateUserDto } from '@common';
 import { firstValueFrom } from 'rxjs';
 import type { JwtPayload } from '@common/utils/jwt.util';
 
 @Injectable()
 export class UsersService {
    constructor(@Inject(SERVICES.USER_SERVICE) private readonly userClient: ClientProxy) {}
+
+   async checkUsername(username: string): Promise<{ available: boolean; username: string }> {
+      return firstValueFrom(
+         this.userClient.send<{ available: boolean; username: string }, { username: string }>(
+            { cmd: 'check_username' },
+            { username },
+         ),
+      );
+   }
+
+   async createProfile(createUserProfileDto: CreateUserProfileDto, user: JwtPayload): Promise<unknown> {
+      const message: IServiceMessage<CreateUserProfileDto> = {
+         data: createUserProfileDto,
+         user: {
+            userId: user.sub,
+            email: user.email,
+            roles: user.roles || [],
+            permissions: [],
+            sessionId: user.jti,
+         },
+      };
+
+      return firstValueFrom(
+         this.userClient.send<unknown, IServiceMessage<CreateUserProfileDto>>({ cmd: 'create_profile' }, message),
+      );
+   }
 
    async getUserById(id: string, user?: JwtPayload): Promise<unknown> {
       const message: IServiceMessage<{ id: string }> = {
@@ -67,6 +93,24 @@ export class UsersService {
          this.userClient.send<unknown, IServiceMessage<{ id: string } & UpdateUserDto>>(
             { cmd: 'update_user_profile' },
             message,
+         ),
+      );
+   }
+
+   async getMyProfile(user: JwtPayload): Promise<unknown> {
+      return this.getUserById(user.sub, user);
+   }
+
+   async updateMyProfile(updateUserDto: UpdateUserDto, user: JwtPayload): Promise<unknown> {
+      return this.updateUser(user.sub, updateUserDto, user);
+   }
+
+   async searchUsers(query: string, limit = 10, page = 1): Promise<unknown> {
+      const skip = (page - 1) * limit;
+      return firstValueFrom(
+         this.userClient.send<unknown, { query: string; limit: number; skip: number }>(
+            { cmd: 'search_users' },
+            { query, limit, skip },
          ),
       );
    }

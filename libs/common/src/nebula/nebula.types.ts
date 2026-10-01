@@ -1,7 +1,7 @@
 export interface NebulaExecutionResponse {
    errorCode: number;
    errorMessage: string;
-   data: any[];
+   data: Record<string, unknown>[];
    columns?: string[];
    spaceName?: string;
    latencyInUs?: number;

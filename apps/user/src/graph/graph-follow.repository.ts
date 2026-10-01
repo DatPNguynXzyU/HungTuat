@@ -38,13 +38,7 @@ export class GraphFollowRepository {
       const query = `
       USE social_graph;
       INSERT VERTEX user(user_id, username, display_name, avatar, is_private, created_at, updated_at)
-      VALUES "${data.userId}":("${data.userId}", "${data.username || ''}", "${data.displayName || ''}", "${data.avatar || ''}", ${data.isPrivate || false}, ${now}, ${now})
-      ON DUPLICATE KEY UPDATE
-        username = "${data.username || ''}",
-        display_name = "${data.displayName || ''}",
-        avatar = "${data.avatar || ''}",
-        is_private = ${data.isPrivate || false},
-        updated_at = ${now};
+      VALUES "${data.userId}":("${data.userId}", "${data.username || ''}", "${data.displayName || ''}", "${data.avatar || ''}", ${data.isPrivate || false}, ${now}, ${now});
     `;
 
       await this.nebulaService.execute(query);

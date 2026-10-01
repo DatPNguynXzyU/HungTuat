@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
+   AUTH_ERROR_CODES,
    DEFAULT_DEV_RSA_PRIVATE_KEY,
    DEFAULT_DEV_RSA_PUBLIC_KEY,
    DEFAULT_JWT_KEY_ID,
@@ -10,7 +11,6 @@ import {
    UnauthorizedException,
 } from '@common';
 import { AuthConfigService } from '@auth/config';
-import { AUTH_ERROR_CODES } from '@auth/constants/auth-error-codes';
 import { SESSION_REPOSITORY } from '@auth/repositories/session.repository.interface';
 import { TokenService } from '@auth/services/token.service';
 
@@ -33,7 +33,7 @@ describe('TokenService', () => {
    const mockCreateSession = jest.fn();
    const mockFindById = jest.fn();
    const mockFindByJti = jest.fn();
-   const mockFindActiveSessionsByUserId = jest.fn();
+   const mockFindActiveSessionsByAccountId = jest.fn();
    const mockUpdateSession = jest.fn();
    const mockUpdateSessionByJti = jest.fn();
    const mockRevokeSession = jest.fn();
@@ -73,7 +73,7 @@ describe('TokenService', () => {
                   createSession: mockCreateSession,
                   findById: mockFindById,
                   findByJti: mockFindByJti,
-                  findActiveSessionsByUserId: mockFindActiveSessionsByUserId,
+                  findActiveSessionsByAccountId: mockFindActiveSessionsByAccountId,
                   updateSession: mockUpdateSession,
                   updateSessionByJti: mockUpdateSessionByJti,
                   revokeSession: mockRevokeSession,
@@ -104,7 +104,6 @@ describe('TokenService', () => {
          const user = {
             id: 'user-id-1',
             email: 'test@example.com',
-            fullName: 'Test User',
             roles: ['USER'],
          };
          const deviceInfo = {
@@ -123,13 +122,13 @@ describe('TokenService', () => {
          // Redis whitelist verification
          expect(mockRedisService.setJson).toHaveBeenCalledWith(
             expect.stringContaining(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-id-1:`),
-            expect.objectContaining({ userId: 'user-id-1' }),
+            expect.objectContaining({ accountId: 'user-id-1' }),
             mockConfigService.jwtRefreshTokenExpiresIn,
          );
 
          // Redis session set verification
          expect(mockRedisService.sadd).toHaveBeenCalledWith(
-            `${REDIS_KEY_PREFIX.USER_SESSIONS}user-id-1`,
+            `${REDIS_KEY_PREFIX.ACCOUNT_SESSIONS}user-id-1`,
             expect.any(String),
             expect.any(String),
          );
@@ -137,7 +136,7 @@ describe('TokenService', () => {
          // DB Session repository verification
          expect(mockCreateSession).toHaveBeenCalledWith(
             expect.objectContaining({
-               userId: 'user-id-1',
+               accountId: 'user-id-1',
                deviceType: 'desktop',
                deviceName: 'Chrome on macOS',
             }),
@@ -150,13 +149,12 @@ describe('TokenService', () => {
          const user = {
             id: 'user-id-1',
             email: 'test@example.com',
-            fullName: 'Test User',
             roles: ['USER'],
          };
 
          mockFindByJti.mockResolvedValue({
             id: 'session-id-1',
-            userId: 'user-id-1',
+            accountId: 'user-id-1',
             refreshTokenJti: 'old-jti',
          });
 
@@ -177,10 +175,10 @@ describe('TokenService', () => {
 
    describe('getActiveSessions', () => {
       it('should return active sessions list with isCurrent marked correctly', async () => {
-         mockFindActiveSessionsByUserId.mockResolvedValue([
+         mockFindActiveSessionsByAccountId.mockResolvedValue([
             {
                id: 'session-1',
-               userId: 'user-1',
+               accountId: 'user-1',
                refreshTokenJti: 'current-jti',
                deviceName: 'Chrome on macOS',
                isRevoked: false,
@@ -190,7 +188,7 @@ describe('TokenService', () => {
             },
             {
                id: 'session-2',
-               userId: 'user-1',
+               accountId: 'user-1',
                refreshTokenJti: 'other-jti',
                deviceName: 'Safari on iPhone',
                isRevoked: false,
@@ -214,14 +212,13 @@ describe('TokenService', () => {
       it('should revoke a session successfully if found and owned by user', async () => {
          mockFindById.mockResolvedValue({
             id: 'session-1',
-            userId: 'user-1',
+            accountId: 'user-1',
             refreshTokenJti: 'jti-1',
             isRevoked: false,
          });
 
-         const result = await service.revokeSession('user-1', 'session-1');
+         await service.revokeSession('user-1', 'session-1');
 
-         expect(result.success).toBe(true);
          expect(mockRevokeSession).toHaveBeenCalledWith('session-1', 'user-1');
          expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-1`);
       });
@@ -239,7 +236,6 @@ describe('TokenService', () => {
 
          const result = await service.revokeOtherSessions('user-1', 'current-jti');
 
-         expect(result.success).toBe(true);
          expect(result.revokedCount).toBe(2);
          expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-other-1`);
          expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.REFRESH_TOKEN}user-1:jti-other-2`);
@@ -296,13 +292,13 @@ describe('TokenService', () => {
       });
    });
 
-   describe('revokeAllUserTokens and logoutAll', () => {
+   describe('revokeAllAccountTokens and logoutAll', () => {
       it('should revoke all tokens and all DB sessions', async () => {
          mockRedisService.smembers.mockResolvedValue(['jti-1', 'jti-2']);
 
-         await service.revokeAllUserTokens('user-1');
+         await service.revokeAllAccountTokens('user-1');
 
-         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.USER_SESSIONS}user-1`);
+         expect(mockRedisService.del).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.ACCOUNT_SESSIONS}user-1`);
          expect(mockRevokeAllSessions).toHaveBeenCalledWith('user-1');
       });
    });

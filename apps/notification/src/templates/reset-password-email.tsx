@@ -12,7 +12,7 @@ import {
    Section,
    Text,
 } from '@react-email/components';
-import { EMAIL_COLORS, EMAIL_FONTS } from '@notification/constants';
+import { EMAIL_COLORS, EMAIL_FONTS } from '@notification/constants/email-theme';
 
 export interface ResetPasswordEmailProps {
    fullName?: string;

@@ -1,7 +1,6 @@
-export interface UserEntity {
+export interface AccountEntity {
    id: string;
    email: string;
-   fullName: string;
    passwordHash: string;
    status?: string;
    isEmailVerified?: boolean;
@@ -13,7 +12,7 @@ export interface UserEntity {
    updatedAt?: string;
 }
 
-export type CreateUserData = Omit<UserEntity, 'id' | 'createdAt' | 'updatedAt' | 'roles'> & {
+export type CreateAccountData = Omit<AccountEntity, 'id' | 'createdAt' | 'updatedAt' | 'roles'> & {
    id?: string;
    createdAt?: string;
    roleId?: string;

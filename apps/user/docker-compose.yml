@@ -78,11 +78,6 @@ services:
       volumes:
          - nebula_storaged_data:/data/storage
          - nebula_storaged_logs:/logs
-      healthcheck:
-         test: ['CMD', 'curl', '-f', 'http://127.0.0.1:19779/status']
-         interval: 10s
-         timeout: 5s
-         retries: 5
       networks:
          - omni-network
 
@@ -101,12 +96,15 @@ services:
          - --log_dir=/logs
          - --v=0
          - --minloglevel=0
+         - --max_sessions_per_ip_per_user=100000
       ports:
          - '${NEBULA_GRAPHD_PORT:-9669}:9669'
          - '${NEBULA_GRAPHD_HTTP_PORT:-19669}:19669'
       depends_on:
-         nebula-storaged:
+         nebula-metad:
             condition: service_healthy
+         nebula-storaged:
+            condition: service_started
       volumes:
          - nebula_graphd_logs:/logs
       healthcheck:

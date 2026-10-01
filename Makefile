@@ -3,25 +3,33 @@ install:
 	pnpm install
 	npx -y @colbymchenry/codegraph install
 
+.PHONY: prisma-push
+prisma-push:
+	pnpm run prisma:push
+
 .PHONY: prisma-generate
 prisma-generate:
 	pnpm run prisma:generate
 
+.PHONY: prisma-seed
+prisma-seed:
+	cd apps/auth && pnpm run prisma:seed
+
 .PHONY: start-gateway
 start-gateway:
-	pnpm --filter @omni/gateway run start
+	pnpm run start:gateway
 
 .PHONY: start-auth
 start-auth:
-	pnpm --filter @omni/auth run start
+	pnpm run start:auth
 
 .PHONY: start-user
 start-user:
-	pnpm --filter @omni/user run start
+	pnpm run start:user
 
 .PHONY: start-notification
 start-notification:
-	pnpm --filter @omni/notification run start
+	pnpm run start:notification
 
 .PHONY: build
 build:
@@ -50,6 +58,10 @@ clean:
 	rm -rf apps/*/src/generated libs/*/src/generated
 	rm -rf node_modules apps/*/node_modules libs/*/node_modules
 	rm -rf .pnpm-store *.tsbuildinfo *.log
+
+.PHONY: docker-up
+docker-up:
+	docker compose up -d
 
 .PHONY: docker-clean
 docker-clean:

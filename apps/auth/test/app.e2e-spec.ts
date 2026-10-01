@@ -20,13 +20,13 @@ describe('AuthModule (e2e)', () => {
    });
 
    beforeEach(async () => {
-      await prismaService.user.deleteMany({
+      await prismaService.account.deleteMany({
          where: { email: 'e2e@example.com' },
       });
    });
 
    afterAll(async () => {
-      await prismaService.user.deleteMany({
+      await prismaService.account.deleteMany({
          where: { email: 'e2e@example.com' },
       });
       await moduleFixture.close();
@@ -38,7 +38,7 @@ describe('AuthModule (e2e)', () => {
       const user = await authService.register({
          email: 'e2e@example.com',
          password: 'password123',
-         fullName: 'E2E User',
+         confirmPassword: 'password123',
       });
 
       expect(user.user.email).toBe('e2e@example.com');

@@ -9,6 +9,7 @@
       "lint": "eslint \"src/**/*.ts\" --fix"
    },
    "dependencies": {
+      "@elastic/elasticsearch": "^8.19.2",
       "@nebula-contrib/nebula-nodejs": "^3.0.3",
       "@nestjs/common": "^11.0.1",
       "@nestjs/config": "^4.0.4",

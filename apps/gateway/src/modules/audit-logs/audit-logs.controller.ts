@@ -1,6 +1,7 @@
 import { Controller, Get, HttpCode, HttpStatus, Param, Query } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
+   AUDIT_LOG_RESPONSE_MESSAGES,
    AuditLogResponseDto,
    CurrentUser,
    DEFAULT_ROLES,
@@ -33,7 +34,7 @@ export class AuditLogsController {
       description: 'Audit logs matching query returned successfully.',
       type: [AuditLogResponseDto],
    })
-   @ResponseMessage('AUDIT_LOGS.GET_LIST_SUCCESS')
+   @ResponseMessage(AUDIT_LOG_RESPONSE_MESSAGES.GET_LIST_SUCCESS)
    async getAuditLogs(@Query() query: QueryAuditLogDto, @CurrentUser() user: JwtPayload): Promise<IAuditLogListResult> {
       return this.auditLogsService.getAuditLogs(query, user);
    }
@@ -47,7 +48,7 @@ export class AuditLogsController {
       description: 'Audit log details returned.',
       type: AuditLogResponseDto,
    })
-   @ResponseMessage('AUDIT_LOGS.GET_DETAIL_SUCCESS')
+   @ResponseMessage(AUDIT_LOG_RESPONSE_MESSAGES.GET_DETAIL_SUCCESS)
    async getAuditLogById(@Param('id') id: string, @CurrentUser() user: JwtPayload): Promise<ISecurityAuditLog | null> {
       return this.auditLogsService.getAuditLogById(id, user);
    }

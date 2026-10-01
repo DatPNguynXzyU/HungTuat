@@ -43,7 +43,6 @@ async function bootstrap() {
    // CORS Configuration with strict whitelist
    app.enableCors({
       origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-         // Allow requests without Origin (e.g. mobile apps, curl, server-to-server, Postman)
          if (!origin) {
             return callback(null, true);
          }
@@ -90,7 +89,7 @@ async function bootstrap() {
    // Swagger Documentation Setup
    const swaggerConfig = new DocumentBuilder()
       .setTitle('OmniServices API Gateway')
-      .setDescription('Microservices API Gateway documentation with Cookie-based JWT Authentication')
+      .setDescription('Microservices API Gateway documentation...')
       .setVersion('1.0')
       .addBearerAuth()
       .addCookieAuth('access_token', {
@@ -105,8 +104,8 @@ async function bootstrap() {
    SwaggerModule.setup('docs', app, document);
 
    await app.listen(port);
-   logger.log(`🚀 API Gateway is running on: http://localhost:${port}/${globalPrefix}`);
-   logger.log(`📖 Swagger documentation available at: http://localhost:${port}/docs`);
+   logger.log(`API Gateway is running on: http://localhost:${port}/${globalPrefix}`);
+   logger.log(`Swagger documentation available at: http://localhost:${port}/docs`);
 }
 
 void bootstrap();

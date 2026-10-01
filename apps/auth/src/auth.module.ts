@@ -14,6 +14,7 @@ import {
    SessionRepository,
 } from '@auth/repositories';
 import { AuditLogService } from '@auth/services/audit-log.service';
+import { EmailBloomFilterService } from '@auth/services/email-bloom-filter.service';
 import { TokenService } from '@auth/services/token.service';
 
 @Module({
@@ -32,6 +33,7 @@ import { TokenService } from '@auth/services/token.service';
       AuthService,
       TokenService,
       AuditLogService,
+      EmailBloomFilterService,
       {
          provide: AUTH_REPOSITORY,
          useClass: AuthRepository,
@@ -52,6 +54,7 @@ import { TokenService } from '@auth/services/token.service';
       AuthService,
       TokenService,
       AuditLogService,
+      EmailBloomFilterService,
       AUTH_REPOSITORY,
       AuthRepository,
       SESSION_REPOSITORY,

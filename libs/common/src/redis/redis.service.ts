@@ -132,6 +132,28 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       }
    }
 
+   async setbit(key: string, offset: number, value: number): Promise<number> {
+      if (!this.client) return 0;
+      try {
+         return await this.client.setbit(key, offset, value);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis SETBIT failed for key "${key}" at offset ${offset}: ${error.message}`);
+         return 0;
+      }
+   }
+
+   async getbit(key: string, offset: number): Promise<number> {
+      if (!this.client) return 0;
+      try {
+         return await this.client.getbit(key, offset);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis GETBIT failed for key "${key}" at offset ${offset}: ${error.message}`);
+         return 0;
+      }
+   }
+
    async expire(key: string, ttlSeconds: number): Promise<void> {
       if (!this.client || ttlSeconds <= 0) return;
       try {

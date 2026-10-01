@@ -152,4 +152,12 @@ export class CommonConfigService {
          space: this.configService.get('NEBULA_SPACE', { infer: true }),
       };
    }
+
+   get elasticsearch() {
+      return {
+         node: this.configService.get('ELASTICSEARCH_NODE', { infer: true }) || 'http://localhost:9200',
+         username: this.configService.get('ELASTICSEARCH_USERNAME', { infer: true }),
+         password: this.configService.get('ELASTICSEARCH_PASSWORD', { infer: true }),
+      };
+   }
 }

@@ -1,12 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, UnauthorizedException } from '@common';
+import { ForbiddenException, RmqService, UnauthorizedException } from '@common';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 
 describe('UserController', () => {
    let controller: UserController;
    const mockUserService = {
+      checkUsername: jest.fn(),
       createUser: jest.fn(),
+      handleUserRegistered: jest.fn(),
       getUserById: jest.fn(),
       getUserByUserId: jest.fn(),
       getUserByUsername: jest.fn(),
@@ -26,6 +28,10 @@ describe('UserController', () => {
       getFollowSuggestions: jest.fn(),
    };
 
+   const mockRmqService = {
+      ack: jest.fn(),
+   };
+
    beforeEach(async () => {
       jest.clearAllMocks();
 
@@ -36,6 +42,10 @@ describe('UserController', () => {
                provide: UserService,
                useValue: mockUserService,
             },
+            {
+               provide: RmqService,
+               useValue: mockRmqService,
+            },
          ],
       }).compile();
 
@@ -44,6 +54,56 @@ describe('UserController', () => {
 
    it('should be defined', () => {
       expect(controller).toBeDefined();
+   });
+
+   describe('checkUsername', () => {
+      it('should handle checkUsername message pattern', async () => {
+         mockUserService.checkUsername.mockResolvedValue({ available: true, username: 'valid_user' });
+
+         const result = await controller.checkUsername({ username: 'valid_user' });
+
+         expect(mockUserService.checkUsername).toHaveBeenCalledWith('valid_user');
+         expect(result).toEqual({ available: true, username: 'valid_user' });
+      });
+   });
+
+   describe('createProfile', () => {
+      it('should handle createProfile message pattern from gateway', async () => {
+         const mockResult = { id: 'u1', userId: 'user-auth-1', displayName: 'John Doe' };
+         mockUserService.createUser.mockResolvedValue(mockResult);
+
+         const result = await controller.createProfile({
+            data: { displayName: 'John Doe', username: 'johndoe' },
+            user: {
+               userId: 'user-auth-1',
+               email: 'john@example.com',
+               roles: ['user'],
+               permissions: [],
+            },
+         });
+
+         expect(mockUserService.createUser).toHaveBeenCalledWith(
+            expect.objectContaining({
+               userId: 'user-auth-1',
+               displayName: 'John Doe',
+               username: 'johndoe',
+            }),
+         );
+         expect(result).toEqual(mockResult);
+      });
+   });
+
+   describe('handleUserRegistered', () => {
+      it('should handle user registered event from auth service', async () => {
+         mockUserService.handleUserRegistered.mockResolvedValue({ id: 'user-1', userId: 'auth-user-1' });
+
+         const result = await controller.handleUserRegistered({ userId: 'auth-user-1', email: 'test@example.com' });
+         expect(mockUserService.handleUserRegistered).toHaveBeenCalledWith({
+            userId: 'auth-user-1',
+            email: 'test@example.com',
+         });
+         expect(result).toEqual({ id: 'user-1', userId: 'auth-user-1' });
+      });
    });
 
    describe('getUserById', () => {

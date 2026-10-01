@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { uuidv7 } from 'uuidv7';
-import type { CreateUserData, RoleEntity, UserEntity } from '@auth/entities/user.entity';
+import { uuidv7 } from '@common';
+import type { AccountEntity, CreateAccountData, RoleEntity } from '@auth/entities/account.entity';
 import type { CreateOutboxEventData } from '@auth/outbox/entities/outbox-event.entity';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import type { IAuthRepository } from '@auth/repositories/auth.repository.interface';
-import type { Prisma, Role, User, UserStatus } from '@auth/prisma-client';
+import { type Account, type AccountStatus, type Role, OutboxStatus } from '@auth/prisma-client';
 
-type UserWithRoles = User & {
-   userRoles?: Array<{
+type AccountWithRoles = Account & {
+   accountRoles?: Array<{
       role: Role;
    }>;
 };
@@ -16,32 +16,31 @@ type UserWithRoles = User & {
 export class AuthRepository implements IAuthRepository {
    constructor(private readonly prisma: PrismaService) {}
 
-   private toEntity(user: UserWithRoles): UserEntity {
+   private toEntity(account: AccountWithRoles): AccountEntity {
       return {
-         id: user.id,
-         email: user.email,
-         fullName: user.fullName,
-         passwordHash: user.passwordHash,
-         status: user.status,
-         isEmailVerified: user.isEmailVerified,
-         lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
-         version: user.version,
-         deletedAt: user.deletedAt ? user.deletedAt.toISOString() : null,
-         roles: user.userRoles ? user.userRoles.map((ur) => ur.role.code) : [],
-         createdAt: user.createdAt.toISOString(),
-         updatedAt: user.updatedAt.toISOString(),
+         id: account.id,
+         email: account.email,
+         passwordHash: account.passwordHash,
+         status: account.status,
+         isEmailVerified: account.isEmailVerified,
+         lastLoginAt: account.lastLoginAt ? account.lastLoginAt.toISOString() : null,
+         version: account.version,
+         deletedAt: account.deletedAt ? account.deletedAt.toISOString() : null,
+         roles: account.accountRoles ? account.accountRoles.map((ur) => ur.role.code) : [],
+         createdAt: account.createdAt.toISOString(),
+         updatedAt: account.updatedAt.toISOString(),
       };
    }
 
-   async findByEmail(email: string): Promise<UserEntity | null> {
+   async findByEmail(email: string): Promise<AccountEntity | null> {
       const normalizedEmail = email.toLowerCase().trim();
-      const user = await this.prisma.user.findFirst({
+      const account = await this.prisma.account.findFirst({
          where: {
             email: normalizedEmail,
             deletedAt: null,
          },
          include: {
-            userRoles: {
+            accountRoles: {
                include: {
                   role: true,
                },
@@ -49,17 +48,17 @@ export class AuthRepository implements IAuthRepository {
          },
       });
 
-      return user ? this.toEntity(user) : null;
+      return account ? this.toEntity(account) : null;
    }
 
-   async findById(id: string): Promise<UserEntity | null> {
-      const user = await this.prisma.user.findFirst({
+   async findById(id: string): Promise<AccountEntity | null> {
+      const account = await this.prisma.account.findFirst({
          where: {
             id,
             deletedAt: null,
          },
          include: {
-            userRoles: {
+            accountRoles: {
                include: {
                   role: true,
                },
@@ -67,36 +66,46 @@ export class AuthRepository implements IAuthRepository {
          },
       });
 
-      return user ? this.toEntity(user) : null;
+      return account ? this.toEntity(account) : null;
    }
 
-   async createUser(data: CreateUserData, outboxEvent?: CreateOutboxEventData): Promise<UserEntity> {
+   async findAllEmails(): Promise<string[]> {
+      const accounts = await this.prisma.account.findMany({
+         where: {
+            deletedAt: null,
+         },
+         select: {
+            email: true,
+         },
+      });
+
+      return accounts.map((a) => a.email);
+   }
+
+   async createAccount(data: CreateAccountData, outboxEvent?: CreateOutboxEventData): Promise<AccountEntity> {
       const id = data.id || uuidv7();
 
-      const user = await this.prisma.$transaction(async (tx) => {
-         const createdUser = await tx.user.create({
+      const account = await this.prisma.$transaction(async (tx) => {
+         const createdAccount = await tx.account.create({
             data: {
                id,
-               email: data.email.toLowerCase().trim(),
-               fullName: data.fullName.trim(),
+               email: data.email,
                passwordHash: data.passwordHash,
-               ...(data.status ? { status: data.status as UserStatus } : {}),
-               ...(typeof data.isEmailVerified === 'boolean' ? { isEmailVerified: data.isEmailVerified } : {}),
-               ...(data.createdAt ? { createdAt: new Date(data.createdAt) } : {}),
-               ...(data.roleId
+               status: data.status as AccountStatus,
+               isEmailVerified: data.isEmailVerified,
+               createdAt: data.createdAt ? new Date(data.createdAt) : undefined,
+               accountRoles: data.roleId
                   ? {
-                       userRoles: {
-                          create: [
-                             {
-                                roleId: data.roleId,
-                             },
-                          ],
-                       },
+                       create: [
+                          {
+                             roleId: data.roleId,
+                          },
+                       ],
                     }
-                  : {}),
+                  : undefined,
             },
             include: {
-               userRoles: {
+               accountRoles: {
                   include: {
                      role: true,
                   },
@@ -111,36 +120,41 @@ export class AuthRepository implements IAuthRepository {
                   aggregateType: outboxEvent.aggregateType,
                   aggregateId: outboxEvent.aggregateId || id,
                   eventType: outboxEvent.eventType,
-                  payload: outboxEvent.payload as Prisma.InputJsonValue,
-                  status: 'PENDING',
+                  payload: {
+                     ...outboxEvent.payload,
+                     accountId: id,
+                     userId: id,
+                  },
+                  status: OutboxStatus.PENDING,
                },
             });
          }
 
-         return createdUser;
+         return createdAccount;
       });
 
-      return this.toEntity(user);
+      return this.toEntity(account);
    }
 
-   async updateUser(id: string, data: Partial<UserEntity>): Promise<UserEntity | null> {
+   async updateAccount(id: string, data: Partial<AccountEntity>): Promise<AccountEntity | null> {
       try {
-         const user = await this.prisma.user.update({
+         const account = await this.prisma.account.update({
             where: { id },
             data: {
-               ...(data.email ? { email: data.email.toLowerCase().trim() } : {}),
-               ...(data.fullName ? { fullName: data.fullName.trim() } : {}),
-               ...(data.passwordHash ? { passwordHash: data.passwordHash } : {}),
-               ...(data.status ? { status: data.status as UserStatus } : {}),
-               ...(typeof data.isEmailVerified === 'boolean' ? { isEmailVerified: data.isEmailVerified } : {}),
-               ...(data.lastLoginAt !== undefined
-                  ? { lastLoginAt: data.lastLoginAt ? new Date(data.lastLoginAt) : null }
-                  : {}),
-               ...(typeof data.version === 'number' ? { version: data.version } : {}),
-               ...(data.deletedAt !== undefined ? { deletedAt: data.deletedAt ? new Date(data.deletedAt) : null } : {}),
+               email: data.email,
+               passwordHash: data.passwordHash,
+               status: data.status as AccountStatus,
+               isEmailVerified: data.isEmailVerified,
+               lastLoginAt: data.lastLoginAt
+                  ? new Date(data.lastLoginAt)
+                  : data.lastLoginAt === null
+                    ? null
+                    : undefined,
+               version: data.version,
+               deletedAt: data.deletedAt ? new Date(data.deletedAt) : data.deletedAt === null ? null : undefined,
             },
             include: {
-               userRoles: {
+               accountRoles: {
                   include: {
                      role: true,
                   },
@@ -148,15 +162,15 @@ export class AuthRepository implements IAuthRepository {
             },
          });
 
-         return this.toEntity(user);
+         return this.toEntity(account);
       } catch {
          return null;
       }
    }
 
-   async deleteUser(id: string): Promise<boolean> {
+   async deleteAccount(id: string): Promise<boolean> {
       try {
-         await this.prisma.user.delete({
+         await this.prisma.account.delete({
             where: { id },
          });
          return true;
@@ -195,17 +209,17 @@ export class AuthRepository implements IAuthRepository {
       };
    }
 
-   async assignRoleToUser(userId: string, roleId: string): Promise<void> {
-      await this.prisma.userRole.upsert({
+   async assignRoleToAccount(accountId: string, roleId: string): Promise<void> {
+      await this.prisma.accountRole.upsert({
          where: {
-            userId_roleId: {
-               userId,
+            accountId_roleId: {
+               accountId,
                roleId,
             },
          },
          update: {},
          create: {
-            userId,
+            accountId,
             roleId,
          },
       });

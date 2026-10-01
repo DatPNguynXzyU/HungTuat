@@ -1,5 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength, IsOptional, IsEnum } from 'class-validator';
+import { Match } from '@common/decorators/match.decorator';
 
 export class RegisterDto {
    @ApiProperty({
@@ -20,12 +21,44 @@ export class RegisterDto {
    password: string;
 
    @ApiProperty({
-      example: 'John Doe',
-      description: 'Full name of the user',
+      example: 'password123',
+      description: 'Confirm user password (must match password)',
    })
-   @IsString({ message: 'Full name must be a string' })
-   @IsNotEmpty({ message: 'Full name must not be empty' })
-   @MinLength(2, { message: 'Full name must be at least 2 characters long' })
-   @MaxLength(100, { message: 'Full name must not exceed 100 characters' })
-   fullName: string;
+   @IsString({ message: 'Confirm password must be a string' })
+   @IsNotEmpty({ message: 'Confirm password must not be empty' })
+   @Match('password', { message: 'Confirm password does not match password' })
+   confirmPassword: string;
+
+   @ApiPropertyOptional({
+      example: 'vtok_123e4567e89b12d3a456426614174000',
+      description: 'Verification token obtained from verify-otp step to confirm email ownership',
+   })
+   @IsOptional()
+   @IsString()
+   verificationToken?: string;
+
+   @ApiPropertyOptional({
+      example: 'device-uuid-12345',
+      description: 'Unique device identifier for mobile/desktop clients',
+   })
+   @IsOptional()
+   @IsString()
+   deviceId?: string;
+
+   @ApiPropertyOptional({
+      example: 'mobile',
+      description: 'Client type',
+      enum: ['web', 'mobile', 'desktop'],
+   })
+   @IsOptional()
+   @IsEnum(['web', 'mobile', 'desktop'])
+   clientType?: 'web' | 'mobile' | 'desktop';
+
+   @ApiPropertyOptional({
+      example: '1.0.0',
+      description: 'Application version for mobile/desktop clients',
+   })
+   @IsOptional()
+   @IsString()
+   appVersion?: string;
 }

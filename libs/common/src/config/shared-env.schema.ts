@@ -35,6 +35,10 @@ export const sharedEnvSchema = z.object({
    NEBULA_USERNAME: z.string().default('root'),
    NEBULA_PASSWORD: z.string().default('nebula'),
    NEBULA_SPACE: z.string().default('social_graph'),
+   ELASTICSEARCH_NODE: z.string().default('http://localhost:9200'),
+   ELASTICSEARCH_PORT: z.coerce.number().int().positive().default(9200),
+   ELASTICSEARCH_USERNAME: z.string().optional(),
+   ELASTICSEARCH_PASSWORD: z.string().optional(),
 });
 
 export type SharedEnvConfig = z.infer<typeof sharedEnvSchema>;

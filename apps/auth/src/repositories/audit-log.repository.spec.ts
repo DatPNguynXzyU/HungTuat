@@ -8,7 +8,7 @@ describe('AuditLogRepository', () => {
 
    const sampleAuditLog = {
       id: 'audit-id-1',
-      userId: 'user-id-1',
+      accountId: 'account-id-1',
       actorEmail: 'test@example.com',
       action: 'AUTH.LOGIN_SUCCESS',
       status: AuditStatus.SUCCESS,
@@ -59,7 +59,7 @@ describe('AuditLogRepository', () => {
       mockSecurityAuditLogCreate.mockResolvedValue(sampleAuditLog);
 
       const result = await repository.createAuditLog({
-         userId: 'user-id-1',
+         accountId: 'user-id-1',
          actorEmail: 'test@example.com',
          action: 'AUTH.LOGIN_SUCCESS',
          status: AuditStatus.SUCCESS,
@@ -77,7 +77,7 @@ describe('AuditLogRepository', () => {
       mockSecurityAuditLogCount.mockResolvedValue(1);
 
       const result = await repository.findAuditLogs({
-         userId: 'user-id-1',
+         accountId: 'account-id-1',
          actorEmail: 'test@example.com',
          page: 1,
          limit: 10,
@@ -99,13 +99,13 @@ describe('AuditLogRepository', () => {
       });
    });
 
-   it('should find user audit logs', async () => {
+   it('should find account audit logs', async () => {
       mockSecurityAuditLogFindMany.mockResolvedValue([sampleAuditLog]);
       mockSecurityAuditLogCount.mockResolvedValue(1);
 
-      const result = await repository.findUserAuditLogs('user-id-1', 1, 10);
+      const result = await repository.findAccountAuditLogs('account-id-1', 1, 10);
 
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].userId).toBe('user-id-1');
+      expect(result.data[0].accountId).toBe('account-id-1');
    });
 });

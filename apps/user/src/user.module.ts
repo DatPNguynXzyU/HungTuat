@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { LoggerModule, RedisModule, RmqModule, SERVICES, NebulaModule } from '@common';
+import { LoggerModule, RedisModule, RmqModule, SERVICES, NebulaModule, ElasticsearchModule } from '@common';
 import { UserController } from '@user/user.controller';
 import { UserService } from '@user/user.service';
 import { UserConfigModule } from '@user/config';
@@ -7,7 +7,8 @@ import { OutboxModule } from '@user/outbox';
 import { PrismaModule } from '@user/prisma';
 import { USER_REPOSITORY, UserRepository, FOLLOW_REPOSITORY, FollowRepository } from '@user/repositories';
 import { GraphSchemaService, GraphFollowRepository } from '@user/graph';
-import { UserGraphSyncService } from '@user/services';
+import { UserGraphSyncService, UsernameBloomFilterService } from '@user/services';
+import { UserSearchService } from '@user/search';
 
 @Module({
    imports: [
@@ -17,6 +18,7 @@ import { UserGraphSyncService } from '@user/services';
       RedisModule,
       OutboxModule,
       NebulaModule.forRoot(),
+      ElasticsearchModule.forRoot(),
       RmqModule.register({
          name: SERVICES.NOTIFICATION_SERVICE,
       }),
@@ -27,6 +29,8 @@ import { UserGraphSyncService } from '@user/services';
    controllers: [UserController],
    providers: [
       UserService,
+      UsernameBloomFilterService,
+      UserSearchService,
       {
          provide: USER_REPOSITORY,
          useClass: UserRepository,
@@ -41,6 +45,15 @@ import { UserGraphSyncService } from '@user/services';
       GraphFollowRepository,
       UserGraphSyncService,
    ],
-   exports: [UserService, USER_REPOSITORY, UserRepository, FOLLOW_REPOSITORY, FollowRepository, GraphFollowRepository],
+   exports: [
+      UserService,
+      UsernameBloomFilterService,
+      UserSearchService,
+      USER_REPOSITORY,
+      UserRepository,
+      FOLLOW_REPOSITORY,
+      FollowRepository,
+      GraphFollowRepository,
+   ],
 })
 export class UserModule {}

@@ -7,5 +7,5 @@ export interface IAuditLogRepository {
    createAuditLog(data: CreateAuditLogData): Promise<SecurityAuditLogEntity>;
    findAuditLogs(query: IAuditLogQuery): Promise<IAuditLogListResult>;
    findById(id: string): Promise<SecurityAuditLogEntity | null>;
-   findUserAuditLogs(userId: string, page?: number, limit?: number): Promise<IAuditLogListResult>;
+   findAccountAuditLogs(accountId: string, page?: number, limit?: number): Promise<IAuditLogListResult>;
 }

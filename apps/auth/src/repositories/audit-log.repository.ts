@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AuditStatus, Prisma, type SecurityAuditLog } from '@auth/prisma-client';
-import { uuidv7 } from 'uuidv7';
+import { uuidv7 } from '@common';
 import { AuditSanitizerUtil, type IAuditLogListResult, type IAuditLogQuery } from '@common';
 import type { CreateAuditLogData, SecurityAuditLogEntity } from '@auth/entities/audit-log.entity';
 import { PrismaService } from '@auth/prisma/prisma.service';
@@ -13,7 +13,7 @@ export class AuditLogRepository implements IAuditLogRepository {
    private toEntity(log: SecurityAuditLog): SecurityAuditLogEntity {
       return {
          id: log.id,
-         userId: log.userId,
+         accountId: log.accountId,
          actorEmail: log.actorEmail,
          action: log.action,
          status: log.status,
@@ -42,7 +42,7 @@ export class AuditLogRepository implements IAuditLogRepository {
       const log = await this.prisma.securityAuditLog.create({
          data: {
             id,
-            userId: data.userId || null,
+            accountId: data.accountId || null,
             actorEmail: data.actorEmail || null,
             action: data.action,
             status,
@@ -70,8 +70,8 @@ export class AuditLogRepository implements IAuditLogRepository {
 
       const where: Prisma.SecurityAuditLogWhereInput = {};
 
-      if (query.userId) {
-         where.userId = query.userId;
+      if (query.accountId) {
+         where.accountId = query.accountId;
       }
 
       if (query.actorEmail) {
@@ -125,9 +125,9 @@ export class AuditLogRepository implements IAuditLogRepository {
       return log ? this.toEntity(log) : null;
    }
 
-   async findUserAuditLogs(userId: string, page = 1, limit = 10): Promise<IAuditLogListResult> {
+   async findAccountAuditLogs(accountId: string, page = 1, limit = 10): Promise<IAuditLogListResult> {
       return this.findAuditLogs({
-         userId,
+         accountId,
          page,
          limit,
       });

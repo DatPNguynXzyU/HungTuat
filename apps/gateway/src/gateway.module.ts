@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { CustomThrottlerGuard, JwtAuthGuard, LoggerModule, RedisModule, RmqModule, SERVICES } from '@common';
+import { CustomThrottlerGuard, JwtAuthGuard, RedisModule, RmqModule, SERVICES } from '@common';
 import { GatewayConfigModule, GatewayConfigService } from '@/config';
+import { GatewayLoggerModule } from '@/logger';
 import { AuditLogsModule } from '@/modules/audit-logs/audit-logs.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { HealthModule } from '@/modules/health/health.module';
@@ -11,7 +12,7 @@ import { UsersModule } from '@/modules/users/users.module';
 @Module({
    imports: [
       GatewayConfigModule,
-      LoggerModule,
+      GatewayLoggerModule,
       RedisModule,
       RmqModule.register({
          name: SERVICES.AUTH_SERVICE,

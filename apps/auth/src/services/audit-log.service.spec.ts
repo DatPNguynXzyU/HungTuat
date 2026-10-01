@@ -8,7 +8,7 @@ describe('AuditLogService', () => {
 
    const sampleAuditLog = {
       id: 'audit-id-1',
-      userId: 'user-id-1',
+      accountId: 'user-id-1',
       actorEmail: 'test@example.com',
       action: 'AUTH.LOGIN_SUCCESS',
       status: AuditStatus.SUCCESS,
@@ -20,7 +20,7 @@ describe('AuditLogService', () => {
       createAuditLog: jest.fn(),
       findAuditLogs: jest.fn(),
       findById: jest.fn(),
-      findUserAuditLogs: jest.fn(),
+      findAccountAuditLogs: jest.fn(),
    };
 
    beforeEach(async () => {
@@ -43,7 +43,7 @@ describe('AuditLogService', () => {
       mockAuditLogRepository.createAuditLog.mockResolvedValue(sampleAuditLog);
 
       const result = await service.record({
-         userId: 'user-id-1',
+         accountId: 'user-id-1',
          action: 'AUTH.LOGIN_SUCCESS',
       });
 
@@ -55,7 +55,7 @@ describe('AuditLogService', () => {
       mockAuditLogRepository.createAuditLog.mockRejectedValue(new Error('Database unavailable'));
 
       const result = await service.record({
-         userId: 'user-id-1',
+         accountId: 'user-id-1',
          action: 'AUTH.LOGIN_SUCCESS',
       });
 
@@ -83,7 +83,7 @@ describe('AuditLogService', () => {
       expect(result).toEqual(sampleAuditLog);
    });
 
-   it('should get user audit logs', async () => {
+   it('should get account audit logs', async () => {
       const mockResult = {
          data: [sampleAuditLog],
          total: 1,
@@ -91,9 +91,9 @@ describe('AuditLogService', () => {
          limit: 10,
          totalPages: 1,
       };
-      mockAuditLogRepository.findUserAuditLogs.mockResolvedValue(mockResult);
+      mockAuditLogRepository.findAccountAuditLogs.mockResolvedValue(mockResult);
 
-      const result = await service.getUserAuditLogs('user-id-1', 1, 10);
+      const result = await service.getAccountAuditLogs('user-id-1', 1, 10);
       expect(result).toEqual(mockResult);
    });
 });

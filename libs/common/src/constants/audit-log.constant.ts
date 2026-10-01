@@ -10,6 +10,9 @@ export const AUDIT_ACTIONS = {
    AUTH_ACCOUNT_LOCKED: 'AUTH.ACCOUNT_LOCKED',
    AUTH_SESSION_REVOKE: 'AUTH.SESSION_REVOKE',
    AUTH_SESSION_REVOKE_OTHERS: 'AUTH.SESSION_REVOKE_OTHERS',
+   AUTH_OTP_SENT: 'AUTH.OTP_SENT',
+   AUTH_OTP_VERIFIED: 'AUTH.OTP_VERIFIED',
+   AUTH_OTP_FAILED: 'AUTH.OTP_FAILED',
 } as const;
 
 export const AUDIT_STATUS = {
@@ -17,5 +20,17 @@ export const AUDIT_STATUS = {
    FAILURE: 'FAILURE',
 } as const;
 
+export const AUDIT_LOG_RESPONSE_MESSAGES = {
+   GET_LIST_SUCCESS: 'AUDIT_LOGS.GET_LIST_SUCCESS',
+   GET_DETAIL_SUCCESS: 'AUDIT_LOGS.GET_DETAIL_SUCCESS',
+} as const;
+
+export const AUDIT_LOG_ERROR_CODES = {
+   INVALID_STATUS: 'AUDIT_LOGS.INVALID_STATUS',
+   NOT_FOUND: 'AUDIT_LOGS.NOT_FOUND',
+} as const;
+
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
 export type AuditStatus = (typeof AUDIT_STATUS)[keyof typeof AUDIT_STATUS];
+export type AuditLogResponseMessage = (typeof AUDIT_LOG_RESPONSE_MESSAGES)[keyof typeof AUDIT_LOG_RESPONSE_MESSAGES];
+export type AuditLogErrorCode = (typeof AUDIT_LOG_ERROR_CODES)[keyof typeof AUDIT_LOG_ERROR_CODES];

@@ -27,7 +27,8 @@ describe('AllRpcExceptionsFilter', () => {
       } catch (err) {
          expect(err).toBeInstanceOf(RpcException);
          const rpcError = (err as RpcException).getError();
-         expect(JSON.parse(rpcError as string)).toEqual({
+         const actualPayload: unknown = typeof rpcError === 'string' ? JSON.parse(rpcError) : rpcError;
+         expect(actualPayload).toEqual({
             statusCode: 400,
             errorCode: 'AUTH.EMAIL_ALREADY_EXISTS',
             message: 'AUTH.EMAIL_ALREADY_EXISTS',

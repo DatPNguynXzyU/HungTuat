@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RmqContext } from '@nestjs/microservices';
 import { of } from 'rxjs';
 import {
+   BloomFilterService,
    DEFAULT_DEV_RSA_PRIVATE_KEY,
    DEFAULT_DEV_RSA_PUBLIC_KEY,
    DEFAULT_JWT_KEY_ID,
@@ -25,16 +26,16 @@ import {
    SessionRepository,
 } from '@auth/repositories';
 import { AuditLogService } from '@auth/services/audit-log.service';
+import { EmailBloomFilterService } from '@auth/services/email-bloom-filter.service';
 import { TokenService } from '@auth/services/token.service';
 
 interface MockUserRecord {
    id: string;
    email: string;
-   fullName: string;
    passwordHash: string;
    createdAt: Date;
    updatedAt: Date;
-   userRoles?: Array<{
+   accountRoles?: Array<{
       role: {
          id: string;
          code: string;
@@ -67,7 +68,7 @@ describe('AuthController', () => {
             findMany: jest.fn().mockResolvedValue([]),
             count: jest.fn().mockResolvedValue(0),
          },
-         userSession: {
+         accountSession: {
             create: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
                Promise.resolve({
                   id: 'session-id-1',
@@ -85,7 +86,10 @@ describe('AuthController', () => {
             update: jest.fn().mockResolvedValue({}),
             updateMany: jest.fn().mockResolvedValue({ count: 1 }),
          },
-         user: {
+         accountRole: {
+            upsert: jest.fn().mockResolvedValue({}),
+         },
+         account: {
             findFirst: jest
                .fn()
                .mockImplementation(({ where }: { where: { email?: string; id?: string; deletedAt?: unknown } }) => {
@@ -110,22 +114,23 @@ describe('AuthController', () => {
                }
                return Promise.resolve(null);
             }),
+            findMany: jest.fn().mockImplementation(({ select }: { select?: { email?: boolean } }) => {
+               if (select?.email) {
+                  return Promise.resolve(Array.from(usersMap.values()).map((u) => ({ email: u.email })));
+               }
+               return Promise.resolve(Array.from(usersMap.values()));
+            }),
             create: jest
                .fn()
                .mockImplementation(
-                  ({
-                     data,
-                  }: {
-                     data: { id: string; email: string; fullName: string; passwordHash: string; createdAt?: Date };
-                  }) => {
+                  ({ data }: { data: { id: string; email: string; passwordHash: string; createdAt?: Date } }) => {
                      const record: MockUserRecord = {
                         id: data.id,
                         email: data.email,
-                        fullName: data.fullName,
                         passwordHash: data.passwordHash,
                         createdAt: data.createdAt || new Date(),
                         updatedAt: new Date(),
-                        userRoles: [
+                        accountRoles: [
                            {
                               role: {
                                  id: 'role-user-id',
@@ -148,7 +153,7 @@ describe('AuthController', () => {
                      data,
                   }: {
                      where: { id: string };
-                     data: Partial<{ email: string; fullName: string; passwordHash: string }>;
+                     data: Partial<{ email: string; passwordHash: string }>;
                   }) => {
                      const existing = usersMap.get(where.id);
                      if (!existing) return Promise.reject(new Error('Not found'));
@@ -215,6 +220,7 @@ describe('AuthController', () => {
       const redisSets = new Map<string, Set<string>>();
 
       const mockRedisService = {
+         getClient: jest.fn().mockReturnValue(null),
          get: jest.fn().mockImplementation((key: string) => Promise.resolve(redisStorage.get(key) || null)),
          set: jest.fn().mockImplementation((key: string, value: string) => {
             redisStorage.set(key, value);
@@ -288,6 +294,8 @@ describe('AuthController', () => {
             TokenService,
             AuthService,
             AuditLogService,
+            EmailBloomFilterService,
+            BloomFilterService,
             {
                provide: AUTH_REPOSITORY,
                useClass: AuthRepository,
@@ -362,6 +370,39 @@ describe('AuthController', () => {
       expect(jwks.keys[0].alg).toBe('RS256');
    });
 
+   it('should handle checkEmail message pattern', async () => {
+      const mockContext = {
+         getChannelRef: jest.fn(),
+         getMessage: jest.fn(),
+      } as unknown as RmqContext;
+
+      const checkRes = await authController.checkEmail({ email: 'newemail@example.com' }, mockContext);
+      expect(checkRes).toEqual({ available: true, email: 'newemail@example.com' });
+   });
+
+   it('should handle sendRegisterOtp and verifyRegisterOtp message pattern', async () => {
+      const mockContext = {
+         getChannelRef: jest.fn(),
+         getMessage: jest.fn(),
+      } as unknown as RmqContext;
+
+      const sendOtpRes = await authController.sendRegisterOtp({ email: 'otpuser@example.com' }, mockContext);
+      expect(sendOtpRes.success).toBe(true);
+      expect(sendOtpRes.cooldownSeconds).toBe(60);
+
+      // Verify OTP after retrieving from Redis
+      const otpKey = `auth:otp:register:otpuser@example.com`;
+      const otp = await authService['redisService'].get(otpKey);
+      expect(otp).toBeDefined();
+
+      const verifyRes = await authController.verifyRegisterOtp(
+         { email: 'otpuser@example.com', otp: otp as string },
+         mockContext,
+      );
+      expect(verifyRes.success).toBe(true);
+      expect(verifyRes.verificationToken).toBeDefined();
+   });
+
    it('should register and login a user successfully', async () => {
       const mockContext = {
          getChannelRef: jest.fn(),
@@ -371,7 +412,7 @@ describe('AuthController', () => {
       const registerDto = {
          email: 'test@example.com',
          password: 'password123',
-         fullName: 'Test User',
+         confirmPassword: 'password123',
       };
 
       const registerRes = await authController.register(registerDto, mockContext);
@@ -394,7 +435,7 @@ describe('AuthController', () => {
       } as unknown as RmqContext;
 
       const registerRes = await authController.register(
-         { email: 'refresh@example.com', password: 'password123', fullName: 'Refresh User' },
+         { email: 'refresh@example.com', password: 'password123', confirmPassword: 'password123' },
          mockContext,
       );
 
@@ -421,7 +462,7 @@ describe('AuthController', () => {
       } as unknown as RmqContext;
 
       const result = await authController.revokeOtherSessions({ userId: 'user-1', currentJti: 'jti-1' }, mockContext);
-      expect(result.success).toBe(true);
+      expect(result.revokedCount).toBeDefined();
    });
 
    it('should handle getAuditLogs message with admin role', async () => {
@@ -444,6 +485,30 @@ describe('AuthController', () => {
       );
       expect(logs).toBeDefined();
       expect(logs.data).toEqual([]);
+   });
+
+   it('should handle revokeToken message and return success', async () => {
+      const mockContext = {
+         getChannelRef: jest.fn(),
+         getMessage: jest.fn(),
+      } as unknown as RmqContext;
+
+      jest.spyOn(authService, 'revokeToken').mockResolvedValue(undefined);
+
+      const result = await authController.revokeToken({ token: 'test-token' }, mockContext);
+      expect(result).toEqual({ success: true });
+   });
+
+   it('should handle revokeSession message and return success', async () => {
+      const mockContext = {
+         getChannelRef: jest.fn(),
+         getMessage: jest.fn(),
+      } as unknown as RmqContext;
+
+      jest.spyOn(authService, 'revokeSession').mockResolvedValue(undefined);
+
+      const result = await authController.revokeSession({ userId: 'user-1', sessionId: 'sess-1' }, mockContext);
+      expect(result).toEqual({ success: true });
    });
 
    it('should reject getAuditLogs without admin role', async () => {

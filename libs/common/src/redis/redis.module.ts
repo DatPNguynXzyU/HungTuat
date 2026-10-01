@@ -1,12 +1,10 @@
-import { Global, Module } from '@nestjs/common';
-import { CommonConfigModule } from '@common/config/common-config.module';
+import { Module } from '@nestjs/common';
+import { BloomFilterService } from '@common/redis/bloom-filter.service';
 import { RbacCacheService } from '@common/redis/rbac-cache.service';
 import { RedisService } from '@common/redis/redis.service';
 
-@Global()
 @Module({
-   imports: [CommonConfigModule],
-   providers: [RedisService, RbacCacheService],
-   exports: [RedisService, RbacCacheService],
+   providers: [RedisService, RbacCacheService, BloomFilterService],
+   exports: [RedisService, RbacCacheService, BloomFilterService],
 })
 export class RedisModule {}
