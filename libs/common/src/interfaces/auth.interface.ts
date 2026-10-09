@@ -1,3 +1,9 @@
+export interface ITokenAccountPayload {
+   id: string;
+   email: string;
+   roles: string[];
+}
+
 export interface IAuthUser {
    id: string;
    email: string;

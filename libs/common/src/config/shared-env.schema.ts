@@ -39,6 +39,9 @@ export const sharedEnvSchema = z.object({
    ELASTICSEARCH_PORT: z.coerce.number().int().positive().default(9200),
    ELASTICSEARCH_USERNAME: z.string().optional(),
    ELASTICSEARCH_PASSWORD: z.string().optional(),
+   CLOUDINARY_CLOUD_NAME: z.string().optional(),
+   CLOUDINARY_API_KEY: z.string().optional(),
+   CLOUDINARY_API_SECRET: z.string().optional(),
 });
 
 export type SharedEnvConfig = z.infer<typeof sharedEnvSchema>;

@@ -35,7 +35,6 @@ import {
    VerifyChangePasswordOtpResponseDto,
    VerifyRegisterOtpDto,
    VerifyRegisterOtpResponseDto,
-   uuidv7,
 } from '@common';
 import { AuthConfigService } from '@auth/config';
 import type { RoleEntity } from '@auth/entities/account.entity';
@@ -44,7 +43,8 @@ import type { IAuthRepository } from '@auth/repositories/auth.repository.interfa
 import { AUTH_REPOSITORY } from '@auth/repositories/auth.repository.interface';
 import { AuditLogService } from '@auth/services/audit-log.service';
 import { EmailBloomFilterService } from '@auth/services/email-bloom-filter.service';
-import { TokenService } from '@auth/services/token.service';
+import type { ITokenService } from '@auth/services/token.service.interface';
+import { TOKEN_SERVICE } from '@auth/services/token.service.interface';
 
 export type AuthResult = IAuthResult;
 export type ValidateTokenResult = IValidateTokenResult;
@@ -57,7 +57,8 @@ export class AuthService {
       @Inject(AUTH_REPOSITORY)
       private readonly authRepository: IAuthRepository,
       private readonly rbacCacheService: RbacCacheService,
-      private readonly tokenService: TokenService,
+      @Inject(TOKEN_SERVICE)
+      private readonly tokenService: ITokenService,
       private readonly outboxPublisherService: OutboxPublisherService,
       private readonly redisService: RedisService,
       private readonly auditLogService: AuditLogService,
@@ -221,15 +222,13 @@ export class AuthService {
          });
       }
 
-      // OTP is valid -> generate single-use verificationToken
-      const verificationToken = `vtok_${uuidv7().replace(/-/g, '')}`;
-      const tokenKey = `${REDIS_KEY_PREFIX.OTP_VERIFICATION_TOKEN}${verificationToken}`;
+      // OTP is valid -> generate single-use verificationToken using TokenService
+      const verificationToken = await this.tokenService.generateVerificationToken(
+         normalizedEmail,
+         REDIS_TTL.OTP_VERIFICATION_TOKEN,
+      );
 
-      await Promise.all([
-         this.redisService.set(tokenKey, normalizedEmail, REDIS_TTL.OTP_VERIFICATION_TOKEN),
-         this.redisService.del(otpKey),
-         this.redisService.del(attemptsKey),
-      ]);
+      await Promise.all([this.redisService.del(otpKey), this.redisService.del(attemptsKey)]);
 
       await this.auditLogService.record({
          actorEmail: normalizedEmail,
@@ -251,13 +250,11 @@ export class AuthService {
 
       let isEmailVerified = false;
       if (dto.verificationToken) {
-         const tokenKey = `${REDIS_KEY_PREFIX.OTP_VERIFICATION_TOKEN}${dto.verificationToken}`;
-         const verifiedEmail = await this.redisService.get(tokenKey);
+         const verifiedEmail = await this.tokenService.consumeVerificationToken(dto.verificationToken);
          if (!verifiedEmail || verifiedEmail !== normalizedEmail) {
             throw new BadRequestException(AUTH_ERROR_CODES.VERIFICATION_TOKEN_INVALID);
          }
          isEmailVerified = true;
-         await this.redisService.del(tokenKey);
       }
 
       const mightContain = await this.emailBloomFilterService.mightContain(normalizedEmail);

@@ -54,9 +54,13 @@
       "ehthumbs",
       "geoip",
       "isready",
+      "johndoe",
       "Loggable",
+      "myusername",
       "njsproj",
       "ntvs",
-      "PGPORT"
+      "PGPORT",
+      "uuidv",
+      "vtok"
    ]
 }

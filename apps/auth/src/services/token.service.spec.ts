@@ -4,6 +4,8 @@ import {
    DEFAULT_DEV_RSA_PRIVATE_KEY,
    DEFAULT_DEV_RSA_PUBLIC_KEY,
    DEFAULT_JWT_KEY_ID,
+   ITokenAccountPayload,
+   JWT_TOKEN_TYPE,
    JwtUtil,
    NotFoundException,
    REDIS_KEY_PREFIX,
@@ -101,7 +103,7 @@ describe('TokenService', () => {
 
    describe('generateTokenPair', () => {
       it('should generate a pair of access and refresh tokens signed with RS256 and create session record in DB and Redis', async () => {
-         const user = {
+         const user: ITokenAccountPayload = {
             id: 'user-id-1',
             email: 'test@example.com',
             roles: ['USER'],
@@ -146,7 +148,7 @@ describe('TokenService', () => {
 
    describe('rotateTokenPair', () => {
       it('should rotate token pair and update existing session record', async () => {
-         const user = {
+         const user: ITokenAccountPayload = {
             id: 'user-id-1',
             email: 'test@example.com',
             roles: ['USER'],
@@ -245,19 +247,19 @@ describe('TokenService', () => {
    describe('validateAccessToken', () => {
       it('should validate a valid access token successfully', async () => {
          const token = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'access', jti: 'jti-123' },
+            { sub: 'user-1', email: 'user@example.com', tokenType: JWT_TOKEN_TYPE.ACCESS, jti: 'jti-123' },
             mockConfigService.jwtPrivateKey,
             900,
          );
 
          const payload = await service.validateAccessToken(token);
          expect(payload.sub).toBe('user-1');
-         expect(payload.tokenType).toBe('access');
+         expect(payload.tokenType).toBe(JWT_TOKEN_TYPE.ACCESS);
       });
 
       it('should throw UnauthorizedException if access token JTI is in Redis blacklist', async () => {
          const token = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'access', jti: 'revoked-jti' },
+            { sub: 'user-1', email: 'user@example.com', tokenType: JWT_TOKEN_TYPE.ACCESS, jti: 'revoked-jti' },
             mockConfigService.jwtPrivateKey,
             900,
          );
@@ -278,7 +280,7 @@ describe('TokenService', () => {
    describe('validateRefreshToken', () => {
       it('should validate active refresh token in whitelist', async () => {
          const token = JwtUtil.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: 'refresh', jti: 'jti-123' },
+            { sub: 'user-1', email: 'user@example.com', tokenType: JWT_TOKEN_TYPE.REFRESH, jti: 'jti-123' },
             mockConfigService.jwtPrivateKey,
             604800,
          );

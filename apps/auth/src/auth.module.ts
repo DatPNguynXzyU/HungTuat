@@ -16,6 +16,7 @@ import {
 import { AuditLogService } from '@auth/services/audit-log.service';
 import { EmailBloomFilterService } from '@auth/services/email-bloom-filter.service';
 import { TokenService } from '@auth/services/token.service';
+import { TOKEN_SERVICE } from '@auth/services/token.service.interface';
 
 @Module({
    imports: [
@@ -31,6 +32,10 @@ import { TokenService } from '@auth/services/token.service';
    controllers: [AuthController],
    providers: [
       AuthService,
+      {
+         provide: TOKEN_SERVICE,
+         useClass: TokenService,
+      },
       TokenService,
       AuditLogService,
       EmailBloomFilterService,
@@ -52,6 +57,7 @@ import { TokenService } from '@auth/services/token.service';
    ],
    exports: [
       AuthService,
+      TOKEN_SERVICE,
       TokenService,
       AuditLogService,
       EmailBloomFilterService,

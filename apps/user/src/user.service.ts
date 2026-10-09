@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BadRequestException, ConflictException, NotFoundException, USER_ERROR_CODES } from '@common';
+import {
+   BadRequestException,
+   ConflictException,
+   NotFoundException,
+   USER_ERROR_CODES,
+   CloudinaryService,
+} from '@common';
 import { UserRepository, FollowRepository } from '@user/repositories';
 import { UserEntity, FollowEntity, FollowStatus, Gender } from '@user/entities';
 import { OutboxService } from '@user/outbox';
@@ -19,6 +25,7 @@ export class UserService {
       private readonly userGraphSyncService: UserGraphSyncService,
       private readonly usernameBloomFilterService: UsernameBloomFilterService,
       private readonly userSearchService: UserSearchService,
+      private readonly cloudinaryService: CloudinaryService,
    ) {}
 
    async checkUsername(username: string): Promise<{ available: boolean; username: string }> {
@@ -549,5 +556,46 @@ export class UserService {
    // Elasticsearch User Search
    async searchUsers(query: string, limit = 10, skip = 0) {
       return this.userSearchService.searchUsers(query, limit, skip);
+   }
+
+   // Cloudinary Avatar Management
+   async uploadAvatar(
+      id: string,
+      base64Data: string,
+      mimeType?: string,
+   ): Promise<{ avatarUrl: string; publicId: string; user: UserEntity }> {
+      const user = await this.getUserById(id);
+
+      this.logger.log(`Uploading avatar to Cloudinary for user ${user.id}...`);
+      const formattedBase64 =
+         mimeType && !base64Data.startsWith('data:') ? `data:${mimeType};base64,${base64Data}` : base64Data;
+
+      const uploadResult = await this.cloudinaryService.uploadBase64(formattedBase64, {
+         folder: 'omni/users/avatars',
+         public_id: `avatar_${user.id}_${Date.now()}`,
+         transformation: [
+            { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+            { quality: 'auto', fetch_format: 'auto' },
+         ],
+         tags: ['avatar', user.id, user.userId],
+      });
+
+      const updatedUser = await this.updateUserProfile(user.id, {
+         avatar: uploadResult.secureUrl,
+      });
+
+      return {
+         avatarUrl: uploadResult.secureUrl,
+         publicId: uploadResult.publicId,
+         user: updatedUser,
+      };
+   }
+
+   async getAvatarUploadSignature(id: string) {
+      const user = await this.getUserById(id);
+      return this.cloudinaryService.generateUploadSignature({
+         folder: 'omni/users/avatars',
+         tags: `avatar,${user.id},${user.userId}`,
+      });
    }
 }

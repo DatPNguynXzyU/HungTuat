@@ -1,6 +1,13 @@
 export const DEFAULT_JWT_KEY_ID = 'omni-auth-key-1';
 export const DEFAULT_JWT_ALGORITHM = 'RS256';
 
+export const JWT_TOKEN_TYPE = {
+   ACCESS: 'access',
+   REFRESH: 'refresh',
+} as const;
+
+export type JwtTokenType = (typeof JWT_TOKEN_TYPE)[keyof typeof JWT_TOKEN_TYPE];
+
 export const DEFAULT_DEV_RSA_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCx/CvjH0K6nAfI
 yEh2cMhJrYyMrmmXgKA39rKdH43qihXS9a155y/TRBKQ/3xe+pVOBNOCh7Nbx+vS

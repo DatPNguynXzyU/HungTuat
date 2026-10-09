@@ -45,8 +45,6 @@ import { UsersModule } from '@/modules/users/users.module';
    ],
    controllers: [],
    providers: [
-      // Global guards: Only authentication and rate limiting
-      // Authorization (roles/permissions) is now handled by individual microservices
       {
          provide: APP_GUARD,
          useClass: CustomThrottlerGuard,

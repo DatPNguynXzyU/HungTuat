@@ -1,5 +1,13 @@
 import { Module } from '@nestjs/common';
-import { LoggerModule, RedisModule, RmqModule, SERVICES, NebulaModule, ElasticsearchModule } from '@common';
+import {
+   LoggerModule,
+   RedisModule,
+   RmqModule,
+   SERVICES,
+   NebulaModule,
+   ElasticsearchModule,
+   CloudinaryModule,
+} from '@common';
 import { UserController } from '@user/user.controller';
 import { UserService } from '@user/user.service';
 import { UserConfigModule } from '@user/config';
@@ -19,6 +27,7 @@ import { UserSearchService } from '@user/search';
       OutboxModule,
       NebulaModule.forRoot(),
       ElasticsearchModule.forRoot(),
+      CloudinaryModule.forRoot(),
       RmqModule.register({
          name: SERVICES.NOTIFICATION_SERVICE,
       }),

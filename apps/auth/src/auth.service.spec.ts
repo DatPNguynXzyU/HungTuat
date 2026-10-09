@@ -5,6 +5,7 @@ import {
    AUDIT_STATUS,
    BadRequestException,
    DEFAULT_ROLES,
+   JWT_TOKEN_TYPE,
    NOTIFICATION_EVENTS,
    NOTIFICATION_PATTERNS,
    RbacCacheService,
@@ -560,7 +561,7 @@ describe('AuthService', () => {
          sub: 'user-123',
          email: 'user@example.com',
          roles: [DEFAULT_ROLES.USER],
-         tokenType: 'refresh',
+         tokenType: JWT_TOKEN_TYPE.REFRESH,
          jti: 'old-jti-123',
          exp: nowInSeconds + 600,
       });

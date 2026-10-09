@@ -160,4 +160,12 @@ export class CommonConfigService {
          password: this.configService.get('ELASTICSEARCH_PASSWORD', { infer: true }),
       };
    }
+
+   get cloudinary() {
+      return {
+         cloudName: this.configService.get('CLOUDINARY_CLOUD_NAME', { infer: true }) || '',
+         apiKey: this.configService.get('CLOUDINARY_API_KEY', { infer: true }) || '',
+         apiSecret: this.configService.get('CLOUDINARY_API_SECRET', { infer: true }) || '',
+      };
+   }
 }

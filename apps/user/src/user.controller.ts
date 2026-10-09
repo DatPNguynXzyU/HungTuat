@@ -260,4 +260,27 @@ export class UserController {
    async searchUsers(@Payload() data: { query: string; limit?: number; skip?: number }) {
       return this.userService.searchUsers(data.query, data.limit, data.skip);
    }
+
+   // Cloudinary Avatar Management
+   @MessagePattern({ cmd: 'upload_avatar' })
+   async uploadAvatar(@Payload() message: IServiceMessage<{ id?: string; fileBase64: string; mimeType?: string }>) {
+      const targetUserId = message.data.id || message.user?.userId;
+      if (!targetUserId) {
+         throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
+      }
+      checkOwnershipOrAdmin(message, targetUserId);
+
+      return this.userService.uploadAvatar(targetUserId, message.data.fileBase64, message.data.mimeType);
+   }
+
+   @MessagePattern({ cmd: 'get_avatar_upload_signature' })
+   async getAvatarUploadSignature(@Payload() message: IServiceMessage<{ id?: string }>) {
+      const targetUserId = message.data.id || message.user?.userId;
+      if (!targetUserId) {
+         throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
+      }
+      checkOwnershipOrAdmin(message, targetUserId);
+
+      return this.userService.getAvatarUploadSignature(targetUserId);
+   }
 }

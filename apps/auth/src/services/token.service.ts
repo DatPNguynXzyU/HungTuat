@@ -6,11 +6,14 @@ import {
    IJwksResponse,
    IRevokeSessionResult,
    IRevokeTokenResult,
+   ITokenAccountPayload,
    IUserSessionInfo,
+   JWT_TOKEN_TYPE,
    JwtPayload,
    JwtUtil,
    NotFoundException,
    REDIS_KEY_PREFIX,
+   REDIS_TTL,
    RedisService,
    UnauthorizedException,
 } from '@common';
@@ -18,6 +21,7 @@ import { AuthConfigService } from '@auth/config';
 import type { SessionEntity } from '@auth/entities/session.entity';
 import type { ISessionRepository } from '@auth/repositories/session.repository.interface';
 import { SESSION_REPOSITORY } from '@auth/repositories/session.repository.interface';
+import type { ITokenService } from './token.service.interface';
 
 export interface TokenPair {
    accessToken: string;
@@ -26,8 +30,11 @@ export interface TokenPair {
 
 export type RevokeTokenResult = IRevokeTokenResult;
 
+// Verification Token Prefix - Centralized constant
+export const VERIFICATION_TOKEN_PREFIX = 'vtok_';
+
 @Injectable()
-export class TokenService {
+export class TokenService implements ITokenService {
    private readonly jwtPrivateKey: string;
    private readonly jwtPublicKey: string;
    private readonly jwtKeyId: string;
@@ -51,23 +58,55 @@ export class TokenService {
       return JwtUtil.generateJwks(this.jwtPublicKey, this.jwtKeyId);
    }
 
-   async generateTokenPair(
-      account: {
-         id: string;
-         email: string;
-         roles: string[];
-      },
-      deviceInfo?: IDeviceInfo,
-   ): Promise<TokenPair> {
-      const accessTokenJti = uuidv7();
-      const refreshTokenJti = uuidv7();
+   /**
+    * Generate a single-use verification token for OTP flow
+    * @param email - User email to associate with the token
+    * @param ttl - Time-to-live in seconds (defaults to OTP_VERIFICATION_TOKEN TTL)
+    * @returns Verification token string with prefix
+    */
+   async generateVerificationToken(email: string, ttl: number = REDIS_TTL.OTP_VERIFICATION_TOKEN): Promise<string> {
+      const verificationToken = `${VERIFICATION_TOKEN_PREFIX}${uuidv7().replace(/-/g, '')}`;
+      const tokenKey = `${REDIS_KEY_PREFIX.OTP_VERIFICATION_TOKEN}${verificationToken}`;
+
+      await this.redisService.set(tokenKey, email, ttl);
+
+      return verificationToken;
+   }
+
+   /**
+    * Validate a verification token and return associated email
+    * @param token - Verification token to validate
+    * @returns Email if valid, null if not found or expired
+    */
+   async validateVerificationToken(token: string): Promise<string | null> {
+      const tokenKey = `${REDIS_KEY_PREFIX.OTP_VERIFICATION_TOKEN}${token}`;
+      const email = await this.redisService.get(tokenKey);
+      return email;
+   }
+
+   /**
+    * Consume a verification token (validate and delete)
+    * @param token - Verification token to consume
+    * @returns Email if valid, null if not found or expired
+    */
+   async consumeVerificationToken(token: string): Promise<string | null> {
+      const tokenKey = `${REDIS_KEY_PREFIX.OTP_VERIFICATION_TOKEN}${token}`;
+      const email = await this.redisService.get(tokenKey);
+      if (email) {
+         await this.redisService.del(tokenKey);
+      }
+      return email;
+   }
+
+   async generateTokenPair(account: ITokenAccountPayload, deviceInfo?: IDeviceInfo): Promise<TokenPair> {
+      const [accessTokenJti, refreshTokenJti] = [uuidv7(), uuidv7()];
 
       const accessToken = JwtUtil.sign(
          {
             sub: account.id,
             email: account.email,
             roles: account.roles,
-            tokenType: 'access',
+            tokenType: JWT_TOKEN_TYPE.ACCESS,
             jti: accessTokenJti,
          },
          this.jwtPrivateKey,
@@ -80,7 +119,7 @@ export class TokenService {
             sub: account.id,
             email: account.email,
             roles: account.roles,
-            tokenType: 'refresh',
+            tokenType: JWT_TOKEN_TYPE.REFRESH,
             jti: refreshTokenJti,
          },
          this.jwtPrivateKey,
@@ -128,24 +167,19 @@ export class TokenService {
    }
 
    async rotateTokenPair(
-      account: {
-         id: string;
-         email: string;
-         roles: string[];
-      },
+      account: ITokenAccountPayload,
       oldRefreshTokenJti: string,
       deviceInfo?: IDeviceInfo,
       remainingTtl?: number,
    ): Promise<TokenPair> {
-      const accessTokenJti = uuidv7();
-      const refreshTokenJti = uuidv7();
+      const [accessTokenJti, refreshTokenJti] = [uuidv7(), uuidv7()];
 
       const accessToken = JwtUtil.sign(
          {
             sub: account.id,
             email: account.email,
             roles: account.roles,
-            tokenType: 'access',
+            tokenType: JWT_TOKEN_TYPE.ACCESS,
             jti: accessTokenJti,
          },
          this.jwtPrivateKey,
@@ -158,7 +192,7 @@ export class TokenService {
             sub: account.id,
             email: account.email,
             roles: account.roles,
-            tokenType: 'refresh',
+            tokenType: JWT_TOKEN_TYPE.REFRESH,
             jti: refreshTokenJti,
          },
          this.jwtPrivateKey,
@@ -174,7 +208,6 @@ export class TokenService {
       // Invalidate old refresh token in Redis
       await this.invalidateRefreshToken(account.id, oldRefreshTokenJti, remainingTtl);
 
-      // Try updating existing session with new JTI and lastActiveAt; if not found, create new session
       const existingSession = await this.sessionRepository.findByJti(oldRefreshTokenJti);
       if (existingSession) {
          await this.sessionRepository.updateSession(existingSession.id, {
@@ -234,7 +267,7 @@ export class TokenService {
          throw new UnauthorizedException(AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED);
       }
 
-      if (payload.tokenType !== 'access') {
+      if (payload.tokenType !== JWT_TOKEN_TYPE.ACCESS) {
          throw new UnauthorizedException(AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED);
       }
 
@@ -268,7 +301,7 @@ export class TokenService {
          throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_INVALID);
       }
 
-      if (payload.tokenType !== 'refresh') {
+      if (payload.tokenType !== JWT_TOKEN_TYPE.REFRESH) {
          throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_INVALID);
       }
 

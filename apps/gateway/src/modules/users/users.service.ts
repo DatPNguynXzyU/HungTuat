@@ -114,4 +114,48 @@ export class UsersService {
          ),
       );
    }
+
+   async uploadAvatar(id: string, fileBase64: string, mimeType?: string, user?: JwtPayload): Promise<unknown> {
+      const message: IServiceMessage<{ id: string; fileBase64: string; mimeType?: string }> = {
+         data: { id, fileBase64, mimeType },
+         user: user
+            ? {
+                 userId: user.sub,
+                 email: user.email,
+                 roles: user.roles || [],
+                 permissions: [],
+                 sessionId: user.jti,
+              }
+            : undefined,
+      };
+
+      return firstValueFrom(
+         this.userClient.send<unknown, IServiceMessage<{ id: string; fileBase64: string; mimeType?: string }>>(
+            { cmd: 'upload_avatar' },
+            message,
+         ),
+      );
+   }
+
+   async getAvatarUploadSignature(id: string, user?: JwtPayload): Promise<unknown> {
+      const message: IServiceMessage<{ id: string }> = {
+         data: { id },
+         user: user
+            ? {
+                 userId: user.sub,
+                 email: user.email,
+                 roles: user.roles || [],
+                 permissions: [],
+                 sessionId: user.jti,
+              }
+            : undefined,
+      };
+
+      return firstValueFrom(
+         this.userClient.send<unknown, IServiceMessage<{ id: string }>>(
+            { cmd: 'get_avatar_upload_signature' },
+            message,
+         ),
+      );
+   }
 }

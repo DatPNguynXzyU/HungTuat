@@ -1,5 +1,15 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+   ApiBearerAuth,
+   ApiBody,
+   ApiConsumes,
+   ApiCookieAuth,
+   ApiOperation,
+   ApiQuery,
+   ApiResponse,
+   ApiTags,
+} from '@nestjs/swagger';
 import {
    BadRequestException,
    CreateUserProfileDto,
@@ -102,6 +112,57 @@ export class UsersController {
    @ResponseMessage(USER_RESPONSE_MESSAGES.UPDATE_PROFILE_SUCCESS)
    async updateMyProfile(@Body() updateUserDto: UpdateUserDto, @CurrentUser() user: JwtPayload): Promise<unknown> {
       return this.usersService.updateMyProfile(updateUserDto, user);
+   }
+
+   @Post('me/avatar')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({ summary: 'Upload new avatar image directly to Cloudinary CDN' })
+   @ApiConsumes('multipart/form-data')
+   @ApiBody({
+      schema: {
+         type: 'object',
+         properties: {
+            file: {
+               type: 'string',
+               format: 'binary',
+               description: 'Image file (JPEG, PNG, WebP, max 5MB)',
+            },
+         },
+         required: ['file'],
+      },
+   })
+   @ApiResponse({ status: 200, description: 'Avatar uploaded and updated successfully.' })
+   @ResponseMessage(USER_RESPONSE_MESSAGES.UPLOAD_AVATAR_SUCCESS)
+   @UseInterceptors(
+      FileInterceptor('file', {
+         limits: { fileSize: 5 * 1024 * 1024 },
+      }),
+   )
+   async uploadMyAvatar(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: JwtPayload): Promise<unknown> {
+      if (!file || !file.buffer) {
+         throw new BadRequestException(USER_ERROR_CODES.FILE_REQUIRED);
+      }
+
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (!allowedMimes.includes(file.mimetype)) {
+         throw new BadRequestException(USER_ERROR_CODES.INVALID_FILE_TYPE, {
+            params: { allowed: allowedMimes.join(', ') },
+         });
+      }
+
+      const fileBase64 = file.buffer.toString('base64');
+      return this.usersService.uploadAvatar(user.sub, fileBase64, file.mimetype, user);
+   }
+
+   @Get('me/avatar/signature')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({ summary: 'Get signed upload signature for direct client-to-Cloudinary upload' })
+   @ApiResponse({ status: 200, description: 'Signed upload parameters generated successfully.' })
+   @ResponseMessage(USER_RESPONSE_MESSAGES.GET_AVATAR_SIGNATURE_SUCCESS)
+   async getMyAvatarSignature(@CurrentUser() user: JwtPayload): Promise<unknown> {
+      return this.usersService.getAvatarUploadSignature(user.sub, user);
    }
 
    @Get(':id')

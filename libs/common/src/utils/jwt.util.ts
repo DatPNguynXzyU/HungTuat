@@ -6,6 +6,7 @@ import {
    DEFAULT_DEV_RSA_PRIVATE_KEY,
    DEFAULT_DEV_RSA_PUBLIC_KEY,
    DEFAULT_JWT_KEY_ID,
+   type JwtTokenType,
 } from '@common/constants/jwt.constant';
 import type { IJwksResponse, IJsonWebKey } from '@common/interfaces/auth.interface';
 
@@ -13,7 +14,7 @@ export interface JwtPayload {
    sub: string;
    email: string;
    roles?: string[];
-   tokenType?: 'access' | 'refresh';
+   tokenType?: JwtTokenType;
    jti?: string;
    iat?: number;
    exp?: number;
