@@ -17,6 +17,7 @@ import {
    SendRegisterOtpDto,
    SendRegisterOtpResponseDto,
    SERVICES,
+   UserEmailResponseDto,
    VerifyChangePasswordOtpDto,
    VerifyChangePasswordOtpResponseDto,
    VerifyRegisterOtpDto,
@@ -190,6 +191,15 @@ export class AuthService {
          this.authClient.send<IAuditLogListResult, { userId: string; page?: number; limit?: number }>(
             { cmd: AUTH_PATTERNS.GET_USER_AUDIT_LOGS },
             { userId, page, limit },
+         ),
+      );
+   }
+
+   async getEmail(accountId: string): Promise<UserEmailResponseDto> {
+      return firstValueFrom(
+         this.authClient.send<UserEmailResponseDto, { accountId: string }>(
+            { cmd: AUTH_PATTERNS.GET_EMAIL },
+            { accountId },
          ),
       );
    }

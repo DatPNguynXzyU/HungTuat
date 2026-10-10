@@ -34,6 +34,7 @@ export const AUTH_PATTERNS = {
    VERIFY_REGISTER_OTP: 'auth.verify_register_otp',
    SEND_CHANGE_PASSWORD_OTP: 'auth.send_change_password_otp',
    VERIFY_CHANGE_PASSWORD_OTP: 'auth.verify_change_password_otp',
+   GET_EMAIL: 'auth.get_email',
 } as const;
 
 export const AUTH_SECURITY = {
@@ -62,6 +63,7 @@ export const AUTH_RESPONSE_MESSAGES = {
    VERIFY_CHANGE_PASSWORD_OTP_SUCCESS: 'AUTH.VERIFY_CHANGE_PASSWORD_OTP_SUCCESS',
    GET_SECURITY_LOGS_SUCCESS: 'AUTH.GET_SECURITY_LOGS_SUCCESS',
    GET_PROFILE_SUCCESS: 'AUTH.GET_PROFILE_SUCCESS',
+   GET_EMAIL_SUCCESS: 'AUTH.GET_EMAIL_SUCCESS',
 } as const;
 
 export const AUTH_MESSAGES = AUTH_RESPONSE_MESSAGES;

@@ -30,6 +30,7 @@ enum AuditStatus {
 model Account {
   id                 String              @id @default(uuid())
   email              String              @unique
+  phoneNumber        String?             @unique @map("phone_number")
   passwordHash       String              @map("password_hash")
   status             AccountStatus       @default(ACTIVE)
   isEmailVerified    Boolean             @default(false) @map("is_email_verified")

@@ -2,7 +2,14 @@ import { Controller } from '@nestjs/common';
 import { Ctx, EventPattern, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
 import { UserService } from '@user/user.service';
 import { Gender, FollowStatus } from '@user/entities';
-import { BadRequestException, checkOwnershipOrAdmin, NOTIFICATION_EVENTS, RmqService, USER_ERROR_CODES } from '@common';
+import {
+   BadRequestException,
+   checkOwnershipOrAdmin,
+   NOTIFICATION_EVENTS,
+   RmqService,
+   USER_ERROR_CODES,
+   USER_PATTERNS,
+} from '@common';
 import type { IServiceMessage } from '@common';
 
 @Controller()
@@ -30,13 +37,24 @@ export class UserController {
    }
 
    // User Profile Operations
-   @MessagePattern({ cmd: 'check_username' })
-   async checkUsername(@Payload() data: { username: string }) {
-      return this.userService.checkUsername(data.username);
+   @MessagePattern({ cmd: USER_PATTERNS.CHECK_USERNAME })
+   async checkUsername(@Payload() data: { username: string }, @Ctx() context?: RmqContext) {
+      try {
+         const result = await this.userService.checkUsername(data.username);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'create_profile' })
-   @MessagePattern({ cmd: 'create_user_profile' })
+   @MessagePattern({ cmd: USER_PATTERNS.CREATE_PROFILE })
+   @MessagePattern({ cmd: USER_PATTERNS.CREATE_USER_PROFILE })
    async createProfile(
       @Payload()
       message: IServiceMessage<{
@@ -51,23 +69,35 @@ export class UserController {
          location?: string;
          userId?: string;
       }>,
+      @Ctx() context?: RmqContext,
    ) {
-      const userId = message.user?.userId || message.data?.userId;
-      if (!userId) {
-         throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
+      try {
+         const userId = message.user?.userId || message.data?.userId;
+         if (!userId) {
+            throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
+         }
+
+         const { gender, dateOfBirth, ...profileData } = message.data;
+
+         const result = await this.userService.createUser({
+            userId,
+            ...profileData,
+            ...(gender && { gender: gender as Gender }),
+            ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
+         });
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
       }
-
-      const { gender, dateOfBirth, ...profileData } = message.data;
-
-      return this.userService.createUser({
-         userId,
-         ...profileData,
-         ...(gender && { gender: gender as Gender }),
-         ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
-      });
    }
 
-   @MessagePattern({ cmd: 'create_user' })
+   @MessagePattern({ cmd: USER_PATTERNS.CREATE_USER })
    async createUser(
       @Payload()
       data: {
@@ -82,45 +112,112 @@ export class UserController {
          website?: string;
          location?: string;
       },
+      @Ctx() context?: RmqContext,
    ) {
-      const { gender, dateOfBirth, ...profileData } = data;
-      return this.userService.createUser({
-         ...profileData,
-         ...(gender && { gender: gender as Gender }),
-         ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
-      });
-   }
-
-   @MessagePattern({ cmd: 'get_user_by_id' })
-   async getUserById(@Payload() message: IServiceMessage<{ id: string }>) {
       try {
-         return await this.userService.getUserById(message.data.id);
-      } catch (err) {
-         if (message.user && message.user.userId === message.data.id && message.user.email) {
-            const autoCreated = await this.userService.handleUserRegistered({
-               userId: message.user.userId,
-               email: message.user.email,
-            });
-            if (autoCreated) {
-               return autoCreated;
-            }
+         const { gender, dateOfBirth, ...profileData } = data;
+         const result = await this.userService.createUser({
+            ...profileData,
+            ...(gender && { gender: gender as Gender }),
+            ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
+         });
+         if (context) {
+            this.rmqService.ack(context);
          }
-         throw err;
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
       }
    }
 
-   @MessagePattern({ cmd: 'get_user_by_user_id' })
-   async getUserByUserId(@Payload() data: { userId: string }) {
-      return this.userService.getUserByUserId(data.userId);
+   @MessagePattern({ cmd: USER_PATTERNS.GET_USER_BY_ID })
+   async getUserById(@Payload() message: IServiceMessage<{ id: string }>, @Ctx() context?: RmqContext) {
+      try {
+         try {
+            const result = await this.userService.getUserById(message.data.id);
+            if (context) {
+               this.rmqService.ack(context);
+            }
+            return result;
+         } catch (err) {
+            if (message.user && message.user.userId === message.data.id && message.user.email) {
+               const autoCreated = await this.userService.handleUserRegistered({
+                  userId: message.user.userId,
+                  email: message.user.email,
+               });
+               if (autoCreated) {
+                  if (context) {
+                     this.rmqService.ack(context);
+                  }
+                  return autoCreated;
+               }
+            }
+            throw err;
+         }
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'get_user_by_username' })
-   async getUserByUsername(@Payload() data: { username: string }) {
-      return this.userService.getUserByUsername(data.username);
+   @MessagePattern({ cmd: USER_PATTERNS.GET_USER_BY_USER_ID })
+   async getUserByUserId(@Payload() data: { userId: string }, @Ctx() context?: RmqContext) {
+      try {
+         const result = await this.userService.getUserByUserId(data.userId);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'update_user_profile' })
-   @MessagePattern({ cmd: 'update_user' })
+   @MessagePattern({ cmd: USER_PATTERNS.GET_USER_BY_USERNAME })
+   async getUserByUsername(@Payload() data: { username: string }, @Ctx() context?: RmqContext) {
+      try {
+         const result = await this.userService.getUserByUsername(data.username);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
+   }
+
+   @MessagePattern({ cmd: USER_PATTERNS.GET_DATE_OF_BIRTH })
+   async getDateOfBirth(@Payload() data: { userId: string }, @Ctx() context?: RmqContext) {
+      try {
+         if (!data?.userId) {
+            throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
+         }
+         const result = await this.userService.getDateOfBirth(data.userId);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
+   }
+
+   @MessagePattern({ cmd: USER_PATTERNS.UPDATE_USER_PROFILE })
+   @MessagePattern({ cmd: USER_PATTERNS.UPDATE_USER })
    async updateUserProfile(
       @Payload()
       message: IServiceMessage<{
@@ -135,80 +232,177 @@ export class UserController {
          website?: string;
          location?: string;
       }>,
+      @Ctx() context?: RmqContext,
    ) {
-      const { id, gender, dateOfBirth, ...updateData } = message.data;
-
-      let targetOwnerId = id;
       try {
-         const existingUser = await this.userService.getUserById(id);
-         if (existingUser) {
-            targetOwnerId = existingUser.userId;
+         const { id, gender, dateOfBirth, ...updateData } = message.data;
+
+         let targetOwnerId = id;
+         try {
+            const existingUser = await this.userService.getUserById(id);
+            if (existingUser) {
+               targetOwnerId = existingUser.userId;
+            }
+         } catch {
+            // User does not exist in DB yet, fallback to comparing id with message.user.userId
          }
-      } catch {
-         // User does not exist in DB yet, fallback to comparing id with message.user.userId
+
+         checkOwnershipOrAdmin(message, targetOwnerId);
+
+         const result = await this.userService.updateUserProfile(id, {
+            ...updateData,
+            ...(gender && { gender: gender as Gender }),
+            ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
+         });
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
       }
-
-      checkOwnershipOrAdmin(message, targetOwnerId);
-
-      return this.userService.updateUserProfile(id, {
-         ...updateData,
-         ...(gender && { gender: gender as Gender }),
-         ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
-      });
    }
 
-   @MessagePattern({ cmd: 'update_username' })
-   async updateUsername(@Payload() message: IServiceMessage<{ id: string; username: string }>) {
-      const user = await this.userService.getUserById(message.data.id);
-      if (user) {
-         checkOwnershipOrAdmin(message, user.userId);
-      }
+   @MessagePattern({ cmd: USER_PATTERNS.UPDATE_USERNAME })
+   async updateUsername(
+      @Payload() message: IServiceMessage<{ id: string; username: string }>,
+      @Ctx() context?: RmqContext,
+   ) {
+      try {
+         const user = await this.userService.getUserById(message.data.id);
+         if (user) {
+            checkOwnershipOrAdmin(message, user.userId);
+         }
 
-      return this.userService.updateUsername(user.id, message.data.username);
+         const result = await this.userService.updateUsername(user.id, message.data.username);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'delete_user' })
-   async deleteUser(@Payload() message: IServiceMessage<{ id: string }>) {
-      const user = await this.userService.getUserById(message.data.id);
-      if (user) {
-         checkOwnershipOrAdmin(message, user.userId);
-      }
+   @MessagePattern({ cmd: USER_PATTERNS.DELETE_USER })
+   async deleteUser(@Payload() message: IServiceMessage<{ id: string }>, @Ctx() context?: RmqContext) {
+      try {
+         const user = await this.userService.getUserById(message.data.id);
+         if (user) {
+            checkOwnershipOrAdmin(message, user.userId);
+         }
 
-      return this.userService.deleteUser(user.id);
+         const result = await this.userService.deleteUser(user.id);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'restore_user' })
-   async restoreUser(@Payload() data: { id: string }) {
-      return this.userService.restoreUser(data.id);
+   @MessagePattern({ cmd: USER_PATTERNS.RESTORE_USER })
+   async restoreUser(@Payload() data: { id: string }, @Ctx() context?: RmqContext) {
+      try {
+         const result = await this.userService.restoreUser(data.id);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
    // Follow Operations
-   @MessagePattern({ cmd: 'follow_user' })
-   async followUser(@Payload() message: IServiceMessage<{ followerId: string; followingId: string }>) {
-      checkOwnershipOrAdmin(message, message.data.followerId);
+   @MessagePattern({ cmd: USER_PATTERNS.FOLLOW_USER })
+   async followUser(
+      @Payload() message: IServiceMessage<{ followerId: string; followingId: string }>,
+      @Ctx() context?: RmqContext,
+   ) {
+      try {
+         checkOwnershipOrAdmin(message, message.data.followerId);
 
-      return this.userService.followUser(message.data.followerId, message.data.followingId);
+         const result = await this.userService.followUser(message.data.followerId, message.data.followingId);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'unfollow_user' })
-   async unfollowUser(@Payload() message: IServiceMessage<{ followerId: string; followingId: string }>) {
-      checkOwnershipOrAdmin(message, message.data.followerId);
+   @MessagePattern({ cmd: USER_PATTERNS.UNFOLLOW_USER })
+   async unfollowUser(
+      @Payload() message: IServiceMessage<{ followerId: string; followingId: string }>,
+      @Ctx() context?: RmqContext,
+   ) {
+      try {
+         checkOwnershipOrAdmin(message, message.data.followerId);
 
-      await this.userService.unfollowUser(message.data.followerId, message.data.followingId);
-      return { success: true };
+         await this.userService.unfollowUser(message.data.followerId, message.data.followingId);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return { success: true };
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'accept_follow_request' })
-   async acceptFollowRequest(@Payload() data: { followId: string }) {
-      return this.userService.acceptFollowRequest(data.followId);
+   @MessagePattern({ cmd: USER_PATTERNS.ACCEPT_FOLLOW_REQUEST })
+   async acceptFollowRequest(@Payload() data: { followId: string }, @Ctx() context?: RmqContext) {
+      try {
+         const result = await this.userService.acceptFollowRequest(data.followId);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'reject_follow_request' })
-   async rejectFollowRequest(@Payload() data: { followId: string }) {
-      return this.userService.rejectFollowRequest(data.followId);
+   @MessagePattern({ cmd: USER_PATTERNS.REJECT_FOLLOW_REQUEST })
+   async rejectFollowRequest(@Payload() data: { followId: string }, @Ctx() context?: RmqContext) {
+      try {
+         const result = await this.userService.rejectFollowRequest(data.followId);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'get_followers' })
+   @MessagePattern({ cmd: USER_PATTERNS.GET_FOLLOWERS })
    async getFollowers(
       @Payload()
       data: {
@@ -217,11 +411,28 @@ export class UserController {
          skip?: number;
          take?: number;
       },
+      @Ctx() context?: RmqContext,
    ) {
-      return this.userService.getFollowers(data.userId, data.status as FollowStatus | undefined, data.skip, data.take);
+      try {
+         const result = await this.userService.getFollowers(
+            data.userId,
+            data.status as FollowStatus | undefined,
+            data.skip,
+            data.take,
+         );
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'get_following' })
+   @MessagePattern({ cmd: USER_PATTERNS.GET_FOLLOWING })
    async getFollowing(
       @Payload()
       data: {
@@ -230,57 +441,158 @@ export class UserController {
          skip?: number;
          take?: number;
       },
+      @Ctx() context?: RmqContext,
    ) {
-      return this.userService.getFollowing(data.userId, data.status as FollowStatus | undefined, data.skip, data.take);
+      try {
+         const result = await this.userService.getFollowing(
+            data.userId,
+            data.status as FollowStatus | undefined,
+            data.skip,
+            data.take,
+         );
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'get_followers_count' })
-   async getFollowersCount(@Payload() data: { userId: string; status?: string }) {
-      return this.userService.getFollowersCount(data.userId, data.status as FollowStatus | undefined);
+   @MessagePattern({ cmd: USER_PATTERNS.GET_FOLLOWERS_COUNT })
+   async getFollowersCount(@Payload() data: { userId: string; status?: string }, @Ctx() context?: RmqContext) {
+      try {
+         const result = await this.userService.getFollowersCount(data.userId, data.status as FollowStatus | undefined);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'get_following_count' })
-   async getFollowingCount(@Payload() data: { userId: string; status?: string }) {
-      return this.userService.getFollowingCount(data.userId, data.status as FollowStatus | undefined);
+   @MessagePattern({ cmd: USER_PATTERNS.GET_FOLLOWING_COUNT })
+   async getFollowingCount(@Payload() data: { userId: string; status?: string }, @Ctx() context?: RmqContext) {
+      try {
+         const result = await this.userService.getFollowingCount(data.userId, data.status as FollowStatus | undefined);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
    // Advanced Graph Queries
-   @MessagePattern({ cmd: 'get_mutual_followers' })
-   async getMutualFollowers(@Payload() data: { userId1: string; userId2: string }) {
-      return this.userService.getMutualFollowers(data.userId1, data.userId2);
+   @MessagePattern({ cmd: USER_PATTERNS.GET_MUTUAL_FOLLOWERS })
+   async getMutualFollowers(@Payload() data: { userId1: string; userId2: string }, @Ctx() context?: RmqContext) {
+      try {
+         const result = await this.userService.getMutualFollowers(data.userId1, data.userId2);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'get_follow_suggestions' })
-   async getFollowSuggestions(@Payload() data: { userId: string; limit?: number }) {
-      return this.userService.getFollowSuggestions(data.userId, data.limit);
+   @MessagePattern({ cmd: USER_PATTERNS.GET_FOLLOW_SUGGESTIONS })
+   async getFollowSuggestions(@Payload() data: { userId: string; limit?: number }, @Ctx() context?: RmqContext) {
+      try {
+         const result = await this.userService.getFollowSuggestions(data.userId, data.limit);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
    // Search Users via Elasticsearch
-   @MessagePattern({ cmd: 'search_users' })
-   async searchUsers(@Payload() data: { query: string; limit?: number; skip?: number }) {
-      return this.userService.searchUsers(data.query, data.limit, data.skip);
+   @MessagePattern({ cmd: USER_PATTERNS.SEARCH_USERS })
+   async searchUsers(@Payload() data: { query: string; limit?: number; skip?: number }, @Ctx() context?: RmqContext) {
+      try {
+         const result = await this.userService.searchUsers(data.query, data.limit, data.skip);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
    // Cloudinary Avatar Management
-   @MessagePattern({ cmd: 'upload_avatar' })
-   async uploadAvatar(@Payload() message: IServiceMessage<{ id?: string; fileBase64: string; mimeType?: string }>) {
-      const targetUserId = message.data.id || message.user?.userId;
-      if (!targetUserId) {
-         throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
-      }
-      checkOwnershipOrAdmin(message, targetUserId);
+   @MessagePattern({ cmd: USER_PATTERNS.UPLOAD_AVATAR })
+   async uploadAvatar(
+      @Payload() message: IServiceMessage<{ id?: string; fileBase64: string; mimeType?: string }>,
+      @Ctx() context?: RmqContext,
+   ) {
+      try {
+         const targetUserId = message.data.id || message.user?.userId;
+         if (!targetUserId) {
+            throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
+         }
+         checkOwnershipOrAdmin(message, targetUserId);
 
-      return this.userService.uploadAvatar(targetUserId, message.data.fileBase64, message.data.mimeType);
+         const result = await this.userService.uploadAvatar(
+            targetUserId,
+            message.data.fileBase64,
+            message.data.mimeType,
+         );
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 
-   @MessagePattern({ cmd: 'get_avatar_upload_signature' })
-   async getAvatarUploadSignature(@Payload() message: IServiceMessage<{ id?: string }>) {
-      const targetUserId = message.data.id || message.user?.userId;
-      if (!targetUserId) {
-         throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
-      }
-      checkOwnershipOrAdmin(message, targetUserId);
+   @MessagePattern({ cmd: USER_PATTERNS.GET_AVATAR_UPLOAD_SIGNATURE })
+   async getAvatarUploadSignature(@Payload() message: IServiceMessage<{ id?: string }>, @Ctx() context?: RmqContext) {
+      try {
+         const targetUserId = message.data.id || message.user?.userId;
+         if (!targetUserId) {
+            throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
+         }
+         checkOwnershipOrAdmin(message, targetUserId);
 
-      return this.userService.getAvatarUploadSignature(targetUserId);
+         const result = await this.userService.getAvatarUploadSignature(targetUserId);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
    }
 }

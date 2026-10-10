@@ -8,3 +8,4 @@ export * from '@common/dto/auth/send-register-otp.dto';
 export * from '@common/dto/auth/verify-register-otp.dto';
 export * from '@common/dto/auth/send-change-password-otp.dto';
 export * from '@common/dto/auth/verify-change-password-otp.dto';
+export * from '@common/dto/auth/user-email-response.dto';

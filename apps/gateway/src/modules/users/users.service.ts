@@ -1,6 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { CreateUserProfileDto, IServiceMessage, SERVICES, UpdateUserDto } from '@common';
+import {
+   CreateUserProfileDto,
+   IServiceMessage,
+   SERVICES,
+   UpdateUserDto,
+   UserDateOfBirthResponseDto,
+   USER_PATTERNS,
+} from '@common';
 import { firstValueFrom } from 'rxjs';
 import type { JwtPayload } from '@common/utils/jwt.util';
 
@@ -11,7 +18,7 @@ export class UsersService {
    async checkUsername(username: string): Promise<{ available: boolean; username: string }> {
       return firstValueFrom(
          this.userClient.send<{ available: boolean; username: string }, { username: string }>(
-            { cmd: 'check_username' },
+            { cmd: USER_PATTERNS.CHECK_USERNAME },
             { username },
          ),
       );
@@ -30,7 +37,10 @@ export class UsersService {
       };
 
       return firstValueFrom(
-         this.userClient.send<unknown, IServiceMessage<CreateUserProfileDto>>({ cmd: 'create_profile' }, message),
+         this.userClient.send<unknown, IServiceMessage<CreateUserProfileDto>>(
+            { cmd: USER_PATTERNS.CREATE_PROFILE },
+            message,
+         ),
       );
    }
 
@@ -49,7 +59,7 @@ export class UsersService {
       };
 
       return firstValueFrom(
-         this.userClient.send<unknown, IServiceMessage<{ id: string }>>({ cmd: 'get_user_by_id' }, message),
+         this.userClient.send<unknown, IServiceMessage<{ id: string }>>({ cmd: USER_PATTERNS.GET_USER_BY_ID }, message),
       );
    }
 
@@ -69,7 +79,7 @@ export class UsersService {
 
       return firstValueFrom(
          this.userClient.send<unknown, IServiceMessage<{ page: number; limit: number }>>(
-            { cmd: 'users.get_all' },
+            { cmd: USER_PATTERNS.GET_ALL_USERS },
             message,
          ),
       );
@@ -91,7 +101,7 @@ export class UsersService {
 
       return firstValueFrom(
          this.userClient.send<unknown, IServiceMessage<{ id: string } & UpdateUserDto>>(
-            { cmd: 'update_user_profile' },
+            { cmd: USER_PATTERNS.UPDATE_USER_PROFILE },
             message,
          ),
       );
@@ -109,7 +119,7 @@ export class UsersService {
       const skip = (page - 1) * limit;
       return firstValueFrom(
          this.userClient.send<unknown, { query: string; limit: number; skip: number }>(
-            { cmd: 'search_users' },
+            { cmd: USER_PATTERNS.SEARCH_USERS },
             { query, limit, skip },
          ),
       );
@@ -131,7 +141,7 @@ export class UsersService {
 
       return firstValueFrom(
          this.userClient.send<unknown, IServiceMessage<{ id: string; fileBase64: string; mimeType?: string }>>(
-            { cmd: 'upload_avatar' },
+            { cmd: USER_PATTERNS.UPLOAD_AVATAR },
             message,
          ),
       );
@@ -153,8 +163,17 @@ export class UsersService {
 
       return firstValueFrom(
          this.userClient.send<unknown, IServiceMessage<{ id: string }>>(
-            { cmd: 'get_avatar_upload_signature' },
+            { cmd: USER_PATTERNS.GET_AVATAR_UPLOAD_SIGNATURE },
             message,
+         ),
+      );
+   }
+
+   async getDateOfBirth(userId: string): Promise<UserDateOfBirthResponseDto> {
+      return firstValueFrom(
+         this.userClient.send<UserDateOfBirthResponseDto, { userId: string }>(
+            { cmd: USER_PATTERNS.GET_DATE_OF_BIRTH },
+            { userId },
          ),
       );
    }

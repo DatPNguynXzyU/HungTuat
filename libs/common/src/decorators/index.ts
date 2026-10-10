@@ -1,4 +1,5 @@
 export * from '@common/decorators/current-user.decorator';
+export * from '@common/decorators/current-account.decorator';
 export * from '@common/decorators/public.decorator';
 export * from '@common/decorators/require-roles.decorator';
 export * from '@common/decorators/require-permissions.decorator';

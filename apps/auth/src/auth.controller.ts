@@ -3,7 +3,9 @@ import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices'
 import {
    AUTH_PATTERNS,
    AUTH_RESPONSE_MESSAGES,
+   BadRequestException,
    ChangePasswordDto,
+   COMMON_ERROR_CODES,
    CreateAuditLogDto,
    DEFAULT_ROLES,
    IDeviceInfo,
@@ -326,6 +328,23 @@ export class AuthController {
    async createAuditLog(@Payload() data: CreateAuditLogDto, @Ctx() context: RmqContext) {
       try {
          const result = await this.auditLogService.record(data);
+         this.rmqService.ack(context);
+         return result;
+      } catch (error) {
+         this.rmqService.ack(context);
+         throw error;
+      }
+   }
+
+   @MessagePattern({ cmd: AUTH_PATTERNS.GET_EMAIL })
+   async getEmail(@Payload() data: { accountId: string }, @Ctx() context: RmqContext) {
+      try {
+         if (!data?.accountId) {
+            throw new BadRequestException(COMMON_ERROR_CODES.INVALID_REQUEST, {
+               params: { field: 'accountId' },
+            });
+         }
+         const result = await this.authService.getEmail(data.accountId);
          this.rmqService.ack(context);
          return result;
       } catch (error) {

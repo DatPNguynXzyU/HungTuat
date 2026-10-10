@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { uuidv7 } from '@common';
 import { PrismaService } from '@user/prisma';
 import { OutboxStatus } from '@user/prisma-client';
 
@@ -14,6 +15,7 @@ export class OutboxService {
    ) {
       return this.prisma.outbox.create({
          data: {
+            id: uuidv7(),
             aggregateId,
             aggregateType,
             eventType,

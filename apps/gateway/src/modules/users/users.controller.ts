@@ -32,6 +32,7 @@ import {
    Public,
    ResponseMessage,
    UpdateUserDto,
+   UserDateOfBirthResponseDto,
    USER_ERROR_CODES,
    USER_RESPONSE_MESSAGES,
 } from '@common';
@@ -181,6 +182,38 @@ export class UsersController {
       return this.usersService.getMyProfile(user);
    }
 
+   @Get('me/date-of-birth')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({
+      operationId: 'getMyDateOfBirth',
+      summary: 'Get date of birth and age of current authenticated user from User Service',
+      description:
+         'Retrieves the date of birth and calculates current age in completed years from the user profile managed by User Service.',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Current user date of birth details retrieved successfully.',
+      type: UserDateOfBirthResponseDto,
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Authentication token missing, invalid, or expired.',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found in User Service.',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+         exampleParams: { id: '018dc3bc-11a2-7f28-9842-bc08684d0001' },
+      },
+   ])
+   @ResponseMessage(USER_RESPONSE_MESSAGES.GET_DATE_OF_BIRTH_SUCCESS)
+   async getMyDateOfBirth(@CurrentUser('userId') userId: string): Promise<UserDateOfBirthResponseDto> {
+      return this.usersService.getDateOfBirth(userId);
+   }
+
    @Patch('me')
    @ApiCookieAuth()
    @ApiBearerAuth()
@@ -307,6 +340,48 @@ export class UsersController {
    @ResponseMessage(USER_RESPONSE_MESSAGES.GET_AVATAR_SIGNATURE_SUCCESS)
    async getMyAvatarSignature(@CurrentUser() user: JwtPayload): Promise<unknown> {
       return this.usersService.getAvatarUploadSignature(user.sub, user);
+   }
+
+   @Get(':userId/date-of-birth')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({
+      operationId: 'getUserDateOfBirthByUserId',
+      summary: 'Get date of birth and age of a specific user by userId from User Service',
+      description:
+         'Retrieves the date of birth and calculates current age for the requested user account by userId in User Service.',
+   })
+   @ApiParam({
+      name: 'userId',
+      description: 'Account user identifier (UUIDv7 format, matching account id / JWT sub)',
+      example: '018dc3bc-11a2-7f28-9842-bc08684d0001',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'User date of birth details returned successfully.',
+      type: UserDateOfBirthResponseDto,
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Invalid userId format.',
+         errorCodes: [COMMON_ERROR_CODES.INVALID_REQUEST],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Authentication token missing, invalid, or expired.',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found in User Service.',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+         exampleParams: { userId: '018dc3bc-11a2-7f28-9842-bc08684d0001' },
+      },
+   ])
+   @ResponseMessage(USER_RESPONSE_MESSAGES.GET_DATE_OF_BIRTH_SUCCESS)
+   async getUserDateOfBirth(@Param('userId') userId: string): Promise<UserDateOfBirthResponseDto> {
+      return this.usersService.getDateOfBirth(userId);
    }
 
    @Get(':id')

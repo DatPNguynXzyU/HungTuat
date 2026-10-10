@@ -28,6 +28,7 @@ import {
 import { AuditLogService } from '@auth/services/audit-log.service';
 import { EmailBloomFilterService } from '@auth/services/email-bloom-filter.service';
 import { TokenService } from '@auth/services/token.service';
+import { TOKEN_SERVICE } from '@auth/services/token.service.interface';
 
 interface MockUserRecord {
    id: string;
@@ -292,6 +293,10 @@ describe('AuthController', () => {
          controllers: [AuthController],
          providers: [
             TokenService,
+            {
+               provide: TOKEN_SERVICE,
+               useExisting: TokenService,
+            },
             AuthService,
             AuditLogService,
             EmailBloomFilterService,
@@ -531,5 +536,34 @@ describe('AuthController', () => {
             mockContext,
          ),
       ).rejects.toThrow();
+   });
+
+   it('should handle getEmail message and return user email', async () => {
+      const mockContext = {
+         getChannelRef: jest.fn(),
+         getMessage: jest.fn(),
+      } as unknown as RmqContext;
+
+      jest.spyOn(authService, 'getEmail').mockResolvedValue({
+         id: 'account-123',
+         email: 'test@example.com',
+         isEmailVerified: true,
+      });
+
+      const result = await authController.getEmail({ accountId: 'account-123' }, mockContext);
+      expect(result).toEqual({
+         id: 'account-123',
+         email: 'test@example.com',
+         isEmailVerified: true,
+      });
+   });
+
+   it('should throw BadRequestException when accountId is missing in getEmail', async () => {
+      const mockContext = {
+         getChannelRef: jest.fn(),
+         getMessage: jest.fn(),
+      } as unknown as RmqContext;
+
+      await expect(authController.getEmail({ accountId: '' }, mockContext)).rejects.toThrow();
    });
 });

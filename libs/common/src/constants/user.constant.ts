@@ -30,6 +30,39 @@ export const USER_RESPONSE_MESSAGES = {
    SEARCH_SUCCESS: 'USERS.SEARCH_SUCCESS',
    UPLOAD_AVATAR_SUCCESS: 'USERS.UPLOAD_AVATAR_SUCCESS',
    GET_AVATAR_SIGNATURE_SUCCESS: 'USERS.GET_AVATAR_SIGNATURE_SUCCESS',
+   GET_DATE_OF_BIRTH_SUCCESS: 'USERS.GET_DATE_OF_BIRTH_SUCCESS',
 } as const;
 
 export type UserResponseMessage = (typeof USER_RESPONSE_MESSAGES)[keyof typeof USER_RESPONSE_MESSAGES];
+
+export const USER_PATTERNS = {
+   CHECK_USERNAME: 'check_username',
+   CREATE_PROFILE: 'create_profile',
+   CREATE_USER_PROFILE: 'create_user_profile',
+   CREATE_USER: 'create_user',
+   GET_USER_BY_ID: 'get_user_by_id',
+   GET_USER_BY_USER_ID: 'get_user_by_user_id',
+   GET_USER_BY_USERNAME: 'get_user_by_username',
+   GET_ALL_USERS: 'users.get_all',
+   GET_DATE_OF_BIRTH: 'get_date_of_birth',
+   UPDATE_USER_PROFILE: 'update_user_profile',
+   UPDATE_USER: 'update_user',
+   UPDATE_USERNAME: 'update_username',
+   DELETE_USER: 'delete_user',
+   RESTORE_USER: 'restore_user',
+   FOLLOW_USER: 'follow_user',
+   UNFOLLOW_USER: 'unfollow_user',
+   ACCEPT_FOLLOW_REQUEST: 'accept_follow_request',
+   REJECT_FOLLOW_REQUEST: 'reject_follow_request',
+   GET_FOLLOWERS: 'get_followers',
+   GET_FOLLOWING: 'get_following',
+   GET_FOLLOWERS_COUNT: 'get_followers_count',
+   GET_FOLLOWING_COUNT: 'get_following_count',
+   GET_MUTUAL_FOLLOWERS: 'get_mutual_followers',
+   GET_FOLLOW_SUGGESTIONS: 'get_follow_suggestions',
+   SEARCH_USERS: 'search_users',
+   UPLOAD_AVATAR: 'upload_avatar',
+   GET_AVATAR_UPLOAD_SIGNATURE: 'get_avatar_upload_signature',
+} as const;
+
+export type UserPattern = (typeof USER_PATTERNS)[keyof typeof USER_PATTERNS];

@@ -36,6 +36,7 @@ describe('Gateway AuthController', () => {
       revokeSession: jest.fn(),
       revokeOtherSessions: jest.fn(),
       getUserAuditLogs: jest.fn(),
+      getEmail: jest.fn(),
    };
 
    const mockConfigService = {
@@ -726,5 +727,19 @@ describe('Gateway AuthController', () => {
       const res = await controller.getSecurityLogs(user, { page: 1, limit: 10 });
       expect(mockAuthService.getUserAuditLogs).toHaveBeenCalledWith('user-123', 1, 10);
       expect(res).toEqual(mockResult);
+   });
+
+   it('should get email of authenticated user from authService', async () => {
+      const mockEmailRes = {
+         id: 'account-123',
+         email: 'test@example.com',
+         isEmailVerified: true,
+      };
+
+      mockAuthService.getEmail.mockResolvedValue(mockEmailRes);
+
+      const res = await controller.getMyEmail('account-123');
+      expect(mockAuthService.getEmail).toHaveBeenCalledWith('account-123');
+      expect(res).toEqual(mockEmailRes);
    });
 });

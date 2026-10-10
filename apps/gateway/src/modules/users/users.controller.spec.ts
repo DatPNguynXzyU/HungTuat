@@ -13,6 +13,7 @@ describe('UsersController', () => {
       updateUser: jest.fn(),
       updateMyProfile: jest.fn(),
       getMyProfile: jest.fn(),
+      getDateOfBirth: jest.fn(),
    };
 
    const mockUser: JwtPayload = {
@@ -120,5 +121,31 @@ describe('UsersController', () => {
          mockUser,
       );
       expect(result).toEqual({ id: 'u1', displayName: 'My Name', username: 'myusername' });
+   });
+
+   it('should get current user date of birth via getMyDateOfBirth', async () => {
+      const mockDobRes = {
+         userId: 'user-1',
+         dateOfBirth: '1995-06-15T00:00:00.000Z',
+         age: 31,
+      };
+      mockUsersService.getDateOfBirth.mockResolvedValue(mockDobRes);
+
+      const result = await controller.getMyDateOfBirth('user-1');
+      expect(mockUsersService.getDateOfBirth).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(mockDobRes);
+   });
+
+   it('should get user date of birth by id via getUserDateOfBirth', async () => {
+      const mockDobRes = {
+         userId: 'other-user-99',
+         dateOfBirth: '2000-01-01T00:00:00.000Z',
+         age: 26,
+      };
+      mockUsersService.getDateOfBirth.mockResolvedValue(mockDobRes);
+
+      const result = await controller.getUserDateOfBirth('other-user-99');
+      expect(mockUsersService.getDateOfBirth).toHaveBeenCalledWith('other-user-99');
+      expect(result).toEqual(mockDobRes);
    });
 });

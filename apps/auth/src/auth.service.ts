@@ -26,11 +26,13 @@ import {
    ChangePasswordResponseDto,
    RedisService,
    RegisterDto,
+   NotFoundException,
    SERVICES,
    SendRegisterOtpDto,
    SendRegisterOtpResponseDto,
    USER_STATUS,
    UnauthorizedException,
+   UserEmailResponseDto,
    VerifyChangePasswordOtpDto,
    VerifyChangePasswordOtpResponseDto,
    VerifyRegisterOtpDto,
@@ -972,6 +974,21 @@ export class AuthService {
             createdAt: account.createdAt,
             updatedAt: account.updatedAt,
          },
+      };
+   }
+
+   async getEmail(accountId: string): Promise<UserEmailResponseDto> {
+      const account = await this.authRepository.findEmailById(accountId);
+      if (!account) {
+         throw new NotFoundException(AUTH_ERROR_CODES.USER_NOT_FOUND, {
+            params: { id: accountId },
+         });
+      }
+
+      return {
+         id: account.id,
+         email: account.email,
+         isEmailVerified: account.isEmailVerified,
       };
    }
 }

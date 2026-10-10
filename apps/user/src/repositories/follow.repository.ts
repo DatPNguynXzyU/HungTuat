@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { uuidv7 } from '@common';
 import { PrismaService } from '@user/prisma';
 import { FollowEntity, FollowStatus } from '@user/entities';
 import { Prisma } from '@user/prisma-client';
@@ -8,7 +9,13 @@ export class FollowRepository {
    constructor(private readonly prisma: PrismaService) {}
 
    async create(data: Prisma.FollowCreateInput): Promise<FollowEntity> {
-      const follow = await this.prisma.follow.create({ data });
+      const id = data.id || uuidv7();
+      const follow = await this.prisma.follow.create({
+         data: {
+            ...data,
+            id,
+         },
+      });
       return new FollowEntity(follow);
    }
 

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { uuidv7 } from '@common';
 import { PrismaService } from '@user/prisma';
 import { UserEntity, Gender, UserStatus } from '@user/entities';
 
@@ -46,11 +47,13 @@ export class UserRepository {
    async create(data: CreateUserData): Promise<UserEntity> {
       const user = await this.prisma.user.create({
          data: {
+            id: uuidv7(),
             userId: data.userId,
             username: data.username,
             status: data.status || UserStatus.ACTIVE,
             profile: {
                create: {
+                  id: uuidv7(),
                   displayName: data.displayName,
                   bio: data.bio,
                   avatar: data.avatar,
@@ -62,10 +65,13 @@ export class UserRepository {
                },
             },
             stats: {
-               create: {},
+               create: {
+                  id: uuidv7(),
+               },
             },
             settings: {
                create: {
+                  id: uuidv7(),
                   isPrivate: data.isPrivate ?? false,
                   isVerified: data.isVerified ?? false,
                },
@@ -97,6 +103,32 @@ export class UserRepository {
          return null;
       }
       return new UserEntity(user);
+   }
+
+   async findDateOfBirth(userId: string): Promise<{ userId: string; dateOfBirth: Date | null } | null> {
+      const user = await this.prisma.user.findFirst({
+         where: {
+            OR: [{ id: userId }, { userId }],
+            deletedAt: null,
+         },
+         select: {
+            userId: true,
+            profile: {
+               select: {
+                  dateOfBirth: true,
+               },
+            },
+         },
+      });
+
+      if (!user) {
+         return null;
+      }
+
+      return {
+         userId: user.userId,
+         dateOfBirth: user.profile?.dateOfBirth ?? null,
+      };
    }
 
    async findByUsername(username: string): Promise<UserEntity | null> {

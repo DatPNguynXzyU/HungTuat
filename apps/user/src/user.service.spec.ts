@@ -24,6 +24,7 @@ describe('UserService', () => {
       decrementFollowersCount: jest.fn(),
       incrementFollowingCount: jest.fn(),
       decrementFollowingCount: jest.fn(),
+      findDateOfBirth: jest.fn(),
    };
    const mockFollowRepository = {
       create: jest.fn(),
@@ -318,6 +319,52 @@ describe('UserService', () => {
             }),
          );
          expect(res.displayName).toBe('Auto Name');
+      });
+   });
+
+   describe('getDateOfBirth', () => {
+      it('should return date of birth and calculated age when dateOfBirth is present', async () => {
+         const birthDate = new Date('1990-05-20');
+         mockUserRepository.findDateOfBirth.mockResolvedValue({
+            userId: 'user-sub-1',
+            dateOfBirth: birthDate,
+         });
+
+         const result = await service.getDateOfBirth('u1');
+         expect(mockUserRepository.findDateOfBirth).toHaveBeenCalledWith('u1');
+         expect(result.userId).toBe('user-sub-1');
+         expect(result.dateOfBirth).toEqual(birthDate);
+         expect(typeof result.age).toBe('number');
+         expect(result.age).toBeGreaterThan(0);
+      });
+
+      it('should return null dateOfBirth and null age when not set', async () => {
+         mockUserRepository.findDateOfBirth.mockResolvedValue({
+            userId: 'user-sub-2',
+            dateOfBirth: null,
+         });
+
+         const result = await service.getDateOfBirth('u2');
+         expect(mockUserRepository.findDateOfBirth).toHaveBeenCalledWith('u2');
+         expect(result.userId).toBe('user-sub-2');
+         expect(result.dateOfBirth).toBeNull();
+         expect(result.age).toBeNull();
+      });
+
+      it('should throw NotFoundException when user does not exist', async () => {
+         mockUserRepository.findDateOfBirth.mockResolvedValue(null);
+
+         await expect(service.getDateOfBirth('non-existent')).rejects.toThrow();
+      });
+
+      it('should calculate age correctly with calculateAge', () => {
+         expect(service.calculateAge(null)).toBeNull();
+         expect(service.calculateAge(undefined)).toBeNull();
+         expect(service.calculateAge('invalid-date')).toBeNull();
+
+         const now = new Date();
+         const exactly20YearsAgo = new Date(now.getFullYear() - 20, now.getMonth(), now.getDate());
+         expect(service.calculateAge(exactly20YearsAgo)).toBe(20);
       });
    });
 });

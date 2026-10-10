@@ -36,6 +36,7 @@ import {
    ChangePasswordDto,
    ChangePasswordResponseDto,
    COMMON_ERROR_CODES,
+   CurrentAccount,
    CurrentUser,
    DeviceDetectorUtil,
    DeviceSessionResponseDto,
@@ -54,6 +55,7 @@ import {
    SendRegisterOtpDto,
    SendRegisterOtpResponseDto,
    UnauthorizedException,
+   UserEmailResponseDto,
    VerifyChangePasswordOtpDto,
    VerifyChangePasswordOtpResponseDto,
    VerifyRegisterOtpDto,
@@ -829,6 +831,38 @@ export class AuthController {
       @Query() query: PaginationQueryDto,
    ): Promise<IAuditLogListResult> {
       return this.authService.getUserAuditLogs(user.sub, query.page, query.limit);
+   }
+
+   @Get('me/email')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({
+      operationId: 'getMyEmail',
+      summary: 'Get email address of current authenticated user from Auth Service',
+      description:
+         'Retrieves the account email address and email verification status directly from the Auth Service account database.',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Account email details retrieved successfully from Auth Service.',
+      type: UserEmailResponseDto,
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Authentication token is missing, revoked, or expired.',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED, AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'Account record not found in Auth Service.',
+         errorCodes: [AUTH_ERROR_CODES.USER_NOT_FOUND],
+         exampleParams: { id: '018dc3bc-11a2-7f28-9842-bc08684d0001' },
+      },
+   ])
+   @ResponseMessage(AUTH_RESPONSE_MESSAGES.GET_EMAIL_SUCCESS)
+   async getMyEmail(@CurrentAccount('id') accountId: string): Promise<UserEmailResponseDto> {
+      return this.authService.getEmail(accountId);
    }
 
    @Get('me')

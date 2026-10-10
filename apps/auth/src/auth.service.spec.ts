@@ -8,6 +8,7 @@ import {
    JWT_TOKEN_TYPE,
    NOTIFICATION_EVENTS,
    NOTIFICATION_PATTERNS,
+   NotFoundException,
    RbacCacheService,
    REDIS_KEY_PREFIX,
    RedisService,
@@ -22,12 +23,13 @@ import { OutboxPublisherService } from '@auth/outbox/services/outbox-publisher.s
 import { AUTH_REPOSITORY } from '@auth/repositories';
 import { AuditLogService } from '@auth/services/audit-log.service';
 import { EmailBloomFilterService } from '@auth/services/email-bloom-filter.service';
-import { TokenService } from '@auth/services/token.service';
+import { TOKEN_SERVICE } from '@auth/services/token.service.interface';
 
 describe('AuthService', () => {
    let service: AuthService;
    const mockFindByEmail = jest.fn();
    const mockFindById = jest.fn();
+   const mockFindEmailById = jest.fn();
    const mockFindAllEmails = jest.fn();
    const mockCreateAccount = jest.fn();
    const mockUpdateAccount = jest.fn();
@@ -52,6 +54,19 @@ describe('AuthService', () => {
    const mockGetActiveSessions = jest.fn();
    const mockRevokeSession = jest.fn();
    const mockRevokeOtherSessions = jest.fn();
+   const mockGenerateVerificationToken = jest.fn().mockImplementation((email: string) => {
+      const token = 'vtok_123456';
+      redisStore.set(`${REDIS_KEY_PREFIX.OTP_VERIFICATION_TOKEN}${token}`, email);
+      return Promise.resolve(token);
+   });
+   const mockValidateVerificationToken = jest.fn().mockImplementation((token: string) => {
+      return Promise.resolve(redisStore.get(`${REDIS_KEY_PREFIX.OTP_VERIFICATION_TOKEN}${token}`) || null);
+   });
+   const mockConsumeVerificationToken = jest.fn().mockImplementation((token: string) => {
+      const email = redisStore.get(`${REDIS_KEY_PREFIX.OTP_VERIFICATION_TOKEN}${token}`) || null;
+      redisStore.delete(`${REDIS_KEY_PREFIX.OTP_VERIFICATION_TOKEN}${token}`);
+      return Promise.resolve(email);
+   });
 
    const mockMightContain = jest.fn().mockResolvedValue(true);
    const mockAddEmail = jest.fn().mockResolvedValue(undefined);
@@ -124,6 +139,7 @@ describe('AuthService', () => {
                useValue: {
                   findByEmail: mockFindByEmail,
                   findById: mockFindById,
+                  findEmailById: mockFindEmailById,
                   findAllEmails: mockFindAllEmails,
                   createAccount: mockCreateAccount,
                   updateAccount: mockUpdateAccount,
@@ -154,7 +170,7 @@ describe('AuthService', () => {
                },
             },
             {
-               provide: TokenService,
+               provide: TOKEN_SERVICE,
                useValue: {
                   getJwks: mockGetJwks,
                   generateTokenPair: mockGenerateTokenPair,
@@ -168,6 +184,9 @@ describe('AuthService', () => {
                   getActiveSessions: mockGetActiveSessions,
                   revokeSession: mockRevokeSession,
                   revokeOtherSessions: mockRevokeOtherSessions,
+                  generateVerificationToken: mockGenerateVerificationToken,
+                  validateVerificationToken: mockValidateVerificationToken,
+                  consumeVerificationToken: mockConsumeVerificationToken,
                },
             },
             {
@@ -382,6 +401,7 @@ describe('AuthService', () => {
 
    it('should throw BadRequestException if verificationToken is invalid on register', async () => {
       const email = 'verifieduser@example.com';
+      mockConsumeVerificationToken.mockResolvedValueOnce(null);
       await expect(
          service.register({
             email,
@@ -834,6 +854,31 @@ describe('AuthService', () => {
                otp: '000000',
             }),
          ).rejects.toThrow(BadRequestException);
+      });
+   });
+
+   describe('getEmail', () => {
+      it('should return email details when account exists', async () => {
+         mockFindEmailById.mockResolvedValue({
+            id: 'account-123',
+            email: 'user@example.com',
+            isEmailVerified: true,
+         });
+
+         const result = await service.getEmail('account-123');
+
+         expect(mockFindEmailById).toHaveBeenCalledWith('account-123');
+         expect(result).toEqual({
+            id: 'account-123',
+            email: 'user@example.com',
+            isEmailVerified: true,
+         });
+      });
+
+      it('should throw NotFoundException when account does not exist', async () => {
+         mockFindEmailById.mockResolvedValue(null);
+
+         await expect(service.getEmail('non-existent')).rejects.toThrow(NotFoundException);
       });
    });
 });

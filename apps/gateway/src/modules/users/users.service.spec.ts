@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { of } from 'rxjs';
-import { SERVICES } from '@common';
+import { SERVICES, USER_PATTERNS } from '@common';
 import type { JwtPayload } from '@common';
 import { UsersService } from '@/modules/users/users.service';
 
@@ -40,7 +40,7 @@ describe('UsersService', () => {
       mockUserClient.send.mockReturnValue(of({ available: true, username: 'john_doe' }));
 
       const result = await service.checkUsername('john_doe');
-      expect(mockUserClient.send).toHaveBeenCalledWith({ cmd: 'check_username' }, { username: 'john_doe' });
+      expect(mockUserClient.send).toHaveBeenCalledWith({ cmd: USER_PATTERNS.CHECK_USERNAME }, { username: 'john_doe' });
       expect(result).toEqual({ available: true, username: 'john_doe' });
    });
 
@@ -49,7 +49,7 @@ describe('UsersService', () => {
 
       const result = await service.getUserById('u1', mockUser);
       expect(mockUserClient.send).toHaveBeenCalledWith(
-         { cmd: 'get_user_by_id' },
+         { cmd: USER_PATTERNS.GET_USER_BY_ID },
          {
             data: { id: 'u1' },
             user: {
@@ -69,7 +69,7 @@ describe('UsersService', () => {
 
       const result = await service.getAllUsers(1, 10, mockUser);
       expect(mockUserClient.send).toHaveBeenCalledWith(
-         { cmd: 'users.get_all' },
+         { cmd: USER_PATTERNS.GET_ALL_USERS },
          {
             data: { page: 1, limit: 10 },
             user: {
@@ -89,7 +89,7 @@ describe('UsersService', () => {
 
       const result = await service.updateUser('u1', { displayName: 'New Name' }, mockUser);
       expect(mockUserClient.send).toHaveBeenCalledWith(
-         { cmd: 'update_user_profile' },
+         { cmd: USER_PATTERNS.UPDATE_USER_PROFILE },
          {
             data: { id: 'u1', displayName: 'New Name' },
             user: {
@@ -109,7 +109,7 @@ describe('UsersService', () => {
 
       const result = await service.updateMyProfile({ displayName: 'Self Name' }, mockUser);
       expect(mockUserClient.send).toHaveBeenCalledWith(
-         { cmd: 'update_user_profile' },
+         { cmd: USER_PATTERNS.UPDATE_USER_PROFILE },
          {
             data: { id: 'auth-user-1', displayName: 'Self Name' },
             user: {
@@ -122,5 +122,14 @@ describe('UsersService', () => {
          },
       );
       expect(result).toEqual({ id: 'auth-user-1', displayName: 'Self Name' });
+   });
+
+   it('should send get_date_of_birth message with userId', async () => {
+      const mockDob = { userId: 'u1', dateOfBirth: '1995-06-15T00:00:00.000Z', age: 31 };
+      mockUserClient.send.mockReturnValue(of(mockDob));
+
+      const result = await service.getDateOfBirth('u1');
+      expect(mockUserClient.send).toHaveBeenCalledWith({ cmd: USER_PATTERNS.GET_DATE_OF_BIRTH }, { userId: 'u1' });
+      expect(result).toEqual(mockDob);
    });
 });

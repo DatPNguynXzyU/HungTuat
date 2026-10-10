@@ -3,7 +3,7 @@ import { uuidv7 } from '@common';
 import type { AccountEntity, CreateAccountData, RoleEntity } from '@auth/entities/account.entity';
 import type { CreateOutboxEventData } from '@auth/outbox/entities/outbox-event.entity';
 import { PrismaService } from '@auth/prisma/prisma.service';
-import type { IAuthRepository } from '@auth/repositories/auth.repository.interface';
+import type { AccountEmailRecord, IAuthRepository } from '@auth/repositories/auth.repository.interface';
 import { type Account, type AccountStatus, type Role, OutboxStatus } from '@auth/prisma-client';
 
 type AccountWithRoles = Account & {
@@ -20,6 +20,7 @@ export class AuthRepository implements IAuthRepository {
       return {
          id: account.id,
          email: account.email,
+         phoneNumber: account.phoneNumber,
          passwordHash: account.passwordHash,
          status: account.status,
          isEmailVerified: account.isEmailVerified,
@@ -69,6 +70,20 @@ export class AuthRepository implements IAuthRepository {
       return account ? this.toEntity(account) : null;
    }
 
+   async findEmailById(id: string): Promise<AccountEmailRecord | null> {
+      return this.prisma.account.findFirst({
+         where: {
+            id,
+            deletedAt: null,
+         },
+         select: {
+            id: true,
+            email: true,
+            isEmailVerified: true,
+         },
+      });
+   }
+
    async findAllEmails(): Promise<string[]> {
       const accounts = await this.prisma.account.findMany({
          where: {
@@ -90,6 +105,7 @@ export class AuthRepository implements IAuthRepository {
             data: {
                id,
                email: data.email,
+               phoneNumber: data.phoneNumber,
                passwordHash: data.passwordHash,
                status: data.status as AccountStatus,
                isEmailVerified: data.isEmailVerified,
@@ -142,6 +158,7 @@ export class AuthRepository implements IAuthRepository {
             where: { id },
             data: {
                email: data.email,
+               phoneNumber: data.phoneNumber,
                passwordHash: data.passwordHash,
                status: data.status as AccountStatus,
                isEmailVerified: data.isEmailVerified,

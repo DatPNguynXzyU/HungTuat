@@ -26,6 +26,7 @@ describe('UserController', () => {
       getFollowingCount: jest.fn(),
       getMutualFollowers: jest.fn(),
       getFollowSuggestions: jest.fn(),
+      getDateOfBirth: jest.fn(),
    };
 
    const mockRmqService = {
@@ -215,6 +216,26 @@ describe('UserController', () => {
                },
             }),
          ).rejects.toThrow(ForbiddenException);
+      });
+   });
+
+   describe('getDateOfBirth', () => {
+      it('should handle get_date_of_birth message and return date of birth', async () => {
+         const expectedRes = {
+            userId: 'user-123',
+            dateOfBirth: new Date('1995-05-15'),
+            age: 31,
+         };
+         mockUserService.getDateOfBirth.mockResolvedValue(expectedRes);
+
+         const result = await controller.getDateOfBirth({ userId: 'user-123' });
+
+         expect(mockUserService.getDateOfBirth).toHaveBeenCalledWith('user-123');
+         expect(result).toEqual(expectedRes);
+      });
+
+      it('should throw BadRequestException when user ID is missing', async () => {
+         await expect(controller.getDateOfBirth({} as { userId: string })).rejects.toThrow();
       });
    });
 });

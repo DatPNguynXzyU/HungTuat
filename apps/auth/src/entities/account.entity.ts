@@ -1,6 +1,7 @@
 export interface AccountEntity {
    id: string;
    email: string;
+   phoneNumber?: string | null;
    passwordHash: string;
    status?: string;
    isEmailVerified?: boolean;

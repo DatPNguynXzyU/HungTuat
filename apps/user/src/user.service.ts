@@ -4,6 +4,7 @@ import {
    ConflictException,
    NotFoundException,
    USER_ERROR_CODES,
+   UserDateOfBirthResponseDto,
    CloudinaryService,
 } from '@common';
 import { UserRepository, FollowRepository } from '@user/repositories';
@@ -159,6 +160,38 @@ export class UserService {
          });
       }
       return user;
+   }
+
+   calculateAge(dob?: Date | string | null): number | null {
+      if (!dob) {
+         return null;
+      }
+      const birthDate = new Date(dob);
+      if (isNaN(birthDate.getTime())) {
+         return null;
+      }
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+         age--;
+      }
+      return age >= 0 ? age : null;
+   }
+
+   async getDateOfBirth(userId: string): Promise<UserDateOfBirthResponseDto> {
+      const record = await this.userRepository.findDateOfBirth(userId);
+      if (!record) {
+         throw new NotFoundException(USER_ERROR_CODES.USER_NOT_FOUND, {
+            params: { userId },
+         });
+      }
+
+      return {
+         userId: record.userId,
+         dateOfBirth: record.dateOfBirth,
+         age: this.calculateAge(record.dateOfBirth),
+      };
    }
 
    async updateUserProfile(
