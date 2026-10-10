@@ -4,6 +4,7 @@ include:
    - apps/auth/docker-compose.yml
    - apps/notification/docker-compose.yml
    - apps/user/docker-compose.yml
+   - apps/post/docker-compose.yml
 
 services:
    redis:

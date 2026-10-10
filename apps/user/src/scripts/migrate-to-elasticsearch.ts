@@ -1,45 +1,49 @@
 import { NestFactory } from '@nestjs/core';
-import { Logger } from '@nestjs/common';
+import { AppLogger } from '@common';
 import { UserModule } from '@user/user.module';
-import { UserRepository } from '@user/repositories';
+import { PrismaService } from '@user/prisma';
 import { UserSearchService } from '@user/search';
 
-async function migrate() {
-   const logger = new Logger('ElasticsearchUserMigration');
+async function bootstrap() {
+   const app = await NestFactory.createApplicationContext(UserModule);
+   const logger = app.get(AppLogger);
+   logger.setContext('ElasticsearchUserMigration');
+
+   const prismaService = app.get(PrismaService);
+   const userSearchService = app.get(UserSearchService);
 
    try {
       logger.log('Starting migration to Elasticsearch...');
 
-      const app = await NestFactory.createApplicationContext(UserModule);
-      const userRepository = app.get(UserRepository);
-      const userSearchService = app.get(UserSearchService);
+      const users = await prismaService.user.findMany();
+      logger.log(`Found ${users.length} users to migrate`);
 
-      logger.log('Fetching users from PostgreSQL...');
-      const users = await userRepository.findAll(0, 10000);
-      logger.log(`Found ${users.length} users to index into Elasticsearch`);
+      let successCount = 0;
+      let errorCount = 0;
 
-      let indexedCount = 0;
       for (const user of users) {
          try {
-            await userSearchService.indexUser(user);
-            indexedCount++;
-            if (indexedCount % 50 === 0) {
-               logger.log(`Indexed ${indexedCount}/${users.length} users...`);
-            }
+            await userSearchService.indexUser({
+               id: user.id,
+               username: user.username || undefined,
+               createdAt: user.createdAt,
+               updatedAt: user.updatedAt,
+            });
+            successCount++;
+            logger.debug(`Indexed user: ${user.username}`);
          } catch (error) {
-            logger.error(`Failed to index user ${user.id}:`, error);
+            errorCount++;
+            logger.error(`Failed to index user: ${user.username}`, error instanceof Error ? error.stack : undefined);
          }
       }
 
-      logger.log(`✓ Successfully indexed ${indexedCount}/${users.length} users into Elasticsearch!`);
-      await app.close();
+      logger.log(`Migration completed! Success: ${successCount}, Errors: ${errorCount}`);
    } catch (error) {
-      logger.error('Migration failed:', error);
-      process.exit(1);
+      logger.error('Migration failed', error instanceof Error ? error.stack : undefined);
+      throw error;
+   } finally {
+      await app.close();
    }
 }
 
-migrate().catch((error) => {
-   console.error('Fatal error during migration:', error);
-   process.exit(1);
-});
+void bootstrap();

@@ -1,252 +1,184 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ElasticsearchService } from '@common';
-import { UserEntity } from '@user/entities';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { ElasticsearchService, AppLogger } from '@common';
 
-export interface UserSearchDoc {
+export interface UserDocument {
    id: string;
-   userId: string;
-   username: string | null;
-   displayName: string | null;
-   bio: string | null;
-   avatar: string | null;
-   status: string;
+   email?: string | null;
+   username?: string | null;
+   displayName?: string | null;
+   bio?: string | null;
    createdAt: Date;
    updatedAt: Date;
 }
 
-export interface UserSearchResult {
-   id: string;
-   userId: string;
-   username: string | null;
-   displayName: string | null;
-   bio: string | null;
-   avatar: string | null;
-   status: string;
-   score?: number;
+interface SearchHit {
+   _source: UserDocument;
+}
+
+interface SearchResponse {
+   hits: {
+      hits: SearchHit[];
+   };
 }
 
 @Injectable()
 export class UserSearchService implements OnModuleInit {
-   private readonly logger = new Logger(UserSearchService.name);
-   private readonly indexName = 'users';
+   private readonly INDEX_NAME = 'users';
 
-   constructor(private readonly elasticsearchService: ElasticsearchService) {}
-
-   async onModuleInit(): Promise<void> {
-      await this.ensureIndex();
+   constructor(
+      private readonly elasticsearchService: ElasticsearchService,
+      private readonly logger: AppLogger,
+   ) {
+      this.logger.setContext(UserSearchService.name);
    }
 
-   private async ensureIndex(): Promise<void> {
+   async onModuleInit() {
+      await this.createIndexIfNotExists();
+   }
+
+   private async createIndexIfNotExists(): Promise<void> {
       try {
          const client = this.elasticsearchService.getClient();
-         const exists = await client.indices.exists({ index: this.indexName });
+         const indexExists = await client.indices.exists({
+            index: this.INDEX_NAME,
+         });
 
-         if (!exists) {
-            this.logger.log(`Creating Elasticsearch index: ${this.indexName}...`);
+         if (!indexExists) {
+            this.logger.log(`Creating Elasticsearch index: ${this.INDEX_NAME}`);
             await client.indices.create({
-               index: this.indexName,
-               settings: {
-                  analysis: {
-                     filter: {
-                        user_edge_ngram: {
-                           type: 'edge_ngram',
-                           min_gram: 1,
-                           max_gram: 20,
-                        },
+               index: this.INDEX_NAME,
+               body: {
+                  mappings: {
+                     properties: {
+                        id: { type: 'keyword' },
+                        email: { type: 'keyword' },
+                        username: { type: 'keyword' },
+                        displayName: { type: 'text' },
+                        bio: { type: 'text' },
+                        createdAt: { type: 'date' },
+                        updatedAt: { type: 'date' },
                      },
-                     analyzer: {
-                        user_autocomplete: {
-                           type: 'custom',
-                           tokenizer: 'standard',
-                           filter: ['lowercase', 'asciifolding', 'user_edge_ngram'],
-                        },
-                        user_search: {
-                           type: 'custom',
-                           tokenizer: 'standard',
-                           filter: ['lowercase', 'asciifolding'],
-                        },
-                     },
-                  },
-               },
-               mappings: {
-                  properties: {
-                     id: { type: 'keyword' },
-                     userId: { type: 'keyword' },
-                     username: {
-                        type: 'text',
-                        analyzer: 'user_autocomplete',
-                        search_analyzer: 'user_search',
-                        fields: {
-                           keyword: { type: 'keyword', ignore_above: 256 },
-                        },
-                     },
-                     displayName: {
-                        type: 'text',
-                        analyzer: 'user_autocomplete',
-                        search_analyzer: 'user_search',
-                        fields: {
-                           keyword: { type: 'keyword', ignore_above: 256 },
-                        },
-                     },
-                     bio: { type: 'text', analyzer: 'standard' },
-                     avatar: { type: 'keyword', index: false },
-                     status: { type: 'keyword' },
-                     createdAt: { type: 'date' },
-                     updatedAt: { type: 'date' },
                   },
                },
             });
-            this.logger.log(`Index ${this.indexName} created successfully.`);
          }
       } catch (error) {
-         this.logger.warn(`Could not verify/create index ${this.indexName}: ${(error as Error).message}`);
+         this.logger.error('Failed to create Elasticsearch index', error instanceof Error ? error.stack : undefined);
       }
    }
 
-   async indexUser(user: UserEntity): Promise<void> {
+   async indexUser(
+      user:
+         | UserDocument
+         | {
+              id: string;
+              email?: string | null;
+              username?: string | null;
+              displayName?: string | null;
+              bio?: string | null;
+              createdAt: Date;
+              updatedAt: Date;
+           },
+   ): Promise<void> {
       try {
          const client = this.elasticsearchService.getClient();
-         const doc: UserSearchDoc = {
-            id: user.id,
-            userId: user.userId,
-            username: user.username,
-            displayName: user.displayName,
-            bio: user.bio,
-            avatar: user.avatar,
-            status: user.status,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
-         };
-
          await client.index({
-            index: this.indexName,
+            index: this.INDEX_NAME,
             id: user.id,
-            document: doc,
+            document: {
+               id: user.id,
+               email: user.email ?? undefined,
+               username: user.username ?? undefined,
+               displayName: user.displayName ?? undefined,
+               bio: user.bio ?? undefined,
+               createdAt: user.createdAt,
+               updatedAt: user.updatedAt,
+            },
          });
+         this.logger.debug(`Indexed user: ${user.username ?? user.id}`);
       } catch (error) {
-         this.logger.error(`Failed to index user ${user.id} in Elasticsearch: ${(error as Error).message}`);
+         this.logger.error(
+            `Failed to index user: ${user.username ?? user.id}`,
+            error instanceof Error ? error.stack : undefined,
+         );
+         throw error;
       }
    }
 
-   async updateUser(id: string, partial: Partial<UserSearchDoc>): Promise<void> {
+   async updateUser(
+      user:
+         | UserDocument
+         | {
+              id: string;
+              email?: string | null;
+              username?: string | null;
+              displayName?: string | null;
+              bio?: string | null;
+              updatedAt: Date;
+           },
+   ): Promise<void> {
       try {
          const client = this.elasticsearchService.getClient();
          await client.update({
-            index: this.indexName,
-            id,
+            index: this.INDEX_NAME,
+            id: user.id,
             doc: {
-               ...partial,
-               updatedAt: new Date(),
+               email: user.email ?? undefined,
+               username: user.username ?? undefined,
+               displayName: user.displayName ?? undefined,
+               bio: user.bio ?? undefined,
+               updatedAt: user.updatedAt,
             },
-            doc_as_upsert: true,
          });
+         this.logger.debug(`Updated user in index: ${user.username ?? user.id}`);
       } catch (error) {
-         this.logger.error(`Failed to update user ${id} in Elasticsearch: ${(error as Error).message}`);
+         this.logger.error(
+            `Failed to update user in index: ${user.username ?? user.id}`,
+            error instanceof Error ? error.stack : undefined,
+         );
+         throw error;
       }
    }
 
-   async deleteUser(id: string): Promise<void> {
+   async deleteUser(userId: string): Promise<void> {
       try {
          const client = this.elasticsearchService.getClient();
          await client.delete({
-            index: this.indexName,
-            id,
+            index: this.INDEX_NAME,
+            id: userId,
          });
+         this.logger.debug(`Deleted user from index: ${userId}`);
       } catch (error) {
-         this.logger.warn(`Failed to delete user ${id} from Elasticsearch: ${(error as Error).message}`);
+         this.logger.error(
+            `Failed to delete user from index: ${userId}`,
+            error instanceof Error ? error.stack : undefined,
+         );
+         throw error;
       }
    }
 
-   async searchUsers(
-      query: string,
-      limit = 10,
-      skip = 0,
-   ): Promise<{ users: UserSearchResult[]; total: number; page: number; limit: number }> {
-      const trimmedQuery = query?.trim();
-      if (!trimmedQuery) {
-         return { users: [], total: 0, page: Math.floor(skip / limit) + 1, limit };
-      }
-
+   async searchUsers(query: string, limit = 20, skip = 0): Promise<UserDocument[]> {
       try {
          const client = this.elasticsearchService.getClient();
-         const lowerQuery = trimmedQuery.toLowerCase();
-
-         const response = await client.search<UserSearchDoc>({
-            index: this.indexName,
+         const result = (await client.search({
+            index: this.INDEX_NAME,
             from: skip,
             size: limit,
-            query: {
-               bool: {
-                  must: [
-                     {
-                        bool: {
-                           should: [
-                              {
-                                 term: {
-                                    'username.keyword': {
-                                       value: lowerQuery,
-                                       boost: 10,
-                                    },
-                                 },
-                              },
-                              {
-                                 prefix: {
-                                    'username.keyword': {
-                                       value: lowerQuery,
-                                       boost: 5,
-                                    },
-                                 },
-                              },
-                              {
-                                 multi_match: {
-                                    query: trimmedQuery,
-                                    fields: ['username^4', 'displayName^3', 'bio'],
-                                    fuzziness: 'AUTO',
-                                    prefix_length: 2,
-                                 },
-                              },
-                           ],
-                           minimum_should_match: 1,
-                        },
-                     },
-                  ],
-                  filter: [
-                     {
-                        term: {
-                           status: 'ACTIVE',
-                        },
-                     },
-                  ],
+            body: {
+               query: {
+                  multi_match: {
+                     query,
+                     fields: ['username^3', 'displayName^2', 'bio'],
+                     fuzziness: 'AUTO',
+                  },
                },
             },
-         });
+         })) as SearchResponse;
 
-         const hits = response.hits.hits;
-         const total = typeof response.hits.total === 'number' ? response.hits.total : response.hits.total?.value || 0;
-
-         const users: UserSearchResult[] = hits.map((hit) => {
-            const source = hit._source as UserSearchDoc;
-            return {
-               id: source.id,
-               userId: source.userId,
-               username: source.username,
-               displayName: source.displayName,
-               bio: source.bio,
-               avatar: source.avatar,
-               status: source.status,
-               score: hit._score ?? undefined,
-            };
-         });
-
-         return {
-            users,
-            total,
-            page: Math.floor(skip / limit) + 1,
-            limit,
-         };
+         return result.hits.hits.map((hit) => hit._source);
       } catch (error) {
-         this.logger.error(`Error searching users with query "${query}": ${(error as Error).message}`);
-         return { users: [], total: 0, page: Math.floor(skip / limit) + 1, limit };
+         this.logger.error(`Failed to search users: ${query}`, error instanceof Error ? error.stack : undefined);
+         return [];
       }
    }
 }

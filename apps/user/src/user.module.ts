@@ -1,13 +1,5 @@
 import { Module } from '@nestjs/common';
-import {
-   LoggerModule,
-   RedisModule,
-   RmqModule,
-   SERVICES,
-   NebulaModule,
-   ElasticsearchModule,
-   CloudinaryModule,
-} from '@common';
+import { RedisModule, RmqModule, SERVICES, NebulaModule, ElasticsearchModule, CloudinaryModule } from '@common';
 import { UserController } from '@user/user.controller';
 import { UserService } from '@user/user.service';
 import { UserConfigModule } from '@user/config';
@@ -17,11 +9,12 @@ import { USER_REPOSITORY, UserRepository, FOLLOW_REPOSITORY, FollowRepository } 
 import { GraphSchemaService, GraphFollowRepository } from '@user/graph';
 import { UserGraphSyncService, UsernameBloomFilterService } from '@user/services';
 import { UserSearchService } from '@user/search';
+import { UserLoggerModule } from '@user/logger';
 
 @Module({
    imports: [
       UserConfigModule,
-      LoggerModule,
+      UserLoggerModule,
       PrismaModule,
       RedisModule,
       OutboxModule,

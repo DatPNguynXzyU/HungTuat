@@ -1,246 +1,291 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { NebulaService } from '@common';
+import { AppLogger } from '@common';
 import { FollowStatus } from '@user/entities';
-
-export interface GraphFollowResult {
-   followerId: string;
-   followingId: string;
-   status: FollowStatus;
-   createdAt: Date;
-   updatedAt: Date;
-}
-
-interface NebulaRowData {
-   follower_id?: string;
-   following_id?: string;
-   status?: string;
-   created_at?: number;
-   updated_at?: number;
-   count?: number;
-   mutual_follower?: string;
-   suggested_user?: string;
-}
 
 @Injectable()
 export class GraphFollowRepository {
-   private readonly logger = new Logger(GraphFollowRepository.name);
+   constructor(
+      private readonly nebulaService: NebulaService,
+      private readonly logger: AppLogger,
+   ) {
+      this.logger.setContext(GraphFollowRepository.name);
+   }
 
-   constructor(private readonly nebulaService: NebulaService) {}
-
-   async createOrUpdateUser(data: {
-      userId: string;
-      username?: string;
-      displayName?: string;
-      avatar?: string;
+   async createOrUpdateUser(user: {
+      id: string;
+      userId?: string;
+      username?: string | null;
+      email?: string | null;
+      displayName?: string | null;
+      avatar?: string | null;
+      bio?: string | null;
       isPrivate?: boolean;
+      createdAt?: Date;
+      updatedAt?: Date;
    }): Promise<void> {
-      const now = Date.now();
-      const query = `
-      USE social_graph;
-      INSERT VERTEX user(user_id, username, display_name, avatar, is_private, created_at, updated_at)
-      VALUES "${data.userId}":("${data.userId}", "${data.username || ''}", "${data.displayName || ''}", "${data.avatar || ''}", ${data.isPrivate || false}, ${now}, ${now});
-    `;
+      const escapedUserId = user.userId ? user.userId.replace(/"/g, '\\"') : user.id;
+      const escapedUsername = user.username ? user.username.replace(/"/g, '\\"') : '';
+      const escapedDisplayName = user.displayName ? user.displayName.replace(/"/g, '\\"') : '';
+      const escapedAvatar = user.avatar ? user.avatar.replace(/"/g, '\\"') : '';
+      const isPrivate = Boolean(user.isPrivate);
+      const createdAt = user.createdAt ? user.createdAt.getTime() : Date.now();
+      const updatedAt = user.updatedAt ? user.updatedAt.getTime() : Date.now();
 
-      await this.nebulaService.execute(query);
+      const query = `
+         INSERT VERTEX User(user_id, username, display_name, avatar, is_private, created_at, updated_at)
+         VALUES "${user.id}":("${escapedUserId}", "${escapedUsername}", "${escapedDisplayName}", "${escapedAvatar}", ${isPrivate}, ${createdAt}, ${updatedAt});
+      `;
+
+      try {
+         await this.nebulaService.execute(query);
+         this.logger.debug(`Synced user to graph: ${user.id}`);
+      } catch (error) {
+         this.logger.error(
+            `Failed to sync user to graph: ${user.id}`,
+            error instanceof Error ? error.stack : undefined,
+         );
+         throw error;
+      }
    }
 
-   async createFollow(followerId: string, followingId: string, status: FollowStatus): Promise<GraphFollowResult> {
-      const now = Date.now();
+   async createFollow(
+      followerId: string,
+      followingId: string,
+      _status: FollowStatus = FollowStatus.ACCEPTED,
+   ): Promise<void> {
+      void _status;
       const query = `
-      USE social_graph;
-      INSERT EDGE follow(status, created_at, updated_at)
-      VALUES "${followerId}"->"${followingId}":("${status}", ${now}, ${now});
-    `;
+         INSERT EDGE Follow(createdAt) VALUES "${followerId}" -> "${followingId}":(now());
+      `;
 
-      await this.nebulaService.execute(query);
-
-      return {
-         followerId,
-         followingId,
-         status,
-         createdAt: new Date(now),
-         updatedAt: new Date(now),
-      };
+      try {
+         await this.nebulaService.execute(query);
+         this.logger.debug(`Created follow relationship: ${followerId} -> ${followingId}`);
+      } catch (error) {
+         this.logger.error(
+            `Failed to create follow relationship: ${followerId} -> ${followingId}`,
+            error instanceof Error ? error.stack : undefined,
+         );
+         throw error;
+      }
    }
 
-   async updateFollowStatus(followerId: string, followingId: string, status: FollowStatus): Promise<GraphFollowResult> {
-      const now = Date.now();
+   async createFollowRelationship(followerId: string, followingId: string): Promise<void> {
+      return this.createFollow(followerId, followingId);
+   }
+
+   async updateFollowStatus(followerId: string, followingId: string, _status: FollowStatus): Promise<void> {
+      void _status;
       const query = `
-      USE social_graph;
-      UPDATE EDGE ON follow "${followerId}"->"${followingId}"
-      SET status = "${status}", updated_at = ${now};
-    `;
+         INSERT EDGE Follow(createdAt) VALUES "${followerId}" -> "${followingId}":(now());
+      `;
 
-      await this.nebulaService.execute(query);
-
-      return {
-         followerId,
-         followingId,
-         status,
-         createdAt: new Date(), // Will be fetched in real implementation
-         updatedAt: new Date(now),
-      };
+      try {
+         await this.nebulaService.execute(query);
+         this.logger.debug(`Updated follow status: ${followerId} -> ${followingId}`);
+      } catch (error) {
+         this.logger.error(
+            `Failed to update follow status: ${followerId} -> ${followingId}`,
+            error instanceof Error ? error.stack : undefined,
+         );
+         throw error;
+      }
    }
 
    async deleteFollow(followerId: string, followingId: string): Promise<void> {
       const query = `
-      USE social_graph;
-      DELETE EDGE follow "${followerId}"->"${followingId}";
-    `;
+         DELETE EDGE Follow "${followerId}" -> "${followingId}";
+      `;
 
-      await this.nebulaService.execute(query);
-   }
-
-   async findFollow(followerId: string, followingId: string): Promise<GraphFollowResult | null> {
-      const query = `
-      USE social_graph;
-      GO FROM "${followerId}" OVER follow WHERE id($$) == "${followingId}"
-      YIELD follow.status AS status, follow.created_at AS created_at, follow.updated_at AS updated_at;
-    `;
-
-      const result = await this.nebulaService.execute(query);
-
-      if (!result.data || result.data.length === 0) {
-         return null;
+      try {
+         await this.nebulaService.execute(query);
+         this.logger.debug(`Deleted follow relationship: ${followerId} -> ${followingId}`);
+      } catch (error) {
+         this.logger.error(
+            `Failed to delete follow relationship: ${followerId} -> ${followingId}`,
+            error instanceof Error ? error.stack : undefined,
+         );
+         throw error;
       }
-
-      const row = result.data[0] as NebulaRowData;
-      return {
-         followerId,
-         followingId,
-         status: (row.status || 'ACCEPTED') as FollowStatus,
-         createdAt: new Date(row.created_at || Date.now()),
-         updatedAt: new Date(row.updated_at || Date.now()),
-      };
    }
 
-   async getFollowers(userId: string, status?: FollowStatus, skip = 0, take = 20): Promise<GraphFollowResult[]> {
-      const statusFilter = status ? `WHERE follow.status == "${status}"` : '';
+   async deleteFollowRelationship(followerId: string, followingId: string): Promise<void> {
+      return this.deleteFollow(followerId, followingId);
+   }
+
+   async findFollow(followerId: string, followingId: string): Promise<boolean> {
       const query = `
-      USE social_graph;
-      GO FROM "${userId}" OVER follow REVERSELY
-      ${statusFilter}
-      YIELD id($^) AS follower_id, id($$) AS following_id, follow.status AS status,
-            follow.created_at AS created_at, follow.updated_at AS updated_at
-      | ORDER BY $-.created_at DESC
-      | LIMIT ${skip}, ${take};
-    `;
+         FETCH PROP ON Follow "${followerId}" -> "${followingId}" YIELD Follow.createdAt;
+      `;
 
-      const result = await this.nebulaService.execute(query);
+      try {
+         const result = await this.nebulaService.execute(query);
+         return Boolean(result.data && result.data.length > 0);
+      } catch {
+         this.logger.debug(`Find follow check failed or not found: ${followerId} -> ${followingId}`);
+         return false;
+      }
+   }
 
-      if (!result.data || result.data.length === 0) {
+   async getFollowers(
+      userId: string,
+      _status?: FollowStatus,
+      skip = 0,
+      take = 50,
+   ): Promise<
+      Array<{ followerId: string; followingId: string; status: FollowStatus; createdAt: Date; updatedAt: Date }>
+   > {
+      void _status;
+      const limit = skip + take;
+      const query = `
+         GO FROM "${userId}" OVER Follow REVERSELY YIELD Follow._src AS followerId, Follow._dst AS followingId, Follow.createdAt AS createdAt | LIMIT ${limit};
+      `;
+
+      try {
+         const result = await this.nebulaService.execute(query);
+         if (result.data && Array.isArray(result.data)) {
+            const rows = result.data.slice(skip);
+            return rows.map((row) => ({
+               followerId: typeof row.followerId === 'string' ? row.followerId : '',
+               followingId: userId,
+               status: FollowStatus.ACCEPTED,
+               createdAt: row.createdAt ? new Date(Number(row.createdAt)) : new Date(),
+               updatedAt: row.createdAt ? new Date(Number(row.createdAt)) : new Date(),
+            }));
+         }
+         return [];
+      } catch (error) {
+         this.logger.error(
+            `Failed to get followers for user: ${userId}`,
+            error instanceof Error ? error.stack : undefined,
+         );
          return [];
       }
-
-      return result.data.map((row: NebulaRowData) => ({
-         followerId: row.follower_id || '',
-         followingId: row.following_id || '',
-         status: (row.status || 'ACCEPTED') as FollowStatus,
-         createdAt: new Date(row.created_at || Date.now()),
-         updatedAt: new Date(row.updated_at || Date.now()),
-      }));
    }
 
-   async getFollowing(userId: string, status?: FollowStatus, skip = 0, take = 20): Promise<GraphFollowResult[]> {
-      const statusFilter = status ? `WHERE follow.status == "${status}"` : '';
+   async getFollowing(
+      userId: string,
+      _status?: FollowStatus,
+      skip = 0,
+      take = 50,
+   ): Promise<
+      Array<{ followerId: string; followingId: string; status: FollowStatus; createdAt: Date; updatedAt: Date }>
+   > {
+      void _status;
+      const limit = skip + take;
       const query = `
-      USE social_graph;
-      GO FROM "${userId}" OVER follow
-      ${statusFilter}
-      YIELD id($^) AS follower_id, id($$) AS following_id, follow.status AS status,
-            follow.created_at AS created_at, follow.updated_at AS updated_at
-      | ORDER BY $-.created_at DESC
-      | LIMIT ${skip}, ${take};
-    `;
+         GO FROM "${userId}" OVER Follow YIELD Follow._src AS followerId, Follow._dst AS followingId, Follow.createdAt AS createdAt | LIMIT ${limit};
+      `;
 
-      const result = await this.nebulaService.execute(query);
-
-      if (!result.data || result.data.length === 0) {
+      try {
+         const result = await this.nebulaService.execute(query);
+         if (result.data && Array.isArray(result.data)) {
+            const rows = result.data.slice(skip);
+            return rows.map((row) => ({
+               followerId: userId,
+               followingId: typeof row.followingId === 'string' ? row.followingId : '',
+               status: FollowStatus.ACCEPTED,
+               createdAt: row.createdAt ? new Date(Number(row.createdAt)) : new Date(),
+               updatedAt: row.createdAt ? new Date(Number(row.createdAt)) : new Date(),
+            }));
+         }
+         return [];
+      } catch (error) {
+         this.logger.error(
+            `Failed to get following for user: ${userId}`,
+            error instanceof Error ? error.stack : undefined,
+         );
          return [];
       }
-
-      return result.data.map((row: NebulaRowData) => ({
-         followerId: row.follower_id || '',
-         followingId: row.following_id || '',
-         status: (row.status || 'ACCEPTED') as FollowStatus,
-         createdAt: new Date(row.created_at || Date.now()),
-         updatedAt: new Date(row.updated_at || Date.now()),
-      }));
    }
 
-   async countFollowers(userId: string, status?: FollowStatus): Promise<number> {
-      const statusFilter = status ? `WHERE follow.status == "${status}"` : '';
+   async countFollowers(userId: string, _status?: FollowStatus): Promise<number> {
+      void _status;
       const query = `
-      USE social_graph;
-      GO FROM "${userId}" OVER follow REVERSELY
-      ${statusFilter}
-      YIELD count(*) AS count;
-    `;
+         GO FROM "${userId}" OVER Follow REVERSELY YIELD Follow._src AS followerId | COUNT(followerId) AS count;
+      `;
 
-      const result = await this.nebulaService.execute(query);
-
-      if (!result.data || result.data.length === 0) {
+      try {
+         const result = await this.nebulaService.execute(query);
+         if (result.data && result.data.length > 0) {
+            return Number(result.data[0].count ?? 0);
+         }
+         return 0;
+      } catch (error) {
+         this.logger.error(
+            `Failed to count followers for user: ${userId}`,
+            error instanceof Error ? error.stack : undefined,
+         );
          return 0;
       }
-
-      const row = result.data[0] as NebulaRowData;
-      return row.count || 0;
    }
 
-   async countFollowing(userId: string, status?: FollowStatus): Promise<number> {
-      const statusFilter = status ? `WHERE follow.status == "${status}"` : '';
+   async countFollowing(userId: string, _status?: FollowStatus): Promise<number> {
+      void _status;
       const query = `
-      USE social_graph;
-      GO FROM "${userId}" OVER follow
-      ${statusFilter}
-      YIELD count(*) AS count;
-    `;
+         GO FROM "${userId}" OVER Follow YIELD Follow._dst AS followingId | COUNT(followingId) AS count;
+      `;
 
-      const result = await this.nebulaService.execute(query);
-
-      if (!result.data || result.data.length === 0) {
+      try {
+         const result = await this.nebulaService.execute(query);
+         if (result.data && result.data.length > 0) {
+            return Number(result.data[0].count ?? 0);
+         }
+         return 0;
+      } catch (error) {
+         this.logger.error(
+            `Failed to count following for user: ${userId}`,
+            error instanceof Error ? error.stack : undefined,
+         );
          return 0;
       }
-
-      const row = result.data[0] as NebulaRowData;
-      return row.count || 0;
    }
 
-   // Advanced graph queries
    async getMutualFollowers(userId1: string, userId2: string): Promise<string[]> {
       const query = `
-      USE social_graph;
-      GO FROM "${userId1}" OVER follow WHERE follow.status == "ACCEPTED"
-      YIELD id($$) AS following
-      | GO FROM $-.following OVER follow WHERE id($$) == "${userId2}" AND follow.status == "ACCEPTED"
-      YIELD DISTINCT $-.following AS mutual_follower;
-    `;
+         GO FROM "${userId1}" OVER Follow REVERSELY YIELD Follow._src AS follower1
+         INTERSECT
+         GO FROM "${userId2}" OVER Follow REVERSELY YIELD Follow._src AS follower2;
+      `;
 
-      const result = await this.nebulaService.execute(query);
-
-      if (!result.data || result.data.length === 0) {
+      try {
+         const result = await this.nebulaService.execute(query);
+         if (result.data && Array.isArray(result.data)) {
+            return result.data.map((row) => {
+               const val = Object.values(row)[0];
+               return typeof val === 'string' ? val : '';
+            });
+         }
+         return [];
+      } catch (error) {
+         this.logger.error(
+            `Failed to get mutual followers between ${userId1} and ${userId2}`,
+            error instanceof Error ? error.stack : undefined,
+         );
          return [];
       }
-
-      return result.data.map((row: NebulaRowData) => row.mutual_follower || '');
    }
 
    async getFollowSuggestions(userId: string, limit = 10): Promise<string[]> {
-      // Find users that the user's following are following (2-hop)
       const query = `
-      USE social_graph;
-      GO 2 STEPS FROM "${userId}" OVER follow WHERE follow.status == "ACCEPTED"
-      YIELD DISTINCT id($$) AS suggested_user
-      | WHERE $-.suggested_user != "${userId}"
-      | LIMIT ${limit};
-    `;
+         GO 2 STEPS FROM "${userId}" OVER Follow YIELD DISTINCT Follow._dst AS suggestedUserId | LIMIT ${limit};
+      `;
 
-      const result = await this.nebulaService.execute(query);
-
-      if (!result.data || result.data.length === 0) {
+      try {
+         const result = await this.nebulaService.execute(query);
+         if (result.data && Array.isArray(result.data)) {
+            return result.data
+               .map((row) => (typeof row.suggestedUserId === 'string' ? row.suggestedUserId : ''))
+               .filter((id) => id && id !== userId);
+         }
+         return [];
+      } catch (error) {
+         this.logger.error(
+            `Failed to get follow suggestions for user: ${userId}`,
+            error instanceof Error ? error.stack : undefined,
+         );
          return [];
       }
-
-      return result.data.map((row: NebulaRowData) => row.suggested_user || '');
    }
 }

@@ -53,14 +53,22 @@
       "colbymchenry",
       "ehthumbs",
       "geoip",
+      "graphd",
+      "healthcheck",
       "isready",
       "johndoe",
       "Loggable",
+      "metad",
       "myusername",
       "njsproj",
+      "nowatch",
       "ntvs",
+      "omniservices",
+      "OVERMIND",
       "PGPORT",
+      "storaged",
       "uuidv",
-      "vtok"
+      "vtok",
+      "zeion"
    ]
 }

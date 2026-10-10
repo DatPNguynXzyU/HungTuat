@@ -4,7 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
-import { AllExceptionsFilter, TimeoutInterceptor, TransformInterceptor } from '@common';
+import { AllExceptionsFilter, ErrorResponseDto, TimeoutInterceptor, TransformInterceptor } from '@common';
 import { GatewayConfigService } from '@/config';
 import { GatewayModule } from '@/gateway.module';
 
@@ -100,7 +100,9 @@ async function bootstrap() {
       })
       .build();
 
-   const document = SwaggerModule.createDocument(app, swaggerConfig);
+   const document = SwaggerModule.createDocument(app, swaggerConfig, {
+      extraModels: [ErrorResponseDto],
+   });
    SwaggerModule.setup('docs', app, document);
 
    await app.listen(port);

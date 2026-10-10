@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { sharedEnvSchema, DEFAULT_JWT_KEY_ID } from '@common';
 
 export const authEnvSchema = sharedEnvSchema.extend({
+   SERVICE_NAME: z.string().default('auth-service'),
    POSTGRES_USER: z.string().default('postgres'),
    POSTGRES_PASSWORD: z.string().default('postgres'),
    POSTGRES_DB: z.string().default('omni_service_auth'),

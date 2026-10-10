@@ -1,8 +1,10 @@
 import { Controller, Get, HttpCode, HttpStatus, Param, Query } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
+   ApiErrorResponses,
    AUDIT_LOG_RESPONSE_MESSAGES,
    AuditLogResponseDto,
+   COMMON_ERROR_CODES,
    CurrentUser,
    DEFAULT_ROLES,
    IAuditLogListResult,
@@ -19,6 +21,7 @@ import type { JwtPayload } from '@common/utils/jwt.util';
 @ApiTags('Audit Logs')
 @Controller('audit-logs')
 @ApiCookieAuth()
+@ApiBearerAuth()
 @RequireRoles(DEFAULT_ROLES.ADMIN)
 @RequirePermissions(PERMISSIONS.AUDIT_LOGS_READ)
 export class AuditLogsController {
@@ -34,6 +37,27 @@ export class AuditLogsController {
       description: 'Audit logs matching query returned successfully.',
       type: [AuditLogResponseDto],
    })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Invalid query filters or pagination parameters',
+         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED, COMMON_ERROR_CODES.INVALID_REQUEST],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Authentication token missing or invalid',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.FORBIDDEN,
+         description: 'Forbidden: Requires ADMIN role and AUDIT_LOGS_READ permission',
+         errorCodes: [
+            COMMON_ERROR_CODES.FORBIDDEN,
+            COMMON_ERROR_CODES.INSUFFICIENT_ROLES,
+            COMMON_ERROR_CODES.INSUFFICIENT_PERMISSIONS,
+         ],
+      },
+   ])
    @ResponseMessage(AUDIT_LOG_RESPONSE_MESSAGES.GET_LIST_SUCCESS)
    async getAuditLogs(@Query() query: QueryAuditLogDto, @CurrentUser() user: JwtPayload): Promise<IAuditLogListResult> {
       return this.auditLogsService.getAuditLogs(query, user);
@@ -42,12 +66,44 @@ export class AuditLogsController {
    @Get(':id')
    @HttpCode(HttpStatus.OK)
    @ApiOperation({ summary: 'Get security audit log entry details by ID' })
-   @ApiParam({ name: 'id', description: 'Audit log UUID', type: String })
+   @ApiParam({
+      name: 'id',
+      description: 'Audit log UUID',
+      type: String,
+      example: '550e8400-e29b-41d4-a716-446655440000',
+   })
    @ApiResponse({
       status: 200,
       description: 'Audit log details returned.',
       type: AuditLogResponseDto,
    })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Invalid audit log ID format',
+         errorCodes: [COMMON_ERROR_CODES.INVALID_REQUEST],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Authentication token missing or invalid',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.FORBIDDEN,
+         description: 'Forbidden: Requires ADMIN role and AUDIT_LOGS_READ permission',
+         errorCodes: [
+            COMMON_ERROR_CODES.FORBIDDEN,
+            COMMON_ERROR_CODES.INSUFFICIENT_ROLES,
+            COMMON_ERROR_CODES.INSUFFICIENT_PERMISSIONS,
+         ],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'Audit log entry not found',
+         errorCodes: [COMMON_ERROR_CODES.RESOURCE_NOT_FOUND],
+         exampleParams: { id: '550e8400-e29b-41d4-a716-446655440000' },
+      },
+   ])
    @ResponseMessage(AUDIT_LOG_RESPONSE_MESSAGES.GET_DETAIL_SUCCESS)
    async getAuditLogById(@Param('id') id: string, @CurrentUser() user: JwtPayload): Promise<ISecurityAuditLog | null> {
       return this.auditLogsService.getAuditLogById(id, user);

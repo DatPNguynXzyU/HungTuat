@@ -8,13 +8,13 @@ export interface NebulaConfig {
    space: string;
 }
 
-export const getNebulaConfig = (configService: CommonConfigService): NebulaConfig => {
-   const nebulaConfig = configService.nebula;
+export const getNebulaConfig = (configService?: CommonConfigService): NebulaConfig => {
+   const nebulaConfig = configService?.nebula;
    return {
-      graphAddress: nebulaConfig.graphAddress,
-      graphPort: nebulaConfig.graphPort,
-      username: nebulaConfig.username,
-      password: nebulaConfig.password,
-      space: nebulaConfig.space,
+      graphAddress: nebulaConfig?.graphAddress || process.env.NEBULA_GRAPHD_HOST || '127.0.0.1',
+      graphPort: Number(nebulaConfig?.graphPort || process.env.NEBULA_GRAPHD_PORT || 9669),
+      username: nebulaConfig?.username || process.env.NEBULA_USERNAME || 'root',
+      password: nebulaConfig?.password || process.env.NEBULA_PASSWORD || 'nebula',
+      space: nebulaConfig?.space || process.env.NEBULA_SPACE || 'omni_users',
    };
 };

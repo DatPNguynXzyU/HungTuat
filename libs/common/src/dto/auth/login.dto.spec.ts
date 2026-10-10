@@ -47,8 +47,8 @@ describe('LoginDto', () => {
       const dto = new LoginDto();
       dto.email = 'user@example.com';
       dto.password = 'password123';
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      (dto as any).clientType = 'invalid-type';
+      const dtoWithInvalidType = dto as unknown as Record<string, unknown>;
+      dtoWithInvalidType.clientType = 'invalid-type';
 
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);

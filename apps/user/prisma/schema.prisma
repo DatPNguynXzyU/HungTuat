@@ -1,6 +1,5 @@
 datasource db {
    provider = "postgresql"
-   url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -37,27 +36,22 @@ enum Gender {
    PREFER_NOT_TO_SAY
 }
 
-// User Core Identity Model
 model User {
    id                String         @id @default(uuid())
-   userId            String         @unique // Reference to Auth service user ID
+   userId            String         @unique
    username          String?        @unique
    status            UserStatus     @default(ACTIVE)
 
-   // Soft delete
    deletedAt         DateTime?
 
-   // Timestamps
    createdAt         DateTime       @default(now())
    updatedAt         DateTime       @updatedAt
    lastActiveAt      DateTime?
 
-   // 1-to-1 Sub-tables
    profile           UserProfile?
    stats             UserStats?
    settings          UserSettings?
 
-   // Social Relations
    followers         Follow[]       @relation("UserFollowers")
    following         Follow[]       @relation("UserFollowing")
 
@@ -69,7 +63,6 @@ model User {
    @@map("users")
 }
 
-// User Profile Model (Personal / Public Info)
 model UserProfile {
    id                String         @id @default(uuid())
    userId            String         @unique @map("user_id")
@@ -82,7 +75,6 @@ model UserProfile {
    dateOfBirth       DateTime?      @map("date_of_birth")
    gender            Gender?
 
-   // Timestamps
    createdAt         DateTime       @default(now()) @map("created_at")
    updatedAt         DateTime       @updatedAt @map("updated_at")
 
@@ -91,7 +83,6 @@ model UserProfile {
    @@map("user_profiles")
 }
 
-// User Social Stats Model (Counters & Metrics)
 model UserStats {
    id                String         @id @default(uuid())
    userId            String         @unique @map("user_id")
@@ -99,7 +90,6 @@ model UserStats {
    followingCount    Int            @default(0) @map("following_count")
    postsCount        Int            @default(0) @map("posts_count")
 
-   // Timestamps
    createdAt         DateTime       @default(now()) @map("created_at")
    updatedAt         DateTime       @updatedAt @map("updated_at")
 
@@ -108,14 +98,12 @@ model UserStats {
    @@map("user_stats")
 }
 
-// User Settings Model (Preferences & Privacy)
 model UserSettings {
    id                String         @id @default(uuid())
    userId            String         @unique @map("user_id")
    isVerified        Boolean        @default(false) @map("is_verified")
    isPrivate         Boolean        @default(false) @map("is_private")
 
-   // Timestamps
    createdAt         DateTime       @default(now()) @map("created_at")
    updatedAt         DateTime       @updatedAt @map("updated_at")
 
@@ -124,21 +112,17 @@ model UserSettings {
    @@map("user_settings")
 }
 
-// Follow/Social Connection Model
 model Follow {
    id                String         @id @default(uuid())
    followerId        String         @map("follower_id")
    followingId       String         @map("following_id")
    status            FollowStatus   @default(PENDING)
 
-   // Soft delete
    deletedAt         DateTime?      @map("deleted_at")
 
-   // Timestamps
    createdAt         DateTime       @default(now()) @map("created_at")
    updatedAt         DateTime       @updatedAt @map("updated_at")
 
-   // Relations
    follower          User           @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
    following         User           @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
 
@@ -151,7 +135,6 @@ model Follow {
    @@map("follows")
 }
 
-// Outbox Pattern for Event-Driven Architecture
 model Outbox {
    id                String         @id @default(uuid())
    aggregateId       String         @map("aggregate_id")
@@ -163,7 +146,6 @@ model Outbox {
    maxRetries        Int            @default(3) @map("max_retries")
    error             String?        @db.Text
 
-   // Timestamps
    createdAt         DateTime       @default(now()) @map("created_at")
    updatedAt         DateTime       @updatedAt @map("updated_at")
    publishedAt       DateTime?      @map("published_at")

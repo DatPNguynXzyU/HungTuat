@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
-import { LoggerModule, RedisModule, RmqModule, SERVICES } from '@common';
+import { RedisModule, RmqModule, SERVICES } from '@common';
 import { AuthController } from '@auth/auth.controller';
 import { AuthService } from '@auth/auth.service';
 import { AuthConfigModule } from '@auth/config';
+import { AuthLoggerModule } from '@auth/logger';
 import { OutboxModule } from '@auth/outbox';
 import { PrismaModule } from '@auth/prisma';
 import {
@@ -21,7 +22,7 @@ import { TOKEN_SERVICE } from '@auth/services/token.service.interface';
 @Module({
    imports: [
       AuthConfigModule,
-      LoggerModule,
+      AuthLoggerModule,
       PrismaModule,
       RedisModule,
       OutboxModule,

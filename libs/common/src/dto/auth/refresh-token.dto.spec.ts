@@ -36,8 +36,8 @@ describe('RefreshTokenDto', () => {
 
    it('should fail validation for non-string refreshToken', async () => {
       const dto = new RefreshTokenDto();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      (dto as any).refreshToken = 12345;
+      const dtoWithInvalidType = dto as Record<string, unknown>;
+      dtoWithInvalidType.refreshToken = 12345;
 
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
@@ -46,8 +46,8 @@ describe('RefreshTokenDto', () => {
 
    it('should fail validation for non-string deviceId', async () => {
       const dto = new RefreshTokenDto();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      (dto as any).deviceId = 12345;
+      const dtoWithInvalidType = dto as Record<string, unknown>;
+      dtoWithInvalidType.deviceId = 12345;
 
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);

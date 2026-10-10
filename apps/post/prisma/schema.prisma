@@ -1,0 +1,105 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma-client"
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  DELETED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
+enum VideoProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Post {
+  id          String     @id @default(uuid())
+  userId      String
+  content     String     @db.Text
+  status      PostStatus @default(DRAFT)
+  viewCount   Int        @default(0)
+  likeCount   Int        @default(0)
+  shareCount  Int        @default(0)
+  commentCount Int       @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  publishedAt DateTime?
+
+  media       Media[]
+  tags        PostTag[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([publishedAt])
+  @@map("posts")
+}
+
+model Media {
+  id          String     @id @default(uuid())
+  postId      String
+  type        MediaType
+  url         String
+  thumbnailUrl String?
+  width       Int?
+  height      Int?
+  duration    Int?       // For videos in seconds
+  size        BigInt?    // File size in bytes
+  mimeType    String?
+  metadata    Json?      // Additional metadata (resolution, codec, etc.)
+  processingStatus VideoProcessingStatus @default(PENDING)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  post        Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([type])
+  @@index([processingStatus])
+  @@map("media")
+}
+
+model Tag {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  slug      String     @unique
+  usageCount Int       @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  posts     PostTag[]
+
+  @@index([slug])
+  @@index([usageCount])
+  @@map("tags")
+}
+
+model PostTag {
+  postId    String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([postId])
+  @@index([tagId])
+  @@map("post_tags")
+}

@@ -36,7 +36,10 @@
          "@app/common/*": ["libs/common/src/*"],
          "@notification/*": ["apps/notification/src/*"],
          "@notification/prisma-client": ["apps/notification/src/generated/prisma-client"],
-         "@notification/prisma-client/*": ["apps/notification/src/generated/prisma-client/*"]
+         "@notification/prisma-client/*": ["apps/notification/src/generated/prisma-client/*"],
+         "@post/*": ["apps/post/src/*"],
+         "@post/prisma-client": ["apps/post/src/generated/prisma-client"],
+         "@post/prisma-client/*": ["apps/post/src/generated/prisma-client/*"]
       },
       "jsx": "react-jsx"
    }

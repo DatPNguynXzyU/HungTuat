@@ -20,3 +20,9 @@
    - OmniServices uses **CodeGraph** (`@colbymchenry/codegraph`) to provide semantic code intelligence and knowledge graph querying for AI agents (Antigravity IDE, Cursor, Claude Code, Gemini CLI, etc.).
    - Rather than crawling and reading dozens of files one-by-one, agents use CodeGraph's local MCP tools (`codegraph_explore`, `codegraph_search`, `codegraph_impact`) to retrieve exact definitions, caller/callee graphs, and impact radiuses in single calls.
    - For detailed setup, MCP tools, and workflow instructions, see [codegraph-guidelines.md](.agent/rules/codegraph-guidelines.md).
+
+5. **Swagger & OpenAPI 3.0 Documentation Standards**:
+   - All Swagger annotations and descriptions **MUST be 100% in professional English**.
+   - Every API endpoint that can throw exceptions must be documented with `@ApiErrorResponse` or `@ApiErrorResponses` from `@common`.
+   - Multi-step workflows (OTP registration, password change, etc.) must define explicit `operationId` and OpenAPI 3.0 `links`.
+   - For detailed rules and code examples, see [swagger-openapi-guidelines.md](.agent/rules/swagger-openapi-guidelines.md).

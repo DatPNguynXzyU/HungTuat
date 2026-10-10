@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CloudinaryService } from '@common';
 import { UserService } from './user.service';
 import { UserRepository, FollowRepository } from './repositories';
 import { OutboxService } from './outbox';
 import { GraphFollowRepository } from '@user/graph';
 import { UserGraphSyncService, UsernameBloomFilterService } from '@user/services';
+import { UserSearchService } from '@user/search';
 import { UserEntity, UserStatus } from '@user/entities';
 
 describe('UserService', () => {
@@ -61,6 +63,23 @@ describe('UserService', () => {
       addUsername: jest.fn().mockResolvedValue(undefined),
       isUsernameAvailable: jest.fn().mockResolvedValue(true),
    };
+   const mockUserSearchService = {
+      indexUser: jest.fn().mockResolvedValue(undefined),
+      updateUser: jest.fn().mockResolvedValue(undefined),
+      deleteUser: jest.fn().mockResolvedValue(undefined),
+      searchUsers: jest.fn().mockResolvedValue([]),
+   };
+   const mockCloudinaryService = {
+      uploadBase64: jest.fn().mockResolvedValue({
+         secureUrl: 'https://cloudinary.com/avatar.jpg',
+         publicId: 'avatar_123',
+      }),
+      generateUploadSignature: jest.fn().mockReturnValue({
+         timestamp: 1234567890,
+         signature: 'mock_signature',
+         apiKey: 'mock_key',
+      }),
+   };
 
    beforeEach(async () => {
       jest.clearAllMocks();
@@ -91,6 +110,14 @@ describe('UserService', () => {
             {
                provide: UsernameBloomFilterService,
                useValue: mockUsernameBloomFilterService,
+            },
+            {
+               provide: UserSearchService,
+               useValue: mockUserSearchService,
+            },
+            {
+               provide: CloudinaryService,
+               useValue: mockCloudinaryService,
             },
          ],
       }).compile();

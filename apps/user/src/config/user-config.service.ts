@@ -1,17 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { CommonConfigService } from '@common';
+import { UserEnvConfig } from '@user/config/user-env.schema';
 
 @Injectable()
-export class UserConfigService {
-   constructor(private configService: ConfigService) {}
+export class UserConfigService extends CommonConfigService {
+   constructor(protected override readonly configService: ConfigService<UserEnvConfig, true>) {
+      super(configService);
+   }
 
-   get serviceName(): string {
-      return this.configService.get<string>('SERVICE_NAME', 'user-service');
+   get databaseUrl(): string {
+      return this.configService.get('DATABASE_URL', { infer: true });
    }
 
    get database() {
       return {
-         url: this.configService.get<string>('DATABASE_URL'),
+         url: this.databaseUrl,
       };
    }
 }

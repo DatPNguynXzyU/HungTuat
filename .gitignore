@@ -54,3 +54,7 @@ Thumbs.db
 
 # CodeGraph database and index
 .codegraph/
+
+# Overmind socket
+.overmind.sock
+apps/user/logs/*.log

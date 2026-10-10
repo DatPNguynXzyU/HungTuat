@@ -1,0 +1,36 @@
+name: omni-services
+
+services:
+   post-postgres:
+      image: postgres:17-alpine
+      container_name: omni-services-post
+      command: ['postgres', '-p', '5441']
+      restart: unless-stopped
+      environment:
+         POSTGRES_USER: ${POSTGRES_USER:-postgres}
+         POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+         POSTGRES_DB: ${POSTGRES_DB:-omni_service_post}
+         PGPORT: ${POSTGRES_PORT:-5441}
+      ports:
+         - '${POSTGRES_PORT:-5441}:${POSTGRES_PORT:-5441}'
+      volumes:
+         - post_postgres_data:/var/lib/postgresql/data
+      healthcheck:
+         test:
+            [
+               'CMD-SHELL',
+               'pg_isready -p ${POSTGRES_PORT:-5441} -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-omni_service_post}',
+            ]
+         interval: 10s
+         timeout: 5s
+         retries: 5
+      networks:
+         - omni-network
+
+volumes:
+   post_postgres_data:
+      driver: local
+
+networks:
+   omni-network:
+      driver: bridge

@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+   Body,
+   Controller,
+   Get,
+   HttpStatus,
+   Param,
+   Patch,
+   Post,
+   Query,
+   UploadedFile,
+   UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
    ApiBearerAuth,
@@ -6,12 +17,16 @@ import {
    ApiConsumes,
    ApiCookieAuth,
    ApiOperation,
+   ApiParam,
    ApiQuery,
    ApiResponse,
    ApiTags,
 } from '@nestjs/swagger';
 import {
+   ApiErrorResponse,
+   ApiErrorResponses,
    BadRequestException,
+   COMMON_ERROR_CODES,
    CreateUserProfileDto,
    CurrentUser,
    Public,
@@ -33,6 +48,12 @@ export class UsersController {
    @ApiOperation({ summary: 'Check if a username is available using fast Bloom Filter' })
    @ApiQuery({ name: 'username', required: true, description: 'Username to verify availability', example: 'john_doe' })
    @ApiResponse({ status: 200, description: 'Username availability status returned.' })
+   @ApiErrorResponse({
+      status: HttpStatus.BAD_REQUEST,
+      description: 'Username query parameter is missing or has invalid format',
+      errorCodes: [USER_ERROR_CODES.INVALID_USERNAME_FORMAT],
+      exampleParams: { reason: 'username_required' },
+   })
    @ResponseMessage(USER_RESPONSE_MESSAGES.CHECK_USERNAME_SUCCESS)
    async checkUsername(@Query('username') username: string): Promise<{ available: boolean; username: string }> {
       if (!username || !username.trim()) {
@@ -50,6 +71,11 @@ export class UsersController {
    @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
    @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
    @ApiResponse({ status: 200, description: 'Matching users returned successfully.' })
+   @ApiErrorResponse({
+      status: HttpStatus.BAD_REQUEST,
+      description: 'Invalid pagination or search query parameters',
+      errorCodes: [COMMON_ERROR_CODES.INVALID_REQUEST, COMMON_ERROR_CODES.VALIDATION_FAILED],
+   })
    @ResponseMessage(USER_RESPONSE_MESSAGES.SEARCH_SUCCESS)
    async searchUsers(
       @Query('q') query: string,
@@ -62,9 +88,38 @@ export class UsersController {
    @Post('profile')
    @ApiCookieAuth()
    @ApiBearerAuth()
-   @ApiOperation({ summary: 'Create initial user profile for the current authenticated user' })
-   @ApiResponse({ status: 201, description: 'User profile created successfully.' })
-   @ApiResponse({ status: 409, description: 'Profile already exists or username already taken.' })
+   @ApiOperation({
+      operationId: 'createUserProfile',
+      summary: 'Create initial user profile for the current authenticated user',
+   })
+   @ApiResponse({
+      status: 201,
+      description: 'User profile created successfully.',
+      links: {
+         GetMyProfile: {
+            operationId: 'getMyUserProfile',
+            description: 'Retrieve current user profile details created in this step',
+         },
+      },
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failed for user profile fields',
+         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.CONFLICT,
+         description: 'Profile already exists or username already taken',
+         errorCodes: [USER_ERROR_CODES.USER_ALREADY_EXISTS, USER_ERROR_CODES.USERNAME_ALREADY_TAKEN],
+         exampleParams: { username: 'john_doe' },
+      },
+   ])
    @ResponseMessage(USER_RESPONSE_MESSAGES.CREATE_PROFILE_SUCCESS)
    async createProfile(
       @Body() createUserProfileDto: CreateUserProfileDto,
@@ -80,6 +135,18 @@ export class UsersController {
    @ApiQuery({ name: 'page', required: false, type: Number })
    @ApiQuery({ name: 'limit', required: false, type: Number })
    @ApiResponse({ status: 200, description: 'List of users returned.' })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Invalid pagination parameters',
+         errorCodes: [COMMON_ERROR_CODES.INVALID_REQUEST],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+   ])
    @ResponseMessage(USER_RESPONSE_MESSAGES.GET_LIST_SUCCESS)
    async getAllUsers(
       @Query('page') page = '1',
@@ -93,10 +160,22 @@ export class UsersController {
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({
+      operationId: 'getMyUserProfile',
       summary: 'Get current authenticated user profile, statistics, and settings',
    })
    @ApiResponse({ status: 200, description: 'Current user profile returned successfully' })
-   @ApiResponse({ status: 401, description: 'Unauthorized if authentication is missing or invalid' })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized if authentication is missing or invalid',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+      },
+   ])
    @ResponseMessage(USER_RESPONSE_MESSAGES.GET_PROFILE_SUCCESS)
    async getMyProfile(@CurrentUser() user: JwtPayload): Promise<unknown> {
       return this.usersService.getMyProfile(user);
@@ -109,6 +188,29 @@ export class UsersController {
       summary: 'Update current authenticated user profile (displayName, username, gender, dateOfBirth, bio, etc.)',
    })
    @ApiResponse({ status: 200, description: 'User profile updated successfully.' })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failed for updated fields',
+         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+      },
+      {
+         status: HttpStatus.CONFLICT,
+         description: 'New username is already taken by another user',
+         errorCodes: [USER_ERROR_CODES.USERNAME_ALREADY_TAKEN],
+         exampleParams: { username: 'new_username' },
+      },
+   ])
    @ResponseMessage(USER_RESPONSE_MESSAGES.UPDATE_PROFILE_SUCCESS)
    async updateMyProfile(@Body() updateUserDto: UpdateUserDto, @CurrentUser() user: JwtPayload): Promise<unknown> {
       return this.usersService.updateMyProfile(updateUserDto, user);
@@ -117,7 +219,10 @@ export class UsersController {
    @Post('me/avatar')
    @ApiCookieAuth()
    @ApiBearerAuth()
-   @ApiOperation({ summary: 'Upload new avatar image directly to Cloudinary CDN' })
+   @ApiOperation({
+      operationId: 'uploadMyAvatar',
+      summary: 'Upload new avatar image directly to Cloudinary CDN',
+   })
    @ApiConsumes('multipart/form-data')
    @ApiBody({
       schema: {
@@ -132,7 +237,34 @@ export class UsersController {
          required: ['file'],
       },
    })
-   @ApiResponse({ status: 200, description: 'Avatar uploaded and updated successfully.' })
+   @ApiResponse({
+      status: 200,
+      description: 'Avatar uploaded and updated successfully.',
+      links: {
+         GetMyProfile: {
+            operationId: 'getMyUserProfile',
+            description: 'Retrieve updated user profile with new avatar image',
+         },
+      },
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'File is missing or invalid image format (allowed: jpeg, png, webp, gif; max 5MB)',
+         errorCodes: [USER_ERROR_CODES.FILE_REQUIRED, USER_ERROR_CODES.INVALID_FILE_TYPE],
+         exampleParams: { allowed: 'image/jpeg, image/png, image/webp, image/gif' },
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+      },
+   ])
    @ResponseMessage(USER_RESPONSE_MESSAGES.UPLOAD_AVATAR_SUCCESS)
    @UseInterceptors(
       FileInterceptor('file', {
@@ -160,6 +292,18 @@ export class UsersController {
    @ApiBearerAuth()
    @ApiOperation({ summary: 'Get signed upload signature for direct client-to-Cloudinary upload' })
    @ApiResponse({ status: 200, description: 'Signed upload parameters generated successfully.' })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+      },
+   ])
    @ResponseMessage(USER_RESPONSE_MESSAGES.GET_AVATAR_SIGNATURE_SUCCESS)
    async getMyAvatarSignature(@CurrentUser() user: JwtPayload): Promise<unknown> {
       return this.usersService.getAvatarUploadSignature(user.sub, user);
@@ -169,7 +313,26 @@ export class UsersController {
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({ summary: 'Get user details by ID' })
+   @ApiParam({ name: 'id', description: 'User UUID identifier', example: '550e8400-e29b-41d4-a716-446655440000' })
    @ApiResponse({ status: 200, description: 'User details returned.' })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Invalid user ID format',
+         errorCodes: [COMMON_ERROR_CODES.INVALID_REQUEST],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+         exampleParams: { id: '550e8400-e29b-41d4-a716-446655440000' },
+      },
+   ])
    @ResponseMessage(USER_RESPONSE_MESSAGES.GET_DETAIL_SUCCESS)
    async getUserById(@Param('id') id: string, @CurrentUser() user: JwtPayload): Promise<unknown> {
       return this.usersService.getUserById(id, user);
@@ -179,7 +342,36 @@ export class UsersController {
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({ summary: 'Update user profile by ID' })
+   @ApiParam({ name: 'id', description: 'User UUID identifier', example: '550e8400-e29b-41d4-a716-446655440000' })
    @ApiResponse({ status: 200, description: 'User updated successfully.' })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failed or invalid user ID',
+         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED, COMMON_ERROR_CODES.INVALID_REQUEST],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.FORBIDDEN,
+         description: 'Forbidden if the user is not the owner or administrator',
+         errorCodes: [COMMON_ERROR_CODES.FORBIDDEN, COMMON_ERROR_CODES.NOT_OWNER_OR_ADMIN],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+      },
+      {
+         status: HttpStatus.CONFLICT,
+         description: 'New username is already taken by another user',
+         errorCodes: [USER_ERROR_CODES.USERNAME_ALREADY_TAKEN],
+         exampleParams: { username: 'new_username' },
+      },
+   ])
    @ResponseMessage(USER_RESPONSE_MESSAGES.UPDATE_SUCCESS)
    async updateUser(
       @Param('id') id: string,

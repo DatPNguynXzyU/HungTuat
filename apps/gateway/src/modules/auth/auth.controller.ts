@@ -24,6 +24,8 @@ import {
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import {
+   ApiErrorResponse,
+   ApiErrorResponses,
    AuditLogResponseDto,
    AUTH_COOKIES,
    AUTH_ERROR_CODES,
@@ -33,6 +35,7 @@ import {
    BadRequestException,
    ChangePasswordDto,
    ChangePasswordResponseDto,
+   COMMON_ERROR_CODES,
    CurrentUser,
    DeviceDetectorUtil,
    DeviceSessionResponseDto,
@@ -189,6 +192,12 @@ export class AuthController {
       status: 200,
       description: 'Email availability status returned.',
    })
+   @ApiErrorResponse({
+      status: HttpStatus.BAD_REQUEST,
+      description: 'Invalid or missing email address',
+      errorCodes: [AUTH_ERROR_CODES.INVALID_EMAIL_FORMAT],
+      exampleParams: { reason: 'email_required' },
+   })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.CHECK_EMAIL_SUCCESS)
    async checkEmail(@Query('email') email: string): Promise<{ available: boolean; email: string }> {
       if (!email || !email.trim()) {
@@ -203,17 +212,40 @@ export class AuthController {
    @Post('register/send-otp')
    @HttpCode(HttpStatus.OK)
    @ApiOperation({
+      operationId: 'sendRegisterOtp',
       summary: 'Send 6-digit OTP verification code to email for registration (uses Bloom Filter for instant check)',
    })
    @ApiResponse({
       status: 200,
       description: 'OTP code sent successfully to user email.',
       type: SendRegisterOtpResponseDto,
+      links: {
+         VerifyOtp: {
+            operationId: 'verifyRegisterOtp',
+            description: 'Verify the 6-digit OTP code received via email in the next step',
+            parameters: {
+               email: '$request.body#/email',
+            },
+         },
+      },
    })
-   @ApiResponse({
-      status: 400,
-      description: 'Email already exists or OTP cooldown is currently active.',
-   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Email already exists, invalid email format, or OTP cooldown active',
+         errorCodes: [
+            AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS,
+            AUTH_ERROR_CODES.INVALID_EMAIL_FORMAT,
+            AUTH_ERROR_CODES.OTP_COOLDOWN_ACTIVE,
+         ],
+         exampleParams: { cooldownSeconds: 60 },
+      },
+      {
+         status: HttpStatus.TOO_MANY_REQUESTS,
+         description: 'Maximum daily OTP limit exceeded',
+         errorCodes: [AUTH_ERROR_CODES.OTP_MAX_ATTEMPTS_EXCEEDED],
+      },
+   ])
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.SEND_OTP_SUCCESS)
    async sendRegisterOtp(@Req() req: Request, @Body() dto: SendRegisterOtpDto): Promise<SendRegisterOtpResponseDto> {
       const deviceInfo = this.extractDeviceInfo(req);
@@ -224,16 +256,33 @@ export class AuthController {
    @Post('register/verify-otp')
    @HttpCode(HttpStatus.OK)
    @ApiOperation({
+      operationId: 'verifyRegisterOtp',
       summary: 'Verify 6-digit OTP verification code and obtain a single-use verificationToken for registration',
    })
    @ApiResponse({
       status: 200,
       description: 'OTP verified successfully. Returns verificationToken.',
       type: VerifyRegisterOtpResponseDto,
+      links: {
+         RegisterAccount: {
+            operationId: 'registerAccount',
+            description: 'Complete account registration using the verificationToken and email from the OTP step',
+            parameters: {
+               verificationToken: '$response.body#/data/verificationToken',
+               email: '$response.body#/data/email',
+            },
+         },
+      },
    })
-   @ApiResponse({
-      status: 400,
-      description: 'Invalid OTP code, expired OTP, or maximum attempts exceeded.',
+   @ApiErrorResponse({
+      status: HttpStatus.BAD_REQUEST,
+      description: 'Invalid OTP code, expired OTP, or maximum OTP attempts exceeded',
+      errorCodes: [
+         AUTH_ERROR_CODES.OTP_INVALID,
+         AUTH_ERROR_CODES.OTP_EXPIRED,
+         AUTH_ERROR_CODES.OTP_MAX_ATTEMPTS_EXCEEDED,
+      ],
+      exampleParams: { remainingAttempts: 2 },
    })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.VERIFY_OTP_SUCCESS)
    async verifyRegisterOtp(
@@ -248,6 +297,7 @@ export class AuthController {
    @Post('register')
    @HttpCode(HttpStatus.CREATED)
    @ApiOperation({
+      operationId: 'registerAccount',
       summary:
          'Register a new account and automatically log in. Supports verificationToken from OTP step. Returns tokens in response body and HttpOnly cookies.',
    })
@@ -267,7 +317,30 @@ export class AuthController {
       status: 201,
       description: 'User successfully registered. Tokens returned in response body and stored in HttpOnly cookies.',
       type: AuthResponseDto,
+      links: {
+         GetAuthProfile: {
+            operationId: 'getAuthProfile',
+            description: 'Retrieve authenticated user profile and token payload after successful registration',
+         },
+      },
    })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failed or invalid/expired verification token',
+         errorCodes: [
+            COMMON_ERROR_CODES.VALIDATION_FAILED,
+            AUTH_ERROR_CODES.VERIFICATION_TOKEN_INVALID,
+            AUTH_ERROR_CODES.VERIFICATION_TOKEN_EXPIRED,
+         ],
+      },
+      {
+         status: HttpStatus.CONFLICT,
+         description: 'Email already registered',
+         errorCodes: [AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS],
+         exampleParams: { email: 'user@example.com' },
+      },
+   ])
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.REGISTER_SUCCESS)
    async register(
       @Req() req: Request,
@@ -292,6 +365,7 @@ export class AuthController {
    @Post('login')
    @HttpCode(HttpStatus.OK)
    @ApiOperation({
+      operationId: 'loginAccount',
       summary:
          'User login. Returns tokens in both response body (for mobile/API clients) and HttpOnly cookies (for web browsers)',
    })
@@ -311,7 +385,32 @@ export class AuthController {
       status: 200,
       description: 'User successfully logged in. Tokens returned in response body and stored in HttpOnly cookies.',
       type: AuthResponseDto,
+      links: {
+         GetAuthProfile: {
+            operationId: 'getAuthProfile',
+            description: 'Retrieve authenticated user profile and token payload after successful login',
+         },
+      },
    })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failed for login payload',
+         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Invalid credentials, locked/blocked account, or inactive user',
+         errorCodes: [
+            AUTH_ERROR_CODES.INVALID_CREDENTIALS,
+            AUTH_ERROR_CODES.USER_NOT_FOUND,
+            AUTH_ERROR_CODES.ACCOUNT_BLOCKED,
+            AUTH_ERROR_CODES.ACCOUNT_INACTIVE,
+            AUTH_ERROR_CODES.ACCOUNT_LOCKED_TEMPORARILY,
+         ],
+         exampleParams: { lockedUntil: '2026-10-10T09:00:00.000Z' },
+      },
+   ])
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.LOGIN_SUCCESS)
    async login(
       @Req() req: Request,
@@ -362,7 +461,18 @@ export class AuthController {
       description: 'Tokens rotated successfully. New tokens returned in response body and cookies.',
       type: AuthResponseDto,
    })
-   @ApiResponse({ status: 401, description: 'Unauthorized if refresh token is missing, invalid or revoked.' })
+   @ApiErrorResponse({
+      status: HttpStatus.UNAUTHORIZED,
+      description: 'Refresh token missing, invalid, expired, or revoked',
+      errorCodes: [
+         AUTH_ERROR_CODES.REFRESH_TOKEN_REQUIRED,
+         AUTH_ERROR_CODES.REFRESH_TOKEN_INVALID,
+         AUTH_ERROR_CODES.REFRESH_TOKEN_REVOKED,
+         AUTH_ERROR_CODES.REFRESH_TOKEN_EXPIRED,
+         AUTH_ERROR_CODES.TOKEN_REVOKED,
+      ],
+      exampleParams: { reason: 'refresh_token_missing' },
+   })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.TOKEN_REFRESH_SUCCESS)
    async refreshToken(
       @Req() req: Request,
@@ -408,6 +518,11 @@ export class AuthController {
       example: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...',
    })
    @ApiResponse({ status: 200, description: 'Token revoked and cookies cleared successfully.' })
+   @ApiErrorResponse({
+      status: HttpStatus.UNAUTHORIZED,
+      description: 'Token invalid or expired',
+      errorCodes: [AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED],
+   })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.TOKEN_REVOKE_SUCCESS)
    async revokeToken(
       @Req() req: Request,
@@ -447,6 +562,11 @@ export class AuthController {
          'User logout. Accepts token from cookie or Authorization header. Revokes refresh token and clears auth cookies.',
    })
    @ApiResponse({ status: 200, description: 'User successfully logged out.' })
+   @ApiErrorResponse({
+      status: HttpStatus.UNAUTHORIZED,
+      description: 'Authentication token missing or expired',
+      errorCodes: [AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED],
+   })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.LOGOUT_SUCCESS)
    async logout(
       @Req() req: Request,
@@ -478,6 +598,11 @@ export class AuthController {
       summary: 'Revoke all sessions/tokens for the current user across all devices and clear auth cookies',
    })
    @ApiResponse({ status: 200, description: 'All user sessions logged out successfully.' })
+   @ApiErrorResponse({
+      status: HttpStatus.UNAUTHORIZED,
+      description: 'Unauthorized access or invalid token',
+      errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED, AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED],
+   })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.LOGOUT_ALL_SUCCESS)
    async logoutAll(
       @CurrentUser() user: JwtPayload,
@@ -505,6 +630,11 @@ export class AuthController {
       description: 'Active sessions and devices retrieved successfully.',
       type: [DeviceSessionResponseDto],
    })
+   @ApiErrorResponse({
+      status: HttpStatus.UNAUTHORIZED,
+      description: 'Unauthorized access or invalid token',
+      errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED, AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED],
+   })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.GET_SESSIONS_SUCCESS)
    async getSessions(@CurrentUser() user: JwtPayload, @Req() req: Request): Promise<IUserSessionInfo[]> {
       const currentJti = this.extractCurrentJti(req);
@@ -521,6 +651,19 @@ export class AuthController {
    })
    @ApiParam({ name: 'sessionId', description: 'Session UUID to revoke', type: String })
    @ApiResponse({ status: 200, description: 'Session revoked successfully.' })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED, AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'Session not found or already revoked',
+         errorCodes: [AUTH_ERROR_CODES.SESSION_NOT_FOUND, AUTH_ERROR_CODES.SESSION_ALREADY_REVOKED],
+         exampleParams: { sessionId: '550e8400-e29b-41d4-a716-446655440000' },
+      },
+   ])
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.REVOKE_SESSION_SUCCESS)
    async revokeSession(
       @CurrentUser() user: JwtPayload,
@@ -540,6 +683,18 @@ export class AuthController {
          'Revoke and log out all other active sessions except the current device session. Supports both cookie and Bearer token authentication.',
    })
    @ApiResponse({ status: 200, description: 'All other sessions revoked successfully.' })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Current active session ID missing from request',
+         errorCodes: [AUTH_ERROR_CODES.CURRENT_SESSION_REQUIRED],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED, AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED],
+      },
+   ])
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.REVOKE_OTHER_SESSIONS_SUCCESS)
    async revokeOtherSessions(@CurrentUser() user: JwtPayload, @Req() req: Request): Promise<IRevokeSessionResult> {
       const currentJti = this.extractCurrentJti(req);
@@ -558,6 +713,7 @@ export class AuthController {
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({
+      operationId: 'initiateChangePassword',
       summary:
          'Initiate password change by validating current password and sending OTP verification code to account email.',
    })
@@ -565,8 +721,31 @@ export class AuthController {
       status: 200,
       description: 'Current password verified and OTP sent successfully',
       type: ChangePasswordResponseDto,
+      links: {
+         VerifyChangePasswordOtp: {
+            operationId: 'verifyChangePasswordOtp',
+            description: 'Verify the OTP code sent to email to finalize password change',
+         },
+      },
    })
-   @ApiResponse({ status: 400, description: 'Current password invalid, same as new password, or OTP cooldown active' })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Current password invalid, password unchanged, or OTP cooldown active',
+         errorCodes: [
+            AUTH_ERROR_CODES.INVALID_OLD_PASSWORD,
+            AUTH_ERROR_CODES.PASSWORD_UNCHANGED,
+            AUTH_ERROR_CODES.OTP_COOLDOWN_ACTIVE,
+            COMMON_ERROR_CODES.VALIDATION_FAILED,
+         ],
+         exampleParams: { cooldownSeconds: 60 },
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'User not found or unauthorized',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED, AUTH_ERROR_CODES.USER_NOT_FOUND],
+      },
+   ])
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.SEND_CHANGE_PASSWORD_OTP_SUCCESS)
    async changePassword(
       @CurrentUser() user: JwtPayload,
@@ -582,6 +761,7 @@ export class AuthController {
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({
+      operationId: 'verifyChangePasswordOtp',
       summary:
          'Verify OTP code and finalize password change, with automatic session revocation if logoutAll was selected.',
    })
@@ -590,7 +770,23 @@ export class AuthController {
       description: 'Password changed successfully via OTP verification',
       type: VerifyChangePasswordOtpResponseDto,
    })
-   @ApiResponse({ status: 400, description: 'OTP invalid, expired, or maximum attempts exceeded' })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'OTP invalid, expired, or maximum attempts exceeded',
+         errorCodes: [
+            AUTH_ERROR_CODES.OTP_INVALID,
+            AUTH_ERROR_CODES.OTP_EXPIRED,
+            AUTH_ERROR_CODES.OTP_MAX_ATTEMPTS_EXCEEDED,
+         ],
+         exampleParams: { remainingAttempts: 1 },
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+   ])
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.CHANGE_PASSWORD_SUCCESS)
    async verifyChangePasswordOtp(
       @CurrentUser() user: JwtPayload,
@@ -613,6 +809,7 @@ export class AuthController {
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({
+      operationId: 'getUserSecurityLogs',
       summary:
          'Get security audit logs for the current authenticated user (SOC 2, GDPR user access). Supports both cookie and Bearer token authentication.',
    })
@@ -620,6 +817,11 @@ export class AuthController {
       status: 200,
       description: 'User security audit logs retrieved successfully',
       type: [AuditLogResponseDto],
+   })
+   @ApiErrorResponse({
+      status: HttpStatus.UNAUTHORIZED,
+      description: 'Unauthorized access or invalid token',
+      errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED, AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED],
    })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.GET_SECURITY_LOGS_SUCCESS)
    async getSecurityLogs(
@@ -633,10 +835,15 @@ export class AuthController {
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({
+      operationId: 'getAuthProfile',
       summary: 'Get current authenticated user profile. Supports both cookie and Bearer token authentication.',
    })
    @ApiResponse({ status: 200, description: 'Current user profile returned.' })
-   @ApiResponse({ status: 401, description: 'Unauthorized if authentication is missing or invalid.' })
+   @ApiErrorResponse({
+      status: HttpStatus.UNAUTHORIZED,
+      description: 'Unauthorized if authentication is missing or invalid.',
+      errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED, AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED],
+   })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.GET_PROFILE_SUCCESS)
    getProfile(@CurrentUser() user: JwtPayload): JwtPayload {
       return user;

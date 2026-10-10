@@ -93,9 +93,6 @@ interface ExtendedError extends Error {
                      }
                      return error.message || `HTTP ${extendedReq.method || 'GET'} ${extendedReq.url || '/'} failed`;
                   },
-                  formatters: {
-                     level: (label: string) => ({ level: label }),
-                  },
                   timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
                   redact: {
                      paths: [

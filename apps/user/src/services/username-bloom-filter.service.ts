@@ -65,7 +65,7 @@ export class UsernameBloomFilterService implements OnModuleInit {
    }
 
    /**
-    * Add a newly registered/updated username to the Bloom Filter.
+    * Add a newly registered username to the Bloom Filter.
     */
    async addUsername(username: string): Promise<void> {
       const normalized = username.toLowerCase().trim();
@@ -73,18 +73,16 @@ export class UsernameBloomFilterService implements OnModuleInit {
    }
 
    /**
-    * Check if a username is available for registration / profile update.
+    * Check if a username is available for registration/update.
     * Uses Bloom filter first for fast path (0 DB queries when definitely available).
     */
    async isUsernameAvailable(username: string): Promise<boolean> {
       const normalized = username.toLowerCase().trim();
       const mightExist = await this.mightContain(normalized);
       if (!mightExist) {
-         // Definitely does not exist
          return true;
       }
 
-      // Might exist -> Verify against database to handle potential false positives
       const existingUser = await this.userRepository.findByUsername(normalized);
       return !existingUser;
    }
