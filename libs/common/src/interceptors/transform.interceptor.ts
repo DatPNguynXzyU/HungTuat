@@ -4,7 +4,7 @@ import type { Request, Response } from 'express';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { RESPONSE_MESSAGE_KEY } from '@common/decorators/response-message.decorator';
-import type { IBaseResponse, IPaginationMeta } from '@common/interfaces/response.interface';
+import type { IBaseResponse, IPaginationMeta, ICursorPaginationMeta } from '@common/interfaces/response.interface';
 import { CORRELATION_ID_HEADER, LOG_ACTION_KEY, REQUEST_ID_HEADER } from '@common/logger/logger.constants';
 
 interface LoggableRequest extends Request {
@@ -45,10 +45,10 @@ export class TransformInterceptor<T> implements NestInterceptor<T, IBaseResponse
       return next.handle().pipe(
          map((data: T) => {
             let responseData: T | null = data;
-            let meta: IPaginationMeta | undefined = undefined;
+            let meta: IPaginationMeta | ICursorPaginationMeta | undefined = undefined;
 
             if (data && typeof data === 'object' && 'items' in data && 'meta' in data) {
-               const paginated = data as { items: unknown; meta: IPaginationMeta };
+               const paginated = data as { items: unknown; meta: IPaginationMeta | ICursorPaginationMeta };
                responseData = paginated.items as T;
                meta = paginated.meta;
             }

@@ -6,6 +6,9 @@ import {
    USER_ERROR_CODES,
    UserDateOfBirthResponseDto,
    CloudinaryService,
+   ICursorPaginationMeta,
+   UserSearchResultItemDto,
+   UserSuggestionItemDto,
 } from '@common';
 import { Prisma } from '@user/prisma-client';
 import { UserRepository, FollowRepository, CreateUserData } from '@user/repositories';
@@ -633,14 +636,152 @@ export class UserService {
       return this.graphFollowRepository.getMutualFollowers(user1.id, user2.id);
    }
 
-   async getFollowSuggestions(userId: string, limit = 10): Promise<string[]> {
+   async getFollowSuggestions(userId: string, limit = 10): Promise<UserSuggestionItemDto[]> {
       const user = await this.getUserById(userId);
-      return this.graphFollowRepository.getFollowSuggestions(user.id, limit);
+
+      // 1. Get IDs of users current user is already following
+      const followingList = await this.followRepository.findFollowing(user.id, FollowStatus.ACCEPTED, 0, 1000);
+      const alreadyFollowingIds = new Set(followingList.map((f) => f.followingId));
+      alreadyFollowingIds.add(user.id);
+
+      // 2. Query Graph DB for 2-hop suggestions (friends of friends)
+      let graphCandidateIds: string[] = [];
+      try {
+         const rawGraphIds = await this.graphFollowRepository.getFollowSuggestions(user.id, limit * 2);
+         graphCandidateIds = rawGraphIds.filter((id) => !alreadyFollowingIds.has(id));
+      } catch (err) {
+         this.logger.warn(`Failed to retrieve graph follow suggestions for ${user.id}: ${String(err)}`);
+      }
+
+      const selectedGraphIds = Array.from(new Set(graphCandidateIds)).slice(0, limit);
+      const graphIdSet = new Set(selectedGraphIds);
+
+      // 3. Fallback: If graph didn't find enough candidates, fetch top popular users (Cold-start)
+      let popularUsers: UserEntity[] = [];
+      const neededCount = limit - selectedGraphIds.length;
+      if (neededCount > 0) {
+         const excludeIds = Array.from(new Set([...alreadyFollowingIds, ...selectedGraphIds]));
+         popularUsers = await this.userRepository.findTopUsers(neededCount, excludeIds);
+      }
+
+      // 4. Batch fetch entities for graph candidate IDs
+      const graphUserEntities =
+         selectedGraphIds.length > 0 ? await this.userRepository.findByIds(selectedGraphIds) : [];
+
+      const allCandidateEntities = [...graphUserEntities, ...popularUsers];
+      if (allCandidateEntities.length === 0) {
+         return [];
+      }
+
+      // 5. Fetch relations & mutual followers count
+      const candidateIds = allCandidateEntities.map((u) => u.id);
+      const { followerSet } = await this.followRepository.findFollowRelations(user.id, candidateIds);
+
+      const mutualCounts = new Map<string, number>();
+      await Promise.all(
+         allCandidateEntities.map(async (candidate) => {
+            if (graphIdSet.has(candidate.id)) {
+               try {
+                  const mutuals = await this.graphFollowRepository.getMutualFollowers(user.id, candidate.id);
+                  mutualCounts.set(candidate.id, mutuals.length);
+               } catch {
+                  mutualCounts.set(candidate.id, 0);
+               }
+            } else {
+               mutualCounts.set(candidate.id, 0);
+            }
+         }),
+      );
+
+      // 6. Map to UserSuggestionItemDto
+      return allCandidateEntities.map((candidate): UserSuggestionItemDto => {
+         const isGraphCandidate = graphIdSet.has(candidate.id);
+         return {
+            id: candidate.id,
+            username: candidate.username,
+            displayName: candidate.displayName,
+            avatar: candidate.avatar,
+            bio: candidate.bio,
+            isVerified: candidate.settings?.isVerified ?? false,
+            followersCount: candidate.stats?.followersCount ?? 0,
+            followingCount: candidate.stats?.followingCount ?? 0,
+            mutualCount: mutualCounts.get(candidate.id) ?? 0,
+            isFollowing: false,
+            isFollower: followerSet.has(candidate.id),
+            reason: isGraphCandidate ? 'mutual_friends' : 'popular',
+         };
+      });
    }
 
    // Elasticsearch User Search
-   async searchUsers(query: string, limit = 10, skip = 0) {
-      return this.userSearchService.searchUsers(query, limit, skip);
+   async searchUsers(
+      query: string,
+      limit = 10,
+      cursor?: string,
+      currentUserId?: string,
+   ): Promise<{ items: UserSearchResultItemDto[]; meta: ICursorPaginationMeta }> {
+      const {
+         items: esUsers,
+         nextCursor,
+         hasMore,
+         total,
+      } = await this.userSearchService.searchUsers(query, limit, cursor);
+
+      if (esUsers.length === 0) {
+         return {
+            items: [],
+            meta: {
+               nextCursor: null,
+               hasMore: false,
+               limit,
+               total: total ?? 0,
+            },
+         };
+      }
+
+      let resolvedCurrentUserId = currentUserId;
+      if (currentUserId) {
+         try {
+            const currentUser = await this.getUserById(currentUserId);
+            resolvedCurrentUserId = currentUser.id;
+         } catch {
+            // Keep currentUserId as-is
+         }
+      }
+
+      const targetUserIds = esUsers.map((u) => u.id);
+      let followingSet = new Set<string>();
+      let followerSet = new Set<string>();
+
+      if (resolvedCurrentUserId) {
+         const relations = await this.followRepository.findFollowRelations(resolvedCurrentUserId, targetUserIds);
+         followingSet = relations.followingSet;
+         followerSet = relations.followerSet;
+      }
+
+      const items: UserSearchResultItemDto[] = esUsers.map((user) => ({
+         id: user.id,
+         username: user.username,
+         displayName: user.displayName,
+         avatar: user.avatar,
+         bio: user.bio,
+         isVerified: user.isVerified ?? false,
+         followersCount: user.followersCount ?? 0,
+         followingCount: user.followingCount ?? 0,
+         isFollowing: resolvedCurrentUserId ? followingSet.has(user.id) : false,
+         isFollower: resolvedCurrentUserId ? followerSet.has(user.id) : false,
+         isSelf: resolvedCurrentUserId ? resolvedCurrentUserId === user.id : false,
+      }));
+
+      return {
+         items,
+         meta: {
+            nextCursor,
+            hasMore,
+            limit,
+            total,
+         },
+      };
    }
 
    // Cloudinary Avatar Management

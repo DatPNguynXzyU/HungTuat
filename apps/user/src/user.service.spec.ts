@@ -25,6 +25,8 @@ describe('UserService', () => {
       incrementFollowingCount: jest.fn(),
       decrementFollowingCount: jest.fn(),
       findDateOfBirth: jest.fn(),
+      findByIds: jest.fn().mockResolvedValue([]),
+      findTopUsers: jest.fn().mockResolvedValue([]),
    };
    const mockFollowRepository = {
       create: jest.fn(),
@@ -32,12 +34,16 @@ describe('UserService', () => {
       findByFollowerAndFollowing: jest.fn(),
       findAllActive: jest.fn(),
       findFollowers: jest.fn(),
-      findFollowing: jest.fn(),
+      findFollowing: jest.fn().mockResolvedValue([]),
       countFollowers: jest.fn(),
       countFollowing: jest.fn(),
       updateStatus: jest.fn(),
       softDelete: jest.fn(),
       restore: jest.fn(),
+      findFollowRelations: jest.fn().mockResolvedValue({
+         followingSet: new Set<string>(),
+         followerSet: new Set<string>(),
+      }),
    };
    const mockOutboxService = {
       createOutboxEvent: jest.fn().mockResolvedValue({ id: 'outbox-1' }),
@@ -52,8 +58,8 @@ describe('UserService', () => {
       getFollowing: jest.fn(),
       countFollowers: jest.fn(),
       countFollowing: jest.fn(),
-      getMutualFollowers: jest.fn(),
-      getFollowSuggestions: jest.fn(),
+      getMutualFollowers: jest.fn().mockResolvedValue([]),
+      getFollowSuggestions: jest.fn().mockResolvedValue([]),
    };
    const mockUserGraphSyncService = {
       syncUserToGraph: jest.fn().mockResolvedValue(undefined),
@@ -68,7 +74,7 @@ describe('UserService', () => {
       indexUser: jest.fn().mockResolvedValue(undefined),
       updateUser: jest.fn().mockResolvedValue(undefined),
       deleteUser: jest.fn().mockResolvedValue(undefined),
-      searchUsers: jest.fn().mockResolvedValue([]),
+      searchUsers: jest.fn().mockResolvedValue({ items: [], nextCursor: null, hasMore: false, total: 0 }),
    };
    const mockCloudinaryService = {
       uploadBase64: jest.fn().mockResolvedValue({
@@ -429,6 +435,111 @@ describe('UserService', () => {
          const now = new Date();
          const exactly20YearsAgo = new Date(now.getFullYear() - 20, now.getMonth(), now.getDate());
          expect(service.calculateAge(exactly20YearsAgo)).toBe(20);
+      });
+   });
+
+   describe('getFollowSuggestions', () => {
+      it('should return suggestions from graph analysis and fallback to popular users', async () => {
+         const mockCurrentUser = new UserEntity({
+            id: 'current-user-1',
+            accountId: 'acc-1',
+            username: 'current_user',
+            status: UserStatus.ACTIVE,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+         });
+         mockUserRepository.findById.mockResolvedValue(mockCurrentUser);
+         mockFollowRepository.findFollowing.mockResolvedValue([]);
+
+         mockGraphFollowRepository.getFollowSuggestions.mockResolvedValue(['friend-1']);
+         const graphUser = new UserEntity({
+            id: 'friend-1',
+            accountId: 'acc-2',
+            username: 'graph_friend',
+            status: UserStatus.ACTIVE,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+         });
+         mockUserRepository.findByIds.mockResolvedValue([graphUser]);
+
+         const popularUser = new UserEntity({
+            id: 'popular-1',
+            accountId: 'acc-3',
+            username: 'popular_user',
+            status: UserStatus.ACTIVE,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+         });
+         mockUserRepository.findTopUsers.mockResolvedValue([popularUser]);
+
+         mockFollowRepository.findFollowRelations.mockResolvedValue({
+            followingSet: new Set<string>(),
+            followerSet: new Set<string>(['friend-1']),
+         });
+         mockGraphFollowRepository.getMutualFollowers.mockResolvedValue(['mutual-user-1', 'mutual-user-2']);
+
+         const results = await service.getFollowSuggestions('current-user-1', 2);
+
+         expect(results).toHaveLength(2);
+         expect(results[0].id).toBe('friend-1');
+         expect(results[0].reason).toBe('mutual_friends');
+         expect(results[0].mutualCount).toBe(2);
+         expect(results[0].isFollower).toBe(true);
+         expect(results[0].isFollowing).toBe(false);
+
+         expect(results[1].id).toBe('popular-1');
+         expect(results[1].reason).toBe('popular');
+         expect(results[1].mutualCount).toBe(0);
+      });
+   });
+
+   describe('searchUsers', () => {
+      it('should return paginated user search results enriched with follow relation flags', async () => {
+         mockUserSearchService.searchUsers.mockResolvedValue({
+            items: [
+               {
+                  id: 'user-match-1',
+                  username: 'alex_test',
+                  displayName: 'Alex Test',
+                  avatar: 'https://cdn.example.com/avatar.jpg',
+                  bio: 'Developer',
+                  isVerified: true,
+                  followersCount: 50,
+                  followingCount: 20,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+               },
+            ],
+            total: 1,
+            nextCursor: 'mock_next_cursor',
+            hasMore: true,
+         });
+
+         const mockCaller = new UserEntity({
+            id: 'caller-user-id',
+            accountId: 'caller-acc',
+            username: 'caller',
+            status: UserStatus.ACTIVE,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+         });
+         mockUserRepository.findById.mockResolvedValue(mockCaller);
+
+         mockFollowRepository.findFollowRelations.mockResolvedValue({
+            followingSet: new Set<string>(['user-match-1']),
+            followerSet: new Set<string>(),
+         });
+
+         const result = await service.searchUsers('alex', 10, 'initial_cursor', 'caller-user-id');
+
+         expect(result.items).toHaveLength(1);
+         expect(result.items[0].username).toBe('alex_test');
+         expect(result.items[0].isFollowing).toBe(true);
+         expect(result.items[0].isFollower).toBe(false);
+         expect(result.items[0].isSelf).toBe(false);
+         expect(result.meta.nextCursor).toBe('mock_next_cursor');
+         expect(result.meta.hasMore).toBe(true);
+         expect(result.meta.total).toBe(1);
       });
    });
 });

@@ -557,9 +557,12 @@ export class UserController {
 
    // Search Users via Elasticsearch
    @MessagePattern({ cmd: USER_PATTERNS.SEARCH_USERS })
-   async searchUsers(@Payload() data: { query: string; limit?: number; skip?: number }, @Ctx() context?: RmqContext) {
+   async searchUsers(
+      @Payload() data: { query: string; limit?: number; cursor?: string; currentUserId?: string },
+      @Ctx() context?: RmqContext,
+   ) {
       try {
-         const result = await this.userService.searchUsers(data.query, data.limit, data.skip);
+         const result = await this.userService.searchUsers(data.query, data.limit, data.cursor, data.currentUserId);
          if (context) {
             this.rmqService.ack(context);
          }

@@ -49,6 +49,50 @@ export class FollowRepository {
       return follows.map((follow) => new FollowEntity(follow));
    }
 
+   async findFollowRelations(
+      currentUserId: string,
+      targetUserIds: string[],
+   ): Promise<{ followingSet: Set<string>; followerSet: Set<string> }> {
+      const followingSet = new Set<string>();
+      const followerSet = new Set<string>();
+
+      if (!currentUserId || !targetUserIds || targetUserIds.length === 0) {
+         return { followingSet, followerSet };
+      }
+
+      const follows = await this.prisma.follow.findMany({
+         where: {
+            deletedAt: null,
+            status: FollowStatus.ACCEPTED,
+            OR: [
+               {
+                  followerId: currentUserId,
+                  followingId: { in: targetUserIds },
+               },
+               {
+                  followerId: { in: targetUserIds },
+                  followingId: currentUserId,
+               },
+            ],
+         },
+         select: {
+            followerId: true,
+            followingId: true,
+         },
+      });
+
+      for (const follow of follows) {
+         if (follow.followerId === currentUserId) {
+            followingSet.add(follow.followingId);
+         }
+         if (follow.followingId === currentUserId) {
+            followerSet.add(follow.followerId);
+         }
+      }
+
+      return { followingSet, followerSet };
+   }
+
    async findFollowers(userId: string, status?: FollowStatus, skip = 0, take = 20): Promise<FollowEntity[]> {
       const follows = await this.prisma.follow.findMany({
          where: {

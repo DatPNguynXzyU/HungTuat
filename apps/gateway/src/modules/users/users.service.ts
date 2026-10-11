@@ -115,12 +115,20 @@ export class UsersService {
       return this.updateUser(user.sub, updateUserDto, user);
    }
 
-   async searchUsers(query: string, limit = 10, page = 1): Promise<unknown> {
-      const skip = (page - 1) * limit;
+   async searchUsers(query: string, limit = 10, cursor?: string, user?: JwtPayload): Promise<unknown> {
       return firstValueFrom(
-         this.userClient.send<unknown, { query: string; limit: number; skip: number }>(
+         this.userClient.send<unknown, { query: string; limit: number; cursor?: string; currentUserId?: string }>(
             { cmd: USER_PATTERNS.SEARCH_USERS },
-            { query, limit, skip },
+            { query, limit, cursor, currentUserId: user?.sub },
+         ),
+      );
+   }
+
+   async getFollowSuggestions(limit = 10, user: JwtPayload): Promise<unknown> {
+      return firstValueFrom(
+         this.userClient.send<unknown, { userId: string; limit: number }>(
+            { cmd: USER_PATTERNS.GET_FOLLOW_SUGGESTIONS },
+            { userId: user.sub, limit },
          ),
       );
    }

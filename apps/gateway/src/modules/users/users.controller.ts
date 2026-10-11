@@ -25,17 +25,25 @@ import {
 import {
    ApiErrorResponse,
    ApiErrorResponses,
+   AvatarSignatureResponseDto,
    BadRequestException,
+   CheckUsernameResponseDto,
    COMMON_ERROR_CODES,
    CreateUserProfileDto,
    CurrentUser,
    Public,
    ResponseMessage,
    UpdateUserDto,
-   UserDateOfBirthResponseDto,
    USER_ERROR_CODES,
    USER_ERROR_REASONS,
    USER_RESPONSE_MESSAGES,
+   UserAvatarUploadResponseDto,
+   UserDateOfBirthResponseDto,
+   UserResponseDto,
+   UserSearchQueryDto,
+   UserSearchResponseDto,
+   UserSuggestionItemDto,
+   UserSuggestionQueryDto,
 } from '@common';
 import { UsersService } from '@/modules/users/users.service';
 import type { JwtPayload } from '@common/utils/jwt.util';
@@ -47,9 +55,16 @@ export class UsersController {
 
    @Public()
    @Get('check-username')
-   @ApiOperation({ summary: 'Check if a username is available using fast Bloom Filter' })
+   @ApiOperation({
+      operationId: 'checkUsername',
+      summary: 'Check if a username is available using fast Bloom Filter',
+   })
    @ApiQuery({ name: 'username', required: true, description: 'Username to verify availability', example: 'john_doe' })
-   @ApiResponse({ status: 200, description: 'Username availability status returned.' })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Username availability status returned successfully.',
+      type: CheckUsernameResponseDto,
+   })
    @ApiErrorResponse({
       status: HttpStatus.BAD_REQUEST,
       description: 'Username query parameter is missing or has invalid format',
@@ -57,7 +72,7 @@ export class UsersController {
       exampleParams: { reason: USER_ERROR_REASONS.USERNAME_REQUIRED },
    })
    @ResponseMessage(USER_RESPONSE_MESSAGES.CHECK_USERNAME_SUCCESS)
-   async checkUsername(@Query('username') username: string): Promise<{ available: boolean; username: string }> {
+   async checkUsername(@Query('username') username: string): Promise<CheckUsernameResponseDto> {
       if (!username || !username.trim()) {
          throw new BadRequestException(USER_ERROR_CODES.INVALID_USERNAME_FORMAT, {
             params: { reason: USER_ERROR_REASONS.USERNAME_REQUIRED },
@@ -68,23 +83,59 @@ export class UsersController {
 
    @Public()
    @Get('search')
-   @ApiOperation({ summary: 'Search users by name or username using Elasticsearch' })
-   @ApiQuery({ name: 'q', required: true, description: 'Search keyword', example: 'alex' })
-   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-   @ApiResponse({ status: 200, description: 'Matching users returned successfully.' })
+   @ApiOperation({
+      operationId: 'searchUsers',
+      summary: 'Search users by name or username using Elasticsearch with relevance boosting',
+      description:
+         'Search users using Elasticsearch inverted index with typo-tolerance, boosting username and displayName over bio. Automatically includes follow relationship flags for authenticated callers.',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Matching users returned successfully with cursor pagination metadata for infinite scroll.',
+      type: UserSearchResponseDto,
+   })
    @ApiErrorResponse({
       status: HttpStatus.BAD_REQUEST,
-      description: 'Invalid pagination or search query parameters',
+      description: 'Invalid search query or cursor parameters',
       errorCodes: [COMMON_ERROR_CODES.INVALID_REQUEST, COMMON_ERROR_CODES.VALIDATION_FAILED],
    })
    @ResponseMessage(USER_RESPONSE_MESSAGES.SEARCH_SUCCESS)
-   async searchUsers(
-      @Query('q') query: string,
-      @Query('page') page = '1',
-      @Query('limit') limit = '10',
+   async searchUsers(@Query() queryDto: UserSearchQueryDto, @CurrentUser() user?: JwtPayload): Promise<unknown> {
+      return this.usersService.searchUsers(queryDto.q, queryDto.limit, queryDto.cursor, user);
+   }
+
+   @Get('suggestions')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({
+      operationId: 'getFollowSuggestions',
+      summary: 'Get personalized friend and follow suggestions',
+      description:
+         'Retrieves friend suggestions using social graph 2-hop analysis (mutual connections), with automatic fallback to popular active users for new accounts (cold-start mitigation).',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Personalized user suggestions returned successfully.',
+      type: [UserSuggestionItemDto],
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Invalid suggestion query parameters',
+         errorCodes: [COMMON_ERROR_CODES.INVALID_REQUEST, COMMON_ERROR_CODES.VALIDATION_FAILED],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+   ])
+   @ResponseMessage(USER_RESPONSE_MESSAGES.GET_SUGGESTIONS_SUCCESS)
+   async getFollowSuggestions(
+      @Query() queryDto: UserSuggestionQueryDto,
+      @CurrentUser() user: JwtPayload,
    ): Promise<unknown> {
-      return this.usersService.searchUsers(query || '', Number(limit), Number(page));
+      return this.usersService.getFollowSuggestions(queryDto.limit, user);
    }
 
    @Post('profile')
@@ -95,8 +146,9 @@ export class UsersController {
       summary: 'Create initial user profile for the current authenticated user',
    })
    @ApiResponse({
-      status: 201,
+      status: HttpStatus.CREATED,
       description: 'User profile created successfully.',
+      type: UserResponseDto,
       links: {
          GetMyProfile: {
             operationId: 'getMyUserProfile',
@@ -133,10 +185,17 @@ export class UsersController {
    @Get()
    @ApiCookieAuth()
    @ApiBearerAuth()
-   @ApiOperation({ summary: 'Get list of users' })
+   @ApiOperation({
+      operationId: 'getAllUsers',
+      summary: 'Get list of users',
+   })
    @ApiQuery({ name: 'page', required: false, type: Number })
    @ApiQuery({ name: 'limit', required: false, type: Number })
-   @ApiResponse({ status: 200, description: 'List of users returned.' })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'List of users returned.',
+      type: [UserResponseDto],
+   })
    @ApiErrorResponses([
       {
          status: HttpStatus.BAD_REQUEST,
@@ -165,7 +224,11 @@ export class UsersController {
       operationId: 'getMyUserProfile',
       summary: 'Get current authenticated user profile, statistics, and settings',
    })
-   @ApiResponse({ status: 200, description: 'Current user profile returned successfully' })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Current user profile returned successfully.',
+      type: UserResponseDto,
+   })
    @ApiErrorResponses([
       {
          status: HttpStatus.UNAUTHORIZED,
@@ -219,9 +282,14 @@ export class UsersController {
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({
+      operationId: 'updateMyProfile',
       summary: 'Update current authenticated user profile (displayName, username, gender, dateOfBirth, bio, etc.)',
    })
-   @ApiResponse({ status: 200, description: 'User profile updated successfully.' })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'User profile updated successfully.',
+      type: UserResponseDto,
+   })
    @ApiErrorResponses([
       {
          status: HttpStatus.BAD_REQUEST,
@@ -272,8 +340,9 @@ export class UsersController {
       },
    })
    @ApiResponse({
-      status: 200,
+      status: HttpStatus.OK,
       description: 'Avatar uploaded and updated successfully.',
+      type: UserAvatarUploadResponseDto,
       links: {
          GetMyProfile: {
             operationId: 'getMyUserProfile',
@@ -324,8 +393,15 @@ export class UsersController {
    @Get('me/avatar/signature')
    @ApiCookieAuth()
    @ApiBearerAuth()
-   @ApiOperation({ summary: 'Get signed upload signature for direct client-to-Cloudinary upload' })
-   @ApiResponse({ status: 200, description: 'Signed upload parameters generated successfully.' })
+   @ApiOperation({
+      operationId: 'getMyAvatarSignature',
+      summary: 'Get signed upload signature for direct client-to-Cloudinary upload',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Signed upload parameters generated successfully.',
+      type: AvatarSignatureResponseDto,
+   })
    @ApiErrorResponses([
       {
          status: HttpStatus.UNAUTHORIZED,
@@ -388,9 +464,16 @@ export class UsersController {
    @Get(':id')
    @ApiCookieAuth()
    @ApiBearerAuth()
-   @ApiOperation({ summary: 'Get user details by ID' })
+   @ApiOperation({
+      operationId: 'getUserById',
+      summary: 'Get user details by ID',
+   })
    @ApiParam({ name: 'id', description: 'User UUID identifier', example: '550e8400-e29b-41d4-a716-446655440000' })
-   @ApiResponse({ status: 200, description: 'User details returned.' })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'User details returned successfully.',
+      type: UserResponseDto,
+   })
    @ApiErrorResponses([
       {
          status: HttpStatus.BAD_REQUEST,
@@ -417,9 +500,16 @@ export class UsersController {
    @Patch(':id')
    @ApiCookieAuth()
    @ApiBearerAuth()
-   @ApiOperation({ summary: 'Update user profile by ID' })
+   @ApiOperation({
+      operationId: 'updateUser',
+      summary: 'Update user profile by ID',
+   })
    @ApiParam({ name: 'id', description: 'User UUID identifier', example: '550e8400-e29b-41d4-a716-446655440000' })
-   @ApiResponse({ status: 200, description: 'User updated successfully.' })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'User updated successfully.',
+      type: UserResponseDto,
+   })
    @ApiErrorResponses([
       {
          status: HttpStatus.BAD_REQUEST,

@@ -166,6 +166,37 @@ export class UserRepository {
       return users.map((user) => new UserEntity(user));
    }
 
+   async findByIds(ids: string[]): Promise<UserEntity[]> {
+      if (!ids || ids.length === 0) {
+         return [];
+      }
+      const users = await this.prisma.user.findMany({
+         where: {
+            id: { in: ids },
+            deletedAt: null,
+            status: UserStatus.ACTIVE,
+         },
+         include: userIncludeRelations,
+      });
+      return users.map((user) => new UserEntity(user));
+   }
+
+   async findTopUsers(limit = 10, excludeUserIds: string[] = []): Promise<UserEntity[]> {
+      const users = await this.prisma.user.findMany({
+         where: {
+            deletedAt: null,
+            status: UserStatus.ACTIVE,
+            ...(excludeUserIds.length > 0 && {
+               id: { notIn: excludeUserIds },
+            }),
+         },
+         take: limit,
+         orderBy: [{ stats: { followersCount: 'desc' } }, { createdAt: 'desc' }],
+         include: userIncludeRelations,
+      });
+      return users.map((user) => new UserEntity(user));
+   }
+
    async update(id: string, data: UpdateUserData): Promise<UserEntity> {
       const {
          username,

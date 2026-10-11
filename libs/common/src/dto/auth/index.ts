@@ -9,3 +9,8 @@ export * from '@common/dto/auth/verify-register-otp.dto';
 export * from '@common/dto/auth/send-change-password-otp.dto';
 export * from '@common/dto/auth/verify-change-password-otp.dto';
 export * from '@common/dto/auth/user-email-response.dto';
+export * from '@common/dto/auth/check-email-response.dto';
+export * from '@common/dto/auth/jwks-response.dto';
+export * from '@common/dto/auth/simple-success-response.dto';
+export * from '@common/dto/auth/revoke-session-result.dto';
+export * from '@common/dto/auth/auth-profile-response.dto';

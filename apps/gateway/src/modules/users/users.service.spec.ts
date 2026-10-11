@@ -132,4 +132,28 @@ describe('UsersService', () => {
       expect(mockUserClient.send).toHaveBeenCalledWith({ cmd: USER_PATTERNS.GET_DATE_OF_BIRTH }, { userId: 'u1' });
       expect(result).toEqual(mockDob);
    });
+
+   it('should send search_users message with query, limit, cursor, and currentUserId', async () => {
+      const mockSearchRes = { items: [], meta: { nextCursor: null, hasMore: false, limit: 10, total: 0 } };
+      mockUserClient.send.mockReturnValue(of(mockSearchRes));
+
+      const result = await service.searchUsers('alex', 10, 'cursor_val', mockUser);
+      expect(mockUserClient.send).toHaveBeenCalledWith(
+         { cmd: USER_PATTERNS.SEARCH_USERS },
+         { query: 'alex', limit: 10, cursor: 'cursor_val', currentUserId: mockUser.sub },
+      );
+      expect(result).toEqual(mockSearchRes);
+   });
+
+   it('should send get_follow_suggestions message with userId and limit', async () => {
+      const mockSuggestions = [{ id: 'u2', username: 'alex' }];
+      mockUserClient.send.mockReturnValue(of(mockSuggestions));
+
+      const result = await service.getFollowSuggestions(10, mockUser);
+      expect(mockUserClient.send).toHaveBeenCalledWith(
+         { cmd: USER_PATTERNS.GET_FOLLOW_SUGGESTIONS },
+         { userId: mockUser.sub, limit: 10 },
+      );
+      expect(result).toEqual(mockSuggestions);
+   });
 });

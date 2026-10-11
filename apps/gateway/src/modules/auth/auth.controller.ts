@@ -31,11 +31,13 @@ import {
    AUTH_ERROR_CODES,
    AUTH_ERROR_REASONS,
    AUTH_RESPONSE_MESSAGES,
+   AuthProfileResponseDto,
    AuthResponseDto,
    AuthTokensDto,
    BadRequestException,
    ChangePasswordDto,
    ChangePasswordResponseDto,
+   CheckEmailResponseDto,
    COMMON_ERROR_CODES,
    CurrentAccount,
    CurrentUser,
@@ -44,7 +46,9 @@ import {
    IAuditLogListResult,
    IDeviceInfo,
    IJwksResponse,
+   IRevokeSessionResult,
    IUserSessionInfo,
+   JwksResponseDto,
    JwtUtil,
    LoginDto,
    PaginationQueryDto,
@@ -52,9 +56,11 @@ import {
    RefreshTokenRequestDto,
    RegisterDto,
    ResponseMessage,
+   RevokeSessionResultDto,
    RevokeTokenRequestDto,
    SendRegisterOtpDto,
    SendRegisterOtpResponseDto,
+   SimpleSuccessResponseDto,
    UnauthorizedException,
    UserEmailResponseDto,
    VerifyChangePasswordOtpDto,
@@ -62,7 +68,7 @@ import {
    VerifyRegisterOtpDto,
    VerifyRegisterOtpResponseDto,
 } from '@common';
-import type { IRevokeSessionResult, JwtPayload } from '@common';
+import type { JwtPayload } from '@common';
 import { GatewayConfigService } from '@/config';
 import { AuthService } from '@/modules/auth/auth.service';
 
@@ -159,8 +165,15 @@ export class AuthController {
    @Public()
    @Get('.well-known/jwks.json')
    @HttpCode(HttpStatus.OK)
-   @ApiOperation({ summary: 'Get JSON Web Key Set (JWKS) public keys for JWT RS256 token verification' })
-   @ApiResponse({ status: 200, description: 'JWKS public keys returned successfully.' })
+   @ApiOperation({
+      operationId: 'getJwks',
+      summary: 'Get JSON Web Key Set (JWKS) public keys for JWT RS256 token verification',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'JWKS public keys returned successfully.',
+      type: JwksResponseDto,
+   })
    async getJwks(): Promise<IJwksResponse> {
       try {
          return await this.authService.getJwks();
@@ -173,8 +186,15 @@ export class AuthController {
    @Public()
    @Get('jwks.json')
    @HttpCode(HttpStatus.OK)
-   @ApiOperation({ summary: 'Get JSON Web Key Set (JWKS) public keys (alias)' })
-   @ApiResponse({ status: 200, description: 'JWKS public keys returned successfully.' })
+   @ApiOperation({
+      operationId: 'getJwksAlias',
+      summary: 'Get JSON Web Key Set (JWKS) public keys (alias)',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'JWKS public keys returned successfully.',
+      type: JwksResponseDto,
+   })
    async getJwksAlias(): Promise<IJwksResponse> {
       return this.getJwks();
    }
@@ -183,6 +203,7 @@ export class AuthController {
    @Get('check-email')
    @HttpCode(HttpStatus.OK)
    @ApiOperation({
+      operationId: 'checkEmail',
       summary: 'Check if an email is available for registration using fast Bloom Filter',
    })
    @ApiQuery({
@@ -192,8 +213,9 @@ export class AuthController {
       example: 'user@example.com',
    })
    @ApiResponse({
-      status: 200,
+      status: HttpStatus.OK,
       description: 'Email availability status returned.',
+      type: CheckEmailResponseDto,
    })
    @ApiErrorResponse({
       status: HttpStatus.BAD_REQUEST,
@@ -202,7 +224,7 @@ export class AuthController {
       exampleParams: { reason: AUTH_ERROR_REASONS.EMAIL_REQUIRED },
    })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.CHECK_EMAIL_SUCCESS)
-   async checkEmail(@Query('email') email: string): Promise<{ available: boolean; email: string }> {
+   async checkEmail(@Query('email') email: string): Promise<CheckEmailResponseDto> {
       if (!email || !email.trim()) {
          throw new BadRequestException(AUTH_ERROR_CODES.INVALID_EMAIL_FORMAT, {
             params: { reason: AUTH_ERROR_REASONS.EMAIL_REQUIRED },
@@ -511,6 +533,7 @@ export class AuthController {
    @HttpCode(HttpStatus.OK)
    @ApiBearerAuth()
    @ApiOperation({
+      operationId: 'revokeToken',
       summary:
          'Revoke active token. Accepts token from cookie, Authorization header, or request body. Clears all auth cookies.',
    })
@@ -520,7 +543,11 @@ export class AuthController {
       description: 'Refresh token to revoke (alternative to cookie or Authorization header)',
       example: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...',
    })
-   @ApiResponse({ status: 200, description: 'Token revoked and cookies cleared successfully.' })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Token revoked and cookies cleared successfully.',
+      type: SimpleSuccessResponseDto,
+   })
    @ApiErrorResponse({
       status: HttpStatus.UNAUTHORIZED,
       description: 'Token invalid or expired',
@@ -533,7 +560,7 @@ export class AuthController {
       @Body() body: RevokeTokenRequestDto,
       @Headers('authorization') authHeader?: string,
       @Headers('x-refresh-token') headerRefreshToken?: string,
-   ): Promise<{ success: boolean; message: string }> {
+   ): Promise<SimpleSuccessResponseDto> {
       const cookies = req.cookies as Record<string, string> | undefined;
 
       let token =
@@ -562,10 +589,15 @@ export class AuthController {
    @HttpCode(HttpStatus.OK)
    @ApiBearerAuth()
    @ApiOperation({
+      operationId: 'logout',
       summary:
          'User logout. Accepts token from cookie or Authorization header. Revokes refresh token and clears auth cookies.',
    })
-   @ApiResponse({ status: 200, description: 'User successfully logged out.' })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'User successfully logged out.',
+      type: SimpleSuccessResponseDto,
+   })
    @ApiErrorResponse({
       status: HttpStatus.UNAUTHORIZED,
       description: 'Authentication token missing or expired',
@@ -576,7 +608,7 @@ export class AuthController {
       @Req() req: Request,
       @Res({ passthrough: true }) res: Response,
       @Headers('authorization') authHeader?: string,
-   ): Promise<{ success: boolean; message: string }> {
+   ): Promise<SimpleSuccessResponseDto> {
       const cookies = req.cookies as Record<string, string> | undefined;
       let refreshToken = cookies?.[AUTH_COOKIES.REFRESH_TOKEN];
 
@@ -600,9 +632,14 @@ export class AuthController {
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({
+      operationId: 'logoutAll',
       summary: 'Revoke all sessions/tokens for the current user across all devices and clear auth cookies',
    })
-   @ApiResponse({ status: 200, description: 'All user sessions logged out successfully.' })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'All user sessions logged out successfully.',
+      type: SimpleSuccessResponseDto,
+   })
    @ApiErrorResponse({
       status: HttpStatus.UNAUTHORIZED,
       description: 'Unauthorized access or invalid token',
@@ -613,13 +650,14 @@ export class AuthController {
       @CurrentUser() user: JwtPayload,
       @Req() req: Request,
       @Res({ passthrough: true }) res: Response,
-   ): Promise<void> {
+   ): Promise<SimpleSuccessResponseDto> {
       const deviceInfo = this.extractDeviceInfo(req);
       if (user?.sub) {
          await this.authService.logoutAll(user.sub, deviceInfo);
       }
 
       this.clearAuthCookies(res);
+      return { success: true, message: AUTH_RESPONSE_MESSAGES.LOGOUT_ALL_SUCCESS };
    }
 
    @Get('sessions')
@@ -627,6 +665,7 @@ export class AuthController {
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({
+      operationId: 'getUserSessions',
       summary:
          'Get list of all active sessions and logged-in devices for the current user. Supports both cookie and Bearer token authentication.',
    })
@@ -651,11 +690,16 @@ export class AuthController {
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({
+      operationId: 'revokeSession',
       summary:
          'Revoke and log out a specific session/device by session ID. Supports both cookie and Bearer token authentication.',
    })
    @ApiParam({ name: 'sessionId', description: 'Session UUID to revoke', type: String })
-   @ApiResponse({ status: 200, description: 'Session revoked successfully.' })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Session revoked successfully.',
+      type: SimpleSuccessResponseDto,
+   })
    @ApiErrorResponses([
       {
          status: HttpStatus.UNAUTHORIZED,
@@ -674,9 +718,10 @@ export class AuthController {
       @CurrentUser() user: JwtPayload,
       @Param('sessionId') sessionId: string,
       @Req() req: Request,
-   ): Promise<void> {
+   ): Promise<SimpleSuccessResponseDto> {
       const deviceInfo = this.extractDeviceInfo(req);
       await this.authService.revokeSession(user.sub, sessionId, deviceInfo);
+      return { success: true, message: AUTH_RESPONSE_MESSAGES.REVOKE_SESSION_SUCCESS };
    }
 
    @Post('sessions/revoke-others')
@@ -684,10 +729,15 @@ export class AuthController {
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({
+      operationId: 'revokeOtherSessions',
       summary:
          'Revoke and log out all other active sessions except the current device session. Supports both cookie and Bearer token authentication.',
    })
-   @ApiResponse({ status: 200, description: 'All other sessions revoked successfully.' })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'All other sessions revoked successfully.',
+      type: RevokeSessionResultDto,
+   })
    @ApiErrorResponses([
       {
          status: HttpStatus.BAD_REQUEST,
@@ -875,14 +925,18 @@ export class AuthController {
       operationId: 'getAuthProfile',
       summary: 'Get current authenticated user profile. Supports both cookie and Bearer token authentication.',
    })
-   @ApiResponse({ status: 200, description: 'Current user profile returned.' })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Current user profile returned.',
+      type: AuthProfileResponseDto,
+   })
    @ApiErrorResponse({
       status: HttpStatus.UNAUTHORIZED,
       description: 'Unauthorized if authentication is missing or invalid.',
       errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED, AUTH_ERROR_CODES.TOKEN_INVALID_OR_EXPIRED],
    })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.GET_PROFILE_SUCCESS)
-   getProfile(@CurrentUser() user: JwtPayload): JwtPayload {
+   getProfile(@CurrentUser() user: JwtPayload): AuthProfileResponseDto {
       return user;
    }
 }

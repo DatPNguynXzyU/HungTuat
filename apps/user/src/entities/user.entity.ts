@@ -7,7 +7,7 @@ import {
    UserStatus,
 } from '@user/prisma-client';
 
-export class UserProfileEntity implements PrismaUserProfile {
+export class UserProfileEntity implements Omit<PrismaUserProfile, 'dateOfBirth' | 'gender'> {
    id: string;
    userId: string;
    displayName: string | null;
@@ -16,13 +16,14 @@ export class UserProfileEntity implements PrismaUserProfile {
    coverImage: string | null;
    website: string | null;
    location: string | null;
-   dateOfBirth: Date | null;
-   gender: Gender | null;
    createdAt: Date;
    updatedAt: Date;
 
-   constructor(partial: Partial<UserProfileEntity>) {
-      Object.assign(this, partial);
+   constructor(partial: Partial<PrismaUserProfile>) {
+      const rest = { ...partial };
+      delete (rest as { dateOfBirth?: unknown }).dateOfBirth;
+      delete (rest as { gender?: unknown }).gender;
+      Object.assign(this, rest);
    }
 }
 
@@ -32,6 +33,7 @@ export class UserStatsEntity implements PrismaUserStats {
    followersCount: number;
    followingCount: number;
    postsCount: number;
+   recipesCount: number;
    createdAt: Date;
    updatedAt: Date;
 
@@ -52,6 +54,14 @@ export class UserSettingsEntity implements PrismaUserSettings {
       Object.assign(this, partial);
    }
 }
+
+export type UserEntityInput = Partial<Omit<UserEntity, 'profile' | 'stats' | 'settings'>> & {
+   dateOfBirth?: unknown;
+   gender?: unknown;
+   profile?: Partial<PrismaUserProfile> | UserProfileEntity | null;
+   stats?: Partial<PrismaUserStats> | UserStatsEntity | null;
+   settings?: Partial<PrismaUserSettings> | UserSettingsEntity | null;
+};
 
 export class UserEntity implements PrismaUser {
    id: string;
@@ -91,14 +101,6 @@ export class UserEntity implements PrismaUser {
       return this.profile?.location ?? null;
    }
 
-   get dateOfBirth(): Date | null {
-      return this.profile?.dateOfBirth ?? null;
-   }
-
-   get gender(): Gender | null {
-      return this.profile?.gender ?? null;
-   }
-
    get followersCount(): number {
       return this.stats?.followersCount ?? 0;
    }
@@ -111,6 +113,10 @@ export class UserEntity implements PrismaUser {
       return this.stats?.postsCount ?? 0;
    }
 
+   get recipesCount(): number {
+      return this.stats?.recipesCount ?? 0;
+   }
+
    get isVerified(): boolean {
       return this.settings?.isVerified ?? false;
    }
@@ -119,8 +125,14 @@ export class UserEntity implements PrismaUser {
       return this.settings?.isPrivate ?? false;
    }
 
-   constructor(partial: Partial<UserEntity>) {
-      Object.assign(this, partial);
+   constructor(partial: UserEntityInput) {
+      const rest = { ...partial } as Partial<UserEntity> & {
+         dateOfBirth?: unknown;
+         gender?: unknown;
+      };
+      delete rest.dateOfBirth;
+      delete rest.gender;
+      Object.assign(this, rest);
       if (partial.profile) {
          this.profile = new UserProfileEntity(partial.profile);
       }

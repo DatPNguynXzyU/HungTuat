@@ -89,6 +89,7 @@ model UserStats {
    followersCount    Int            @default(0) @map("followers_count")
    followingCount    Int            @default(0) @map("following_count")
    postsCount        Int            @default(0) @map("posts_count")
+   recipesCount      Int            @default(0) @map("recipes_count")
 
    createdAt         DateTime       @default(now()) @map("created_at")
    updatedAt         DateTime       @updatedAt @map("updated_at")

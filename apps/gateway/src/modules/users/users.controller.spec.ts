@@ -14,6 +14,8 @@ describe('UsersController', () => {
       updateMyProfile: jest.fn(),
       getMyProfile: jest.fn(),
       getDateOfBirth: jest.fn(),
+      searchUsers: jest.fn(),
+      getFollowSuggestions: jest.fn(),
    };
 
    const mockUser: JwtPayload = {
@@ -147,5 +149,28 @@ describe('UsersController', () => {
       const result = await controller.getUserDateOfBirth('other-user-99');
       expect(mockUsersService.getDateOfBirth).toHaveBeenCalledWith('other-user-99');
       expect(result).toEqual(mockDobRes);
+   });
+
+   it('should search users via searchUsers endpoint with cursor', async () => {
+      const mockSearchRes = {
+         items: [{ id: 'u1', username: 'alex', displayName: 'Alex' }],
+         meta: { nextCursor: 'next_cursor_1', hasMore: true, limit: 10, total: 1 },
+      };
+      mockUsersService.searchUsers.mockResolvedValue(mockSearchRes);
+
+      const result = await controller.searchUsers({ q: 'alex', limit: 10, cursor: 'cur_1' }, mockUser);
+      expect(mockUsersService.searchUsers).toHaveBeenCalledWith('alex', 10, 'cur_1', mockUser);
+      expect(result).toEqual(mockSearchRes);
+   });
+
+   it('should get follow suggestions via getFollowSuggestions endpoint', async () => {
+      const mockSuggestions = [
+         { id: 'u2', username: 'sarah', displayName: 'Sarah', reason: 'mutual_friends', mutualCount: 2 },
+      ];
+      mockUsersService.getFollowSuggestions.mockResolvedValue(mockSuggestions);
+
+      const result = await controller.getFollowSuggestions({ limit: 10 }, mockUser);
+      expect(mockUsersService.getFollowSuggestions).toHaveBeenCalledWith(10, mockUser);
+      expect(result).toEqual(mockSuggestions);
    });
 });

@@ -7,9 +7,16 @@ export interface IPaginationMeta {
    hasPrev: boolean;
 }
 
+export interface ICursorPaginationMeta {
+   nextCursor?: string | null;
+   hasMore: boolean;
+   limit: number;
+   total?: number;
+}
+
 export interface IPaginatedData<T> {
    items: T[];
-   meta: IPaginationMeta;
+   meta: IPaginationMeta | ICursorPaginationMeta;
 }
 
 export interface IBaseResponse<T = unknown> {
@@ -17,7 +24,7 @@ export interface IBaseResponse<T = unknown> {
    statusCode: number;
    message: string;
    data: T | null;
-   meta?: IPaginationMeta;
+   meta?: IPaginationMeta | ICursorPaginationMeta;
    timestamp: string;
    correlationId?: string;
 }

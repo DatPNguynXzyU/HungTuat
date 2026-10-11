@@ -1,6 +1,6 @@
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { HEALTH_RESPONSE_MESSAGES, Public, ResponseMessage } from '@common';
+import { HEALTH_RESPONSE_MESSAGES, HealthCheckResponseDto, Public, ResponseMessage } from '@common';
 
 @ApiTags('Health')
 @Controller()
@@ -8,10 +8,17 @@ export class HealthController {
    @Public()
    @Get()
    @HttpCode(HttpStatus.OK)
-   @ApiOperation({ summary: 'Gateway Root Health Check' })
-   @ApiResponse({ status: 200, description: 'Gateway service is healthy and operational' })
+   @ApiOperation({
+      operationId: 'healthCheckRoot',
+      summary: 'Gateway Root Health Check',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Gateway service is healthy and operational',
+      type: HealthCheckResponseDto,
+   })
    @ResponseMessage(HEALTH_RESPONSE_MESSAGES.HEALTH_CHECK_SUCCESS)
-   root() {
+   root(): HealthCheckResponseDto {
       return {
          status: 'ok',
          uptime: process.uptime(),
@@ -22,10 +29,17 @@ export class HealthController {
    @Public()
    @Get(['health', 'api/v1/health'])
    @HttpCode(HttpStatus.OK)
-   @ApiOperation({ summary: 'Gateway Health Check' })
-   @ApiResponse({ status: 200, description: 'Gateway service is healthy' })
+   @ApiOperation({
+      operationId: 'healthCheck',
+      summary: 'Gateway Health Check',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Gateway service is healthy',
+      type: HealthCheckResponseDto,
+   })
    @ResponseMessage(HEALTH_RESPONSE_MESSAGES.HEALTH_CHECK_SUCCESS)
-   check() {
+   check(): HealthCheckResponseDto {
       return {
          status: 'ok',
          uptime: process.uptime(),
