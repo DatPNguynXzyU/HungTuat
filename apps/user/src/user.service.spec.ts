@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CloudinaryService } from '@common';
+import { CloudinaryService, ConflictException } from '@common';
 import { UserService } from './user.service';
 import { UserRepository, FollowRepository } from './repositories';
 import { OutboxService } from './outbox';
@@ -13,7 +13,7 @@ describe('UserService', () => {
    const mockUserRepository = {
       create: jest.fn(),
       findById: jest.fn(),
-      findByUserId: jest.fn(),
+      findByAccountId: jest.fn(),
       findByUsername: jest.fn(),
       findAllUsernames: jest.fn(),
       findAll: jest.fn(),
@@ -143,12 +143,12 @@ describe('UserService', () => {
 
    describe('createUser', () => {
       it('should create user with profile, stats and settings and sync to graph and bloom filter', async () => {
-         mockUserRepository.findByUserId.mockResolvedValue(null);
+         mockUserRepository.findByAccountId.mockResolvedValue(null);
          mockUsernameBloomFilterService.mightContain.mockResolvedValue(false);
 
          const createdUser = new UserEntity({
             id: 'user-id-1',
-            userId: 'auth-user-1',
+            accountId: 'auth-user-1',
             username: 'johndoe',
             status: UserStatus.ACTIVE,
             createdAt: new Date(),
@@ -172,13 +172,13 @@ describe('UserService', () => {
          mockUserRepository.create.mockResolvedValue(createdUser);
 
          const res = await service.createUser({
-            userId: 'auth-user-1',
+            accountId: 'auth-user-1',
             username: 'johndoe',
             displayName: 'John Doe',
          });
 
          expect(mockUserRepository.create).toHaveBeenCalledWith({
-            userId: 'auth-user-1',
+            accountId: 'auth-user-1',
             username: 'johndoe',
             displayName: 'John Doe',
          });
@@ -187,14 +187,33 @@ describe('UserService', () => {
          expect(mockOutboxService.createOutboxEvent).toHaveBeenCalled();
          expect(res.displayName).toBe('John Doe');
       });
+
+      it('should map Prisma unique constraint error on accountId to ConflictException', async () => {
+         mockUserRepository.findByAccountId.mockResolvedValue(null);
+         const prismaError = Object.assign(
+            new Error('Unique constraint failed on the constraint: users_account_id_key'),
+            {
+               code: 'P2002',
+               meta: { target: ['account_id'] },
+            },
+         );
+         mockUserRepository.create.mockRejectedValue(prismaError);
+
+         await expect(
+            service.createUser({
+               accountId: 'auth-user-dup',
+               username: 'unique_user',
+            }),
+         ).rejects.toThrow(ConflictException);
+      });
    });
 
    describe('handleUserRegistered', () => {
       it('should create user when receiving USER_REGISTERED event from RabbitMQ', async () => {
-         mockUserRepository.findByUserId.mockResolvedValue(null);
+         mockUserRepository.findByAccountId.mockResolvedValue(null);
          const createdUser = new UserEntity({
             id: 'user-id-2',
-            userId: 'auth-user-2',
+            accountId: 'auth-user-2',
             status: UserStatus.ACTIVE,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -216,16 +235,61 @@ describe('UserService', () => {
          mockUserRepository.create.mockResolvedValue(createdUser);
 
          const res = await service.handleUserRegistered({
-            userId: 'auth-user-2',
+            accountId: 'auth-user-2',
             email: 'alice@example.com',
          });
 
          expect(mockUserRepository.create).toHaveBeenCalledWith({
-            userId: 'auth-user-2',
+            accountId: 'auth-user-2',
             username: 'alice',
             displayName: 'alice',
          });
          expect(res?.displayName).toBe('alice');
+      });
+
+      it('should return existing user if concurrent creation occurs (race condition)', async () => {
+         const existingUser = new UserEntity({
+            id: 'user-id-concurrent',
+            accountId: 'auth-user-concurrent',
+            status: UserStatus.ACTIVE,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            profile: {
+               id: 'profile-concurrent',
+               userId: 'user-id-concurrent',
+               displayName: 'concurrent',
+               bio: null,
+               avatar: null,
+               coverImage: null,
+               website: null,
+               location: null,
+               dateOfBirth: null,
+               gender: null,
+               createdAt: new Date(),
+               updatedAt: new Date(),
+            },
+         });
+
+         mockUserRepository.findByAccountId
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(existingUser);
+
+         const prismaError = Object.assign(
+            new Error('Unique constraint failed on the constraint: users_account_id_key'),
+            {
+               code: 'P2002',
+               meta: { target: ['account_id'] },
+            },
+         );
+         mockUserRepository.create.mockRejectedValue(prismaError);
+
+         const res = await service.handleUserRegistered({
+            accountId: 'auth-user-concurrent',
+            email: 'concurrent@example.com',
+         });
+
+         expect(res?.id).toBe('user-id-concurrent');
       });
    });
 
@@ -233,14 +297,14 @@ describe('UserService', () => {
       it('should update user profile and sync to graph when user exists', async () => {
          const existingUser = new UserEntity({
             id: 'user-id-1',
-            userId: 'auth-user-1',
+            accountId: 'auth-user-1',
             status: UserStatus.ACTIVE,
             createdAt: new Date(),
             updatedAt: new Date(),
          });
          const updatedUser = new UserEntity({
             id: 'user-id-1',
-            userId: 'auth-user-1',
+            accountId: 'auth-user-1',
             status: UserStatus.ACTIVE,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -279,11 +343,11 @@ describe('UserService', () => {
 
       it('should auto-create user and user profile if user does not exist in User Service yet', async () => {
          mockUserRepository.findById.mockResolvedValue(null);
-         mockUserRepository.findByUserId.mockResolvedValue(null);
+         mockUserRepository.findByAccountId.mockResolvedValue(null);
 
          const createdUser = new UserEntity({
             id: 'auto-user-id',
-            userId: 'auth-sub-123',
+            accountId: 'auth-sub-123',
             username: 'autouser',
             status: UserStatus.ACTIVE,
             createdAt: new Date(),
@@ -313,7 +377,7 @@ describe('UserService', () => {
 
          expect(mockUserRepository.create).toHaveBeenCalledWith(
             expect.objectContaining({
-               userId: 'auth-sub-123',
+               accountId: 'auth-sub-123',
                username: 'autouser',
                displayName: 'Auto Name',
             }),

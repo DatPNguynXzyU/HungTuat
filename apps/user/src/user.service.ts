@@ -7,7 +7,8 @@ import {
    UserDateOfBirthResponseDto,
    CloudinaryService,
 } from '@common';
-import { UserRepository, FollowRepository } from '@user/repositories';
+import { Prisma } from '@user/prisma-client';
+import { UserRepository, FollowRepository, CreateUserData } from '@user/repositories';
 import { UserEntity, FollowEntity, FollowStatus, Gender } from '@user/entities';
 import { OutboxService } from '@user/outbox';
 import { GraphFollowRepository } from '@user/graph';
@@ -35,17 +36,14 @@ export class UserService {
       return { available, username: normalizedUsername };
    }
 
-   // User Profile Management
-   async createUser(data: { userId: string; username?: string; displayName?: string }): Promise<UserEntity> {
-      // Check if user already exists
-      const existingUser = await this.userRepository.findByUserId(data.userId);
+   async createUser(data: CreateUserData): Promise<UserEntity> {
+      const existingUser = await this.userRepository.findByAccountId(data.accountId);
       if (existingUser) {
          throw new ConflictException(USER_ERROR_CODES.USER_ALREADY_EXISTS, {
-            params: { userId: data.userId },
+            params: { accountId: data.accountId },
          });
       }
 
-      // Check username uniqueness using Bloom Filter first
       if (data.username) {
          const normalizedUsername = data.username.toLowerCase().trim();
          const mightExist = await this.usernameBloomFilterService.mightContain(normalizedUsername);
@@ -59,14 +57,39 @@ export class UserService {
          }
       }
 
-      // Create user
-      const user = await this.userRepository.create({
-         userId: data.userId,
-         username: data.username,
-         displayName: data.displayName,
-      });
+      let user: UserEntity;
+      try {
+         user = await this.userRepository.create(data);
+      } catch (err: unknown) {
+         const errCode = (err as { code?: string })?.code;
+         const errMsg = err instanceof Error ? err.message : String(err);
+         const target = (err as { meta?: { target?: string[] | string } })?.meta?.target;
+         const targetStr = Array.isArray(target) ? target.join(',') : String(target || '');
 
-      // Register username in Bloom Filter
+         if (
+            (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') ||
+            errCode === 'P2002' ||
+            errMsg.includes('Unique constraint failed')
+         ) {
+            if (
+               targetStr.includes('account_id') ||
+               targetStr.includes('accountId') ||
+               errMsg.includes('users_account_id_key')
+            ) {
+               throw new ConflictException(USER_ERROR_CODES.USER_ALREADY_EXISTS, {
+                  params: { accountId: data.accountId },
+               });
+            }
+            if (targetStr.includes('username') || errMsg.includes('users_username_key')) {
+               throw new ConflictException(USER_ERROR_CODES.USERNAME_ALREADY_TAKEN, {
+                  params: { username: data.username },
+               });
+            }
+            throw new ConflictException(USER_ERROR_CODES.USER_ALREADY_EXISTS);
+         }
+         throw err;
+      }
+
       if (user.username) {
          await this.usernameBloomFilterService.addUsername(user.username);
       }
@@ -85,25 +108,20 @@ export class UserService {
          this.logger.warn(`Failed to sync newly created user ${user.id} to Elasticsearch: ${String(err)}`);
       }
 
-      // Publish event
       await this.outboxService.createOutboxEvent(user.id, 'User', 'UserCreated', {
-         userId: user.userId,
+         userId: user.id,
+         accountId: user.accountId,
          username: user.username,
       });
 
       return user;
    }
 
-   async handleUserRegistered(data: {
-      userId?: string;
-      accountId?: string;
-      email?: string;
-   }): Promise<UserEntity | null> {
-      const targetUserId = data.userId || data.accountId;
-      if (!targetUserId) {
+   async handleUserRegistered(data: { accountId: string; email?: string }): Promise<UserEntity | null> {
+      if (!data.accountId) {
          return null;
       }
-      const existing = await this.userRepository.findByUserId(targetUserId);
+      const existing = await this.userRepository.findByAccountId(data.accountId);
       if (existing) {
          return existing;
       }
@@ -122,17 +140,44 @@ export class UserService {
          }
       }
 
-      return this.createUser({
-         userId: targetUserId,
-         username,
-         displayName,
-      });
+      try {
+         return await this.createUser({
+            accountId: data.accountId,
+            username,
+            displayName,
+         });
+      } catch (err: unknown) {
+         // Concurrency check: If another process created the user for this accountId in the meantime, return it
+         const createdUser = await this.userRepository.findByAccountId(data.accountId);
+         if (createdUser) {
+            return createdUser;
+         }
+
+         // If failure was due to username collision, retry with a unique suffix
+         if (err instanceof ConflictException && displayName && username) {
+            const retryUsername = `${displayName.toLowerCase().trim()}_${Math.floor(10000 + Math.random() * 90000)}`;
+            try {
+               return await this.createUser({
+                  accountId: data.accountId,
+                  username: retryUsername,
+                  displayName,
+               });
+            } catch {
+               const finalCheck = await this.userRepository.findByAccountId(data.accountId);
+               if (finalCheck) {
+                  return finalCheck;
+               }
+            }
+         }
+
+         throw err;
+      }
    }
 
    async getUserById(id: string): Promise<UserEntity> {
       let user = await this.userRepository.findById(id);
       if (!user) {
-         user = await this.userRepository.findByUserId(id);
+         user = await this.userRepository.findByAccountId(id);
       }
       if (!user) {
          throw new NotFoundException(USER_ERROR_CODES.USER_NOT_FOUND, {
@@ -142,14 +187,18 @@ export class UserService {
       return user;
    }
 
-   async getUserByUserId(userId: string): Promise<UserEntity> {
-      const user = await this.userRepository.findByUserId(userId);
+   async getUserByAccountId(accountId: string): Promise<UserEntity> {
+      const user = await this.userRepository.findByAccountId(accountId);
       if (!user) {
          throw new NotFoundException(USER_ERROR_CODES.USER_NOT_FOUND, {
-            params: { userId },
+            params: { accountId },
          });
       }
       return user;
+   }
+
+   async getUserByUserId(userId: string): Promise<UserEntity> {
+      return this.getUserById(userId);
    }
 
    async getUserByUsername(username: string): Promise<UserEntity> {
@@ -210,7 +259,7 @@ export class UserService {
    ): Promise<UserEntity> {
       let user = await this.userRepository.findById(id);
       if (!user) {
-         user = await this.userRepository.findByUserId(id);
+         user = await this.userRepository.findByAccountId(id);
       }
 
       // If user does not exist in User service DB yet, auto-create it with the provided profile data!
@@ -230,7 +279,7 @@ export class UserService {
          }
 
          user = await this.userRepository.create({
-            userId: id,
+            accountId: id,
             username: data.username,
             displayName: data.displayName,
             bio: data.bio,
@@ -299,7 +348,8 @@ export class UserService {
 
       // Publish event
       await this.outboxService.createOutboxEvent(user.id, 'User', 'UserProfileUpdated', {
-         userId: user.userId,
+         userId: user.id,
+         accountId: user.accountId,
          changes: data,
       });
 
@@ -359,7 +409,8 @@ export class UserService {
 
       // Publish event
       await this.outboxService.createOutboxEvent(user.id, 'User', 'UserDeleted', {
-         userId: user.userId,
+         userId: user.id,
+         accountId: user.accountId,
       });
 
       return deletedUser;
@@ -377,7 +428,8 @@ export class UserService {
 
       // Publish event
       await this.outboxService.createOutboxEvent(restoredUser.id, 'User', 'UserRestored', {
-         userId: restoredUser.userId,
+         userId: restoredUser.id,
+         accountId: restoredUser.accountId,
       });
 
       return restoredUser;
@@ -421,8 +473,8 @@ export class UserService {
 
       // Publish event
       await this.outboxService.createOutboxEvent(follow.id, 'Follow', 'UserFollowed', {
-         followerId: follower.userId,
-         followingId: following.userId,
+         followerId: follower.id,
+         followingId: following.id,
          status: follow.status,
       });
 
@@ -454,8 +506,8 @@ export class UserService {
 
       // Publish event
       await this.outboxService.createOutboxEvent(follow.id, 'Follow', 'UserUnfollowed', {
-         followerId: follower.userId,
-         followingId: following.userId,
+         followerId: follower.id,
+         followingId: following.id,
       });
    }
 
@@ -610,7 +662,7 @@ export class UserService {
             { width: 400, height: 400, crop: 'fill', gravity: 'face' },
             { quality: 'auto', fetch_format: 'auto' },
          ],
-         tags: ['avatar', user.id, user.userId],
+         tags: ['avatar', user.id, user.accountId],
       });
 
       const updatedUser = await this.updateUserProfile(user.id, {
@@ -628,7 +680,7 @@ export class UserService {
       const user = await this.getUserById(id);
       return this.cloudinaryService.generateUploadSignature({
          folder: 'omni/users/avatars',
-         tags: `avatar,${user.id},${user.userId}`,
+         tags: `avatar,${user.id},${user.accountId}`,
       });
    }
 }

@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DEFAULT_ROLES, RoleCode } from '@common/constants/roles.constant';
+import { AUTH_ERROR_REASONS } from '@common/constants/auth.constant';
 import { ROLES_KEY } from '@common/constants/permissions.constant';
 import { IS_PUBLIC_KEY } from '@common/decorators/public.decorator';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
@@ -35,7 +36,7 @@ export class RolesGuard implements CanActivate {
 
       if (!user) {
          throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
-            params: { reason: 'user_not_authenticated' },
+            params: { reason: AUTH_ERROR_REASONS.USER_NOT_AUTHENTICATED },
          });
       }
 
@@ -48,7 +49,7 @@ export class RolesGuard implements CanActivate {
       const hasRequiredRole = requiredRoles.some((role) => userRoles.includes(role));
       if (!hasRequiredRole) {
          throw new ForbiddenException(COMMON_ERROR_CODES.FORBIDDEN, {
-            params: { reason: 'insufficient_role', required: requiredRoles },
+            params: { reason: AUTH_ERROR_REASONS.INSUFFICIENT_ROLE, required: requiredRoles },
          });
       }
 

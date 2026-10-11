@@ -31,7 +31,7 @@ import { TokenService } from '@auth/services/token.service';
 import { TOKEN_SERVICE } from '@auth/services/token.service.interface';
 
 interface MockUserRecord {
-   id: string;
+   accountId: string;
    email: string;
    passwordHash: string;
    createdAt: Date;
@@ -93,25 +93,27 @@ describe('AuthController', () => {
          account: {
             findFirst: jest
                .fn()
-               .mockImplementation(({ where }: { where: { email?: string; id?: string; deletedAt?: unknown } }) => {
-                  if (where.email) {
-                     for (const u of usersMap.values()) {
-                        if (u.email === where.email) return Promise.resolve(u);
+               .mockImplementation(
+                  ({ where }: { where: { email?: string; accountId?: string; deletedAt?: unknown } }) => {
+                     if (where.email) {
+                        for (const u of usersMap.values()) {
+                           if (u.email === where.email) return Promise.resolve(u);
+                        }
                      }
-                  }
-                  if (where.id) {
-                     return Promise.resolve(usersMap.get(where.id) || null);
-                  }
-                  return Promise.resolve(null);
-               }),
-            findUnique: jest.fn().mockImplementation(({ where }: { where: { email?: string; id?: string } }) => {
+                     if (where.accountId) {
+                        return Promise.resolve(usersMap.get(where.accountId) || null);
+                     }
+                     return Promise.resolve(null);
+                  },
+               ),
+            findUnique: jest.fn().mockImplementation(({ where }: { where: { email?: string; accountId?: string } }) => {
                if (where.email) {
                   for (const u of usersMap.values()) {
                      if (u.email === where.email) return Promise.resolve(u);
                   }
                }
-               if (where.id) {
-                  return Promise.resolve(usersMap.get(where.id) || null);
+               if (where.accountId) {
+                  return Promise.resolve(usersMap.get(where.accountId) || null);
                }
                return Promise.resolve(null);
             }),
@@ -124,9 +126,13 @@ describe('AuthController', () => {
             create: jest
                .fn()
                .mockImplementation(
-                  ({ data }: { data: { id: string; email: string; passwordHash: string; createdAt?: Date } }) => {
+                  ({
+                     data,
+                  }: {
+                     data: { accountId: string; email: string; passwordHash: string; createdAt?: Date };
+                  }) => {
                      const record: MockUserRecord = {
-                        id: data.id,
+                        accountId: data.accountId,
                         email: data.email,
                         passwordHash: data.passwordHash,
                         createdAt: data.createdAt || new Date(),
@@ -142,7 +148,7 @@ describe('AuthController', () => {
                            },
                         ],
                      };
-                     usersMap.set(data.id, record);
+                     usersMap.set(data.accountId, record);
                      return Promise.resolve(record);
                   },
                ),
@@ -153,18 +159,18 @@ describe('AuthController', () => {
                      where,
                      data,
                   }: {
-                     where: { id: string };
+                     where: { accountId: string };
                      data: Partial<{ email: string; passwordHash: string }>;
                   }) => {
-                     const existing = usersMap.get(where.id);
+                     const existing = usersMap.get(where.accountId);
                      if (!existing) return Promise.reject(new Error('Not found'));
                      const updated: MockUserRecord = { ...existing, ...data, updatedAt: new Date() };
-                     usersMap.set(where.id, updated);
+                     usersMap.set(where.accountId, updated);
                      return Promise.resolve(updated);
                   },
                ),
-            delete: jest.fn().mockImplementation(({ where }: { where: { id: string } }) => {
-               usersMap.delete(where.id);
+            delete: jest.fn().mockImplementation(({ where }: { where: { accountId: string } }) => {
+               usersMap.delete(where.accountId);
                return Promise.resolve({});
             }),
          },

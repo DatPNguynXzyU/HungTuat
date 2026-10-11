@@ -74,6 +74,27 @@ describe('GatewayController (e2e)', () => {
       await app.close();
    });
 
+   it('/ (HEAD) - root endpoint should return 200 without body', async () => {
+      await request(app.getHttpServer() as App)
+         .head('/')
+         .expect(200);
+   });
+
+   it('/ (GET) - root endpoint should return 200 with status ok', async () => {
+      const res = await request(app.getHttpServer() as App)
+         .get('/')
+         .expect(200);
+
+      const body = res.body as { status: string };
+      expect(body.status).toBe('ok');
+   });
+
+   it('/health (HEAD) - health endpoint should return 200 without body', async () => {
+      await request(app.getHttpServer() as App)
+         .head('/health')
+         .expect(200);
+   });
+
    it('/health (GET) - public route should be accessible without token', async () => {
       const res = await request(app.getHttpServer() as App)
          .get('/health')
@@ -118,7 +139,7 @@ describe('GatewayController (e2e)', () => {
             .expect(201);
 
          // Verify cookies are set
-         const cookies = res.headers['set-cookie'] as string[] | undefined;
+         const cookies = res.get('Set-Cookie');
          expect(cookies).toBeDefined();
          expect(cookies?.some((c) => c.includes('access_token='))).toBe(true);
          expect(cookies?.some((c) => c.includes('refresh_token='))).toBe(true);
@@ -147,7 +168,7 @@ describe('GatewayController (e2e)', () => {
             .expect(200);
 
          // Verify cookies
-         const cookies = res.headers['set-cookie'] as string[] | undefined;
+         const cookies = res.get('Set-Cookie');
          expect(cookies).toBeDefined();
          expect(cookies?.some((c) => c.includes('access_token='))).toBe(true);
          expect(cookies?.some((c) => c.includes('refresh_token='))).toBe(true);
@@ -192,7 +213,7 @@ describe('GatewayController (e2e)', () => {
          .post('/auth/logout')
          .expect(200);
 
-      const cookies = res.headers['set-cookie'] as string[] | undefined;
+      const cookies = res.get('Set-Cookie');
       expect(cookies).toBeDefined();
       expect(cookies?.some((c) => c.includes('access_token=;'))).toBe(true);
       expect(cookies?.some((c) => c.includes('refresh_token=;'))).toBe(true);

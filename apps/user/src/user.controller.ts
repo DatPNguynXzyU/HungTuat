@@ -21,7 +21,7 @@ export class UserController {
 
    // Event listener from Auth service via RabbitMQ
    @EventPattern(NOTIFICATION_EVENTS.USER_REGISTERED)
-   async handleUserRegistered(@Payload() data: { userId?: string; email?: string }, @Ctx() context?: RmqContext) {
+   async handleUserRegistered(@Payload() data: { accountId: string; email?: string }, @Ctx() context?: RmqContext) {
       try {
          const result = await this.userService.handleUserRegistered(data);
          if (context) {
@@ -67,20 +67,21 @@ export class UserController {
          coverImage?: string;
          website?: string;
          location?: string;
+         accountId?: string;
          userId?: string;
       }>,
       @Ctx() context?: RmqContext,
    ) {
       try {
-         const userId = message.user?.userId || message.data?.userId;
-         if (!userId) {
+         const accountId = message.data?.accountId || message.user?.userId || message.data?.userId;
+         if (!accountId) {
             throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
          }
 
          const { gender, dateOfBirth, ...profileData } = message.data;
 
          const result = await this.userService.createUser({
-            userId,
+            accountId,
             ...profileData,
             ...(gender && { gender: gender as Gender }),
             ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
@@ -101,7 +102,7 @@ export class UserController {
    async createUser(
       @Payload()
       data: {
-         userId: string;
+         accountId: string;
          username?: string;
          displayName?: string;
          gender?: string;
@@ -115,8 +116,9 @@ export class UserController {
       @Ctx() context?: RmqContext,
    ) {
       try {
-         const { gender, dateOfBirth, ...profileData } = data;
+         const { accountId, gender, dateOfBirth, ...profileData } = data;
          const result = await this.userService.createUser({
+            accountId,
             ...profileData,
             ...(gender && { gender: gender as Gender }),
             ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
@@ -143,16 +145,26 @@ export class UserController {
             }
             return result;
          } catch (err) {
-            if (message.user && message.user.userId === message.data.id && message.user.email) {
-               const autoCreated = await this.userService.handleUserRegistered({
-                  userId: message.user.userId,
-                  email: message.user.email,
-               });
-               if (autoCreated) {
-                  if (context) {
-                     this.rmqService.ack(context);
+            if (message.user && message.user.userId === message.data.id) {
+               try {
+                  const autoCreated = await this.userService.handleUserRegistered({
+                     accountId: message.user.userId,
+                     email: message.user.email,
+                  });
+                  if (autoCreated) {
+                     if (context) {
+                        this.rmqService.ack(context);
+                     }
+                     return autoCreated;
                   }
-                  return autoCreated;
+               } catch {
+                  const fallbackUser = await this.userService.getUserById(message.data.id);
+                  if (fallbackUser) {
+                     if (context) {
+                        this.rmqService.ack(context);
+                     }
+                     return fallbackUser;
+                  }
                }
             }
             throw err;
@@ -169,6 +181,22 @@ export class UserController {
    async getUserByUserId(@Payload() data: { userId: string }, @Ctx() context?: RmqContext) {
       try {
          const result = await this.userService.getUserByUserId(data.userId);
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
+   }
+
+   @MessagePattern({ cmd: USER_PATTERNS.GET_USER_BY_ACCOUNT_ID })
+   async getUserByAccountId(@Payload() data: { accountId: string }, @Ctx() context?: RmqContext) {
+      try {
+         const result = await this.userService.getUserByAccountId(data.accountId);
          if (context) {
             this.rmqService.ack(context);
          }
@@ -241,7 +269,7 @@ export class UserController {
          try {
             const existingUser = await this.userService.getUserById(id);
             if (existingUser) {
-               targetOwnerId = existingUser.userId;
+               targetOwnerId = existingUser.accountId;
             }
          } catch {
             // User does not exist in DB yet, fallback to comparing id with message.user.userId
@@ -274,7 +302,7 @@ export class UserController {
       try {
          const user = await this.userService.getUserById(message.data.id);
          if (user) {
-            checkOwnershipOrAdmin(message, user.userId);
+            checkOwnershipOrAdmin(message, user.accountId);
          }
 
          const result = await this.userService.updateUsername(user.id, message.data.username);
@@ -295,7 +323,7 @@ export class UserController {
       try {
          const user = await this.userService.getUserById(message.data.id);
          if (user) {
-            checkOwnershipOrAdmin(message, user.userId);
+            checkOwnershipOrAdmin(message, user.accountId);
          }
 
          const result = await this.userService.deleteUser(user.id);

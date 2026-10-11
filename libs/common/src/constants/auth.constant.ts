@@ -96,8 +96,22 @@ export const AUTH_ERROR_CODES = {
    CURRENT_SESSION_REQUIRED: 'AUTH.CURRENT_SESSION_REQUIRED',
 } as const;
 
+export const AUTH_ERROR_REASONS = {
+   EMAIL_REQUIRED: 'email_required',
+   REFRESH_TOKEN_MISSING: 'refresh_token_missing',
+   TOKEN_MISSING: 'token_missing',
+   TOKEN_REVOKED: 'token_revoked',
+   TOKEN_INVALID_OR_EXPIRED: 'token_invalid_or_expired',
+   INVALID_TOKEN_TYPE: 'invalid_token_type',
+   USER_TOKENS_REVOKED: 'user_tokens_revoked',
+   USER_NOT_AUTHENTICATED: 'user_not_authenticated',
+   INSUFFICIENT_ROLE: 'insufficient_role',
+   INSUFFICIENT_PERMISSIONS: 'insufficient_permissions',
+} as const;
+
 export type AuthCookieName = (typeof AUTH_COOKIES)[keyof typeof AUTH_COOKIES];
 export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
 export type AuthPattern = (typeof AUTH_PATTERNS)[keyof typeof AUTH_PATTERNS];
 export type AuthResponseMessage = (typeof AUTH_RESPONSE_MESSAGES)[keyof typeof AUTH_RESPONSE_MESSAGES];
 export type AuthErrorCode = (typeof AUTH_ERROR_CODES)[keyof typeof AUTH_ERROR_CODES];
+export type AuthErrorReason = (typeof AUTH_ERROR_REASONS)[keyof typeof AUTH_ERROR_REASONS];

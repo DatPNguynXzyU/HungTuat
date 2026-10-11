@@ -11,6 +11,7 @@ describe('UserController', () => {
       handleUserRegistered: jest.fn(),
       getUserById: jest.fn(),
       getUserByUserId: jest.fn(),
+      getUserByAccountId: jest.fn(),
       getUserByUsername: jest.fn(),
       updateUserProfile: jest.fn(),
       updateUsername: jest.fn(),
@@ -70,7 +71,7 @@ describe('UserController', () => {
 
    describe('createProfile', () => {
       it('should handle createProfile message pattern from gateway', async () => {
-         const mockResult = { id: 'u1', userId: 'user-auth-1', displayName: 'John Doe' };
+         const mockResult = { id: 'u1', accountId: 'user-auth-1', displayName: 'John Doe' };
          mockUserService.createUser.mockResolvedValue(mockResult);
 
          const result = await controller.createProfile({
@@ -85,7 +86,7 @@ describe('UserController', () => {
 
          expect(mockUserService.createUser).toHaveBeenCalledWith(
             expect.objectContaining({
-               userId: 'user-auth-1',
+               accountId: 'user-auth-1',
                displayName: 'John Doe',
                username: 'johndoe',
             }),
@@ -96,20 +97,20 @@ describe('UserController', () => {
 
    describe('handleUserRegistered', () => {
       it('should handle user registered event from auth service', async () => {
-         mockUserService.handleUserRegistered.mockResolvedValue({ id: 'user-1', userId: 'auth-user-1' });
+         mockUserService.handleUserRegistered.mockResolvedValue({ id: 'user-1', accountId: 'auth-user-1' });
 
-         const result = await controller.handleUserRegistered({ userId: 'auth-user-1', email: 'test@example.com' });
+         const result = await controller.handleUserRegistered({ accountId: 'auth-user-1', email: 'test@example.com' });
          expect(mockUserService.handleUserRegistered).toHaveBeenCalledWith({
-            userId: 'auth-user-1',
+            accountId: 'auth-user-1',
             email: 'test@example.com',
          });
-         expect(result).toEqual({ id: 'user-1', userId: 'auth-user-1' });
+         expect(result).toEqual({ id: 'user-1', accountId: 'auth-user-1' });
       });
    });
 
    describe('getUserById', () => {
       it('should return user for public request', async () => {
-         const mockUser = { id: 'user-db-1', userId: 'user-auth-1', username: 'john' };
+         const mockUser = { id: 'user-db-1', accountId: 'user-auth-1', username: 'john' };
          mockUserService.getUserById.mockResolvedValue(mockUser);
 
          const result = await controller.getUserById({ data: { id: 'user-db-1' } });
@@ -118,9 +119,20 @@ describe('UserController', () => {
       });
    });
 
+   describe('getUserByAccountId', () => {
+      it('should return user for accountId request', async () => {
+         const mockUser = { id: 'user-db-1', accountId: 'user-auth-1', username: 'john' };
+         mockUserService.getUserByAccountId.mockResolvedValue(mockUser);
+
+         const result = await controller.getUserByAccountId({ accountId: 'user-auth-1' });
+         expect(mockUserService.getUserByAccountId).toHaveBeenCalledWith('user-auth-1');
+         expect(result).toEqual(mockUser);
+      });
+   });
+
    describe('updateUserProfile', () => {
       it('should allow user to update their own profile', async () => {
-         const mockUser = { id: 'user-db-1', userId: 'user-auth-1' };
+         const mockUser = { id: 'user-db-1', accountId: 'user-auth-1' };
          mockUserService.getUserById.mockResolvedValue(mockUser);
          mockUserService.updateUserProfile.mockResolvedValue({ ...mockUser, displayName: 'John Doe' });
 
@@ -139,7 +151,7 @@ describe('UserController', () => {
       });
 
       it('should allow admin to update any user profile', async () => {
-         const mockUser = { id: 'user-db-1', userId: 'user-auth-1' };
+         const mockUser = { id: 'user-db-1', accountId: 'user-auth-1' };
          mockUserService.getUserById.mockResolvedValue(mockUser);
          mockUserService.updateUserProfile.mockResolvedValue({ ...mockUser, displayName: 'Admin Edited' });
 
@@ -158,7 +170,7 @@ describe('UserController', () => {
       });
 
       it('should reject non-owner and non-admin from updating user profile', async () => {
-         const mockUser = { id: 'user-db-1', userId: 'user-auth-1' };
+         const mockUser = { id: 'user-db-1', accountId: 'user-auth-1' };
          mockUserService.getUserById.mockResolvedValue(mockUser);
 
          await expect(
@@ -175,7 +187,7 @@ describe('UserController', () => {
       });
 
       it('should reject update if user context is missing', async () => {
-         const mockUser = { id: 'user-db-1', userId: 'user-auth-1' };
+         const mockUser = { id: 'user-db-1', accountId: 'user-auth-1' };
          mockUserService.getUserById.mockResolvedValue(mockUser);
 
          await expect(

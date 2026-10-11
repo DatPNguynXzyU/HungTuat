@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DEFAULT_ROLES } from '@common/constants/roles.constant';
+import { AUTH_ERROR_REASONS } from '@common/constants/auth.constant';
 import { PERMISSIONS_KEY, PermissionCode } from '@common/constants/permissions.constant';
 import { IS_PUBLIC_KEY } from '@common/decorators/public.decorator';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
@@ -39,7 +40,7 @@ export class PermissionsGuard implements CanActivate {
 
       if (!user) {
          throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
-            params: { reason: 'user_not_authenticated' },
+            params: { reason: AUTH_ERROR_REASONS.USER_NOT_AUTHENTICATED },
          });
       }
 
@@ -51,7 +52,7 @@ export class PermissionsGuard implements CanActivate {
 
       if (userRoles.length === 0) {
          throw new ForbiddenException(COMMON_ERROR_CODES.FORBIDDEN, {
-            params: { reason: 'insufficient_permissions' },
+            params: { reason: AUTH_ERROR_REASONS.INSUFFICIENT_PERMISSIONS },
          });
       }
 
@@ -71,7 +72,7 @@ export class PermissionsGuard implements CanActivate {
       const hasAllRequired = requiredPermissions.every((perm) => userPermissions.has(perm));
       if (!hasAllRequired) {
          throw new ForbiddenException(COMMON_ERROR_CODES.FORBIDDEN, {
-            params: { reason: 'insufficient_permissions', required: requiredPermissions },
+            params: { reason: AUTH_ERROR_REASONS.INSUFFICIENT_PERMISSIONS, required: requiredPermissions },
          });
       }
 

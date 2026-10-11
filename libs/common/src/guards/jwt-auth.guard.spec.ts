@@ -1,6 +1,7 @@
 import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CommonConfigService } from '@common/config/common-config.service';
+import { AUTH_ERROR_REASONS } from '@common/constants/auth.constant';
 import { DEFAULT_DEV_RSA_PRIVATE_KEY, DEFAULT_DEV_RSA_PUBLIC_KEY } from '@common/constants/jwt.constant';
 import { REDIS_KEY_PREFIX } from '@common/constants/redis.constant';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
@@ -103,7 +104,7 @@ describe('JwtAuthGuard', () => {
          await guard.canActivate(mockContext);
       } catch (err) {
          expect(err).toBeInstanceOf(UnauthorizedException);
-         expect((err as UnauthorizedException).params).toEqual({ reason: 'token_revoked' });
+         expect((err as UnauthorizedException).params).toEqual({ reason: AUTH_ERROR_REASONS.TOKEN_REVOKED });
       }
    });
 
@@ -139,7 +140,7 @@ describe('JwtAuthGuard', () => {
          await guard.canActivate(mockContext);
       } catch (err) {
          expect(err).toBeInstanceOf(UnauthorizedException);
-         expect((err as UnauthorizedException).params).toEqual({ reason: 'user_tokens_revoked' });
+         expect((err as UnauthorizedException).params).toEqual({ reason: AUTH_ERROR_REASONS.USER_TOKENS_REVOKED });
       }
    });
 
@@ -205,7 +206,7 @@ describe('JwtAuthGuard', () => {
       } catch (err) {
          expect(err).toBeInstanceOf(UnauthorizedException);
          expect((err as UnauthorizedException).errorCode).toBe(COMMON_ERROR_CODES.UNAUTHORIZED);
-         expect((err as UnauthorizedException).params).toEqual({ reason: 'token_missing' });
+         expect((err as UnauthorizedException).params).toEqual({ reason: AUTH_ERROR_REASONS.TOKEN_MISSING });
       }
    });
 
@@ -231,7 +232,7 @@ describe('JwtAuthGuard', () => {
       } catch (err) {
          expect(err).toBeInstanceOf(UnauthorizedException);
          expect((err as UnauthorizedException).errorCode).toBe(COMMON_ERROR_CODES.UNAUTHORIZED);
-         expect((err as UnauthorizedException).params).toEqual({ reason: 'token_invalid_or_expired' });
+         expect((err as UnauthorizedException).params).toEqual({ reason: AUTH_ERROR_REASONS.TOKEN_INVALID_OR_EXPIRED });
       }
    });
 
@@ -262,7 +263,7 @@ describe('JwtAuthGuard', () => {
       } catch (err) {
          expect(err).toBeInstanceOf(UnauthorizedException);
          expect((err as UnauthorizedException).errorCode).toBe(COMMON_ERROR_CODES.UNAUTHORIZED);
-         expect((err as UnauthorizedException).params).toEqual({ reason: 'invalid_token_type' });
+         expect((err as UnauthorizedException).params).toEqual({ reason: AUTH_ERROR_REASONS.INVALID_TOKEN_TYPE });
       }
    });
 });

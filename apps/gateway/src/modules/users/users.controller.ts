@@ -34,6 +34,7 @@ import {
    UpdateUserDto,
    UserDateOfBirthResponseDto,
    USER_ERROR_CODES,
+   USER_ERROR_REASONS,
    USER_RESPONSE_MESSAGES,
 } from '@common';
 import { UsersService } from '@/modules/users/users.service';
@@ -53,13 +54,13 @@ export class UsersController {
       status: HttpStatus.BAD_REQUEST,
       description: 'Username query parameter is missing or has invalid format',
       errorCodes: [USER_ERROR_CODES.INVALID_USERNAME_FORMAT],
-      exampleParams: { reason: 'username_required' },
+      exampleParams: { reason: USER_ERROR_REASONS.USERNAME_REQUIRED },
    })
    @ResponseMessage(USER_RESPONSE_MESSAGES.CHECK_USERNAME_SUCCESS)
    async checkUsername(@Query('username') username: string): Promise<{ available: boolean; username: string }> {
       if (!username || !username.trim()) {
          throw new BadRequestException(USER_ERROR_CODES.INVALID_USERNAME_FORMAT, {
-            params: { reason: 'username_required' },
+            params: { reason: USER_ERROR_REASONS.USERNAME_REQUIRED },
          });
       }
       return this.usersService.checkUsername(username);

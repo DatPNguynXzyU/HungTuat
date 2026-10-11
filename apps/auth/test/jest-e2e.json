@@ -1,19 +1,19 @@
 {
-  "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": ".",
-  "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
-  "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
-  },
-  "moduleNameMapper": {
-    "^@auth/prisma-client$": "<rootDir>/../src/generated/prisma-client",
-    "^@auth/prisma-client/(.*)$": "<rootDir>/../src/generated/prisma-client/$1",
-    "^@auth/(.*)$": "<rootDir>/../src/$1",
-    "^@gateway/(.*)$": "<rootDir>/../../gateway/src/$1",
-    "^@common$": "<rootDir>/../../../libs/common/src",
-    "^@common/(.*)$": "<rootDir>/../../../libs/common/src/$1",
-    "^@app/common$": "<rootDir>/../../../libs/common/src",
-    "^@app/common/(.*)$": "<rootDir>/../../../libs/common/src/$1"
-  }
+   "moduleFileExtensions": ["js", "json", "ts"],
+   "rootDir": ".",
+   "testEnvironment": "node",
+   "testRegex": ".e2e-spec.ts$",
+   "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+   },
+   "moduleNameMapper": {
+      "^@auth/prisma-client$": "<rootDir>/../src/generated/prisma-client",
+      "^@auth/prisma-client/(.*)$": "<rootDir>/../src/generated/prisma-client/$1",
+      "^@auth/(.*)$": "<rootDir>/../src/$1",
+      "^@gateway/(.*)$": "<rootDir>/../../gateway/src/$1",
+      "^@common$": "<rootDir>/../../../libs/common/src",
+      "^@common/(.*)$": "<rootDir>/../../../libs/common/src/$1",
+      "^@app/common$": "<rootDir>/../../../libs/common/src",
+      "^@app/common/(.*)$": "<rootDir>/../../../libs/common/src/$1"
+   }
 }

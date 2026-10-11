@@ -18,7 +18,7 @@ export class AuthRepository implements IAuthRepository {
 
    private toEntity(account: AccountWithRoles): AccountEntity {
       return {
-         id: account.id,
+         id: account.accountId,
          email: account.email,
          phoneNumber: account.phoneNumber,
          passwordHash: account.passwordHash,
@@ -52,10 +52,10 @@ export class AuthRepository implements IAuthRepository {
       return account ? this.toEntity(account) : null;
    }
 
-   async findById(id: string): Promise<AccountEntity | null> {
+   async findById(accountId: string): Promise<AccountEntity | null> {
       const account = await this.prisma.account.findFirst({
          where: {
-            id,
+            accountId,
             deletedAt: null,
          },
          include: {
@@ -70,18 +70,26 @@ export class AuthRepository implements IAuthRepository {
       return account ? this.toEntity(account) : null;
    }
 
-   async findEmailById(id: string): Promise<AccountEmailRecord | null> {
-      return this.prisma.account.findFirst({
+   async findEmailById(accountId: string): Promise<AccountEmailRecord | null> {
+      const record = await this.prisma.account.findFirst({
          where: {
-            id,
+            accountId,
             deletedAt: null,
          },
          select: {
-            id: true,
+            accountId: true,
             email: true,
             isEmailVerified: true,
          },
       });
+
+      return record
+         ? {
+              id: record.accountId,
+              email: record.email,
+              isEmailVerified: record.isEmailVerified,
+           }
+         : null;
    }
 
    async findAllEmails(): Promise<string[]> {
@@ -98,12 +106,12 @@ export class AuthRepository implements IAuthRepository {
    }
 
    async createAccount(data: CreateAccountData, outboxEvent?: CreateOutboxEventData): Promise<AccountEntity> {
-      const id = data.id || uuidv7();
+      const accountId = data.id || uuidv7();
 
       const account = await this.prisma.$transaction(async (tx) => {
          const createdAccount = await tx.account.create({
             data: {
-               id,
+               accountId,
                email: data.email,
                phoneNumber: data.phoneNumber,
                passwordHash: data.passwordHash,
@@ -134,12 +142,11 @@ export class AuthRepository implements IAuthRepository {
                data: {
                   id: outboxEvent.id || uuidv7(),
                   aggregateType: outboxEvent.aggregateType,
-                  aggregateId: outboxEvent.aggregateId || id,
+                  aggregateId: outboxEvent.aggregateId || accountId,
                   eventType: outboxEvent.eventType,
                   payload: {
                      ...outboxEvent.payload,
-                     accountId: id,
-                     userId: id,
+                     accountId,
                   },
                   status: OutboxStatus.PENDING,
                },
@@ -152,10 +159,10 @@ export class AuthRepository implements IAuthRepository {
       return this.toEntity(account);
    }
 
-   async updateAccount(id: string, data: Partial<AccountEntity>): Promise<AccountEntity | null> {
+   async updateAccount(accountId: string, data: Partial<AccountEntity>): Promise<AccountEntity | null> {
       try {
          const account = await this.prisma.account.update({
-            where: { id },
+            where: { accountId },
             data: {
                email: data.email,
                phoneNumber: data.phoneNumber,
@@ -185,10 +192,10 @@ export class AuthRepository implements IAuthRepository {
       }
    }
 
-   async deleteAccount(id: string): Promise<boolean> {
+   async deleteAccount(accountId: string): Promise<boolean> {
       try {
          await this.prisma.account.delete({
-            where: { id },
+            where: { accountId },
          });
          return true;
       } catch {

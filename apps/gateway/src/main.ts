@@ -67,8 +67,10 @@ async function bootstrap() {
       maxAge: 86400,
    });
 
-   // Global prefix
-   app.setGlobalPrefix(globalPrefix);
+   // Global prefix with exclusions for root probe and health checks
+   app.setGlobalPrefix(globalPrefix, {
+      exclude: ['/', 'health', `${globalPrefix}/health`],
+   });
 
    // Global filters & interceptors
    app.useGlobalFilters(new AllExceptionsFilter());
@@ -96,7 +98,7 @@ async function bootstrap() {
          type: 'apiKey',
          in: 'cookie',
          name: 'access_token',
-         description: 'HTTP-only JWT access token cookie',
+         description: 'HTTP Only JWT access token cookie',
       })
       .build();
 

@@ -28,7 +28,7 @@ enum AuditStatus {
 }
 
 model Account {
-  id                 String              @id @default(uuid())
+  accountId          String              @id @default(uuid()) @map("account_id")
   email              String              @unique
   phoneNumber        String?             @unique @map("phone_number")
   passwordHash       String              @map("password_hash")
@@ -86,7 +86,7 @@ model AccountRole {
   accountId  String   @map("account_id")
   roleId     String   @map("role_id")
   createdAt  DateTime @default(now()) @map("created_at")
-  account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account    Account  @relation(fields: [accountId], references: [accountId], onDelete: Cascade)
   role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([accountId, roleId])
@@ -127,7 +127,7 @@ model AccountSession {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  account           Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account           Account   @relation(fields: [accountId], references: [accountId], onDelete: Cascade)
 
   @@index([accountId, isRevoked])
   @@index([refreshTokenJti])
@@ -155,7 +155,7 @@ model SecurityAuditLog {
   metadata     Json?
   createdAt    DateTime     @default(now()) @map("created_at")
 
-  account      Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  account      Account?     @relation(fields: [accountId], references: [accountId], onDelete: SetNull)
 
   @@index([accountId, createdAt])
   @@index([actorEmail, createdAt])

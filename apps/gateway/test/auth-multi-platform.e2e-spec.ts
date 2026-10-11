@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
-import { DEFAULT_DEV_RSA_PRIVATE_KEY, JwtUtil, SERVICES } from '@common';
+import { AUTH_RESPONSE_MESSAGES, DEFAULT_DEV_RSA_PRIVATE_KEY, JwtUtil, SERVICES } from '@common';
 import { GatewayConfigService } from '@/config';
 import { GatewayModule } from '@/gateway.module';
 import { App } from 'supertest/types';
@@ -128,7 +128,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
             .expect(201);
 
          // Verify Set-Cookie headers
-         const cookies = res.headers['set-cookie'] as string[] | undefined;
+         const cookies = res.get('Set-Cookie');
          expect(cookies).toBeDefined();
          expect(cookies?.length).toBeGreaterThanOrEqual(2);
 
@@ -159,7 +159,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
             })
             .expect(200);
 
-         const cookies = res.headers['set-cookie'] as string[] | undefined;
+         const cookies = res.get('Set-Cookie');
          expect(cookies).toBeDefined();
 
          const accessTokenCookie = cookies?.find((c) => c.includes('access_token='));
@@ -178,7 +178,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
             .send({})
             .expect(200);
 
-         const cookies = res.headers['set-cookie'] as string[] | undefined;
+         const cookies = res.get('Set-Cookie');
          expect(cookies).toBeDefined();
 
          const accessTokenCookie = cookies?.find((c) => c.includes('access_token='));
@@ -250,7 +250,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
             .set('Cookie', ['refresh_token=token.to.revoke'])
             .expect(200);
 
-         const cookies = res.headers['set-cookie'] as string[] | undefined;
+         const cookies = res.get('Set-Cookie');
          expect(cookies).toBeDefined();
          expect(cookies?.some((c) => c.includes('access_token=;'))).toBe(true);
          expect(cookies?.some((c) => c.includes('refresh_token=;'))).toBe(true);
@@ -287,7 +287,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
          expect(typeof body.tokens.expiresIn).toBe('number');
 
          // Cookies should still be set for compatibility
-         const cookies = res.headers['set-cookie'] as string[] | undefined;
+         const cookies = res.get('Set-Cookie');
          expect(cookies).toBeDefined();
       });
 
@@ -391,7 +391,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
 
          const body = res.body as { message: string };
          expect(body.message).toBeDefined();
-         expect(body.message).toContain('revoked');
+         expect(body.message).toBe(AUTH_RESPONSE_MESSAGES.TOKEN_REVOKE_SUCCESS);
       });
 
       it('should logout via Authorization Bearer header', async () => {
@@ -403,7 +403,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
 
          const body = res.body as { message: string };
          expect(body.message).toBeDefined();
-         expect(body.message).toContain('Logged out successfully');
+         expect(body.message).toBe(AUTH_RESPONSE_MESSAGES.LOGOUT_SUCCESS);
       });
 
       it('should access protected endpoint with Bearer token', async () => {
@@ -456,7 +456,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
             .expect(200);
 
          // Mobile client gets both cookies and tokens
-         const cookies = res.headers['set-cookie'] as string[] | undefined;
+         const cookies = res.get('Set-Cookie');
          const body = res.body as { tokens: unknown };
 
          expect(cookies).toBeDefined();

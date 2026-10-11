@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Injectable, Optional } from '@nestjs/com
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { CommonConfigService } from '@common/config/common-config.service';
-import { AUTH_COOKIES } from '@common/constants/auth.constant';
+import { AUTH_COOKIES, AUTH_ERROR_REASONS } from '@common/constants/auth.constant';
 import { REDIS_KEY_PREFIX } from '@common/constants/redis.constant';
 import { IS_PUBLIC_KEY } from '@common/decorators/public.decorator';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
@@ -38,7 +38,7 @@ export class JwtAuthGuard implements CanActivate {
 
       if (!token) {
          throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
-            params: { reason: 'token_missing' },
+            params: { reason: AUTH_ERROR_REASONS.TOKEN_MISSING },
          });
       }
 
@@ -46,7 +46,7 @@ export class JwtAuthGuard implements CanActivate {
          const payload = JwtUtil.verify(token, this.config.jwtPublicKey);
          if (payload.tokenType && payload.tokenType !== 'access') {
             throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
-               params: { reason: 'invalid_token_type' },
+               params: { reason: AUTH_ERROR_REASONS.INVALID_TOKEN_TYPE },
             });
          }
 
@@ -56,7 +56,7 @@ export class JwtAuthGuard implements CanActivate {
                const isBlacklisted = await this.redisService.get(revokedKey);
                if (isBlacklisted) {
                   throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
-                     params: { reason: 'token_revoked' },
+                     params: { reason: AUTH_ERROR_REASONS.TOKEN_REVOKED },
                   });
                }
             }
@@ -68,7 +68,7 @@ export class JwtAuthGuard implements CanActivate {
                   const revokedAtTimestamp = Number(revokedAt);
                   if (payload.iat <= revokedAtTimestamp) {
                      throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
-                        params: { reason: 'user_tokens_revoked' },
+                        params: { reason: AUTH_ERROR_REASONS.USER_TOKENS_REVOKED },
                      });
                   }
                }
@@ -82,7 +82,7 @@ export class JwtAuthGuard implements CanActivate {
             throw err;
          }
          throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
-            params: { reason: 'token_invalid_or_expired' },
+            params: { reason: AUTH_ERROR_REASONS.TOKEN_INVALID_OR_EXPIRED },
          });
       }
    }

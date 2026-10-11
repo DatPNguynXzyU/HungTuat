@@ -17,10 +17,10 @@ export class UserGraphSyncService {
 
    async syncUserToGraph(user: UserEntity): Promise<void> {
       try {
-         this.logger.log(`Syncing user to graph: ${user.id} (${user.username ?? user.userId})`);
+         this.logger.log(`Syncing user to graph: ${user.id} (${user.username ?? user.accountId})`);
          await this.graphFollowRepository.createOrUpdateUser({
             id: user.id,
-            userId: user.userId,
+            userId: user.id,
             username: user.username,
             displayName: user.displayName,
             avatar: user.avatar,

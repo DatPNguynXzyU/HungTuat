@@ -4,7 +4,7 @@ import { PrismaService } from '@user/prisma';
 import { UserEntity, Gender, UserStatus } from '@user/entities';
 
 export interface CreateUserData {
-   userId: string;
+   accountId: string;
    username?: string | null;
    displayName?: string | null;
    bio?: string | null;
@@ -48,7 +48,7 @@ export class UserRepository {
       const user = await this.prisma.user.create({
          data: {
             id: uuidv7(),
-            userId: data.userId,
+            accountId: data.accountId,
             username: data.username,
             status: data.status || UserStatus.ACTIVE,
             profile: {
@@ -94,9 +94,9 @@ export class UserRepository {
       return new UserEntity(user);
    }
 
-   async findByUserId(userId: string): Promise<UserEntity | null> {
+   async findByAccountId(accountId: string): Promise<UserEntity | null> {
       const user = await this.prisma.user.findUnique({
-         where: { userId },
+         where: { accountId },
          include: userIncludeRelations,
       });
       if (!user || user.deletedAt) {
@@ -105,14 +105,15 @@ export class UserRepository {
       return new UserEntity(user);
    }
 
-   async findDateOfBirth(userId: string): Promise<{ userId: string; dateOfBirth: Date | null } | null> {
+   async findDateOfBirth(idOrAccountId: string): Promise<{ userId: string; dateOfBirth: Date | null } | null> {
       const user = await this.prisma.user.findFirst({
          where: {
-            OR: [{ id: userId }, { userId }],
+            OR: [{ id: idOrAccountId }, { accountId: idOrAccountId }],
             deletedAt: null,
          },
          select: {
-            userId: true,
+            id: true,
+            accountId: true,
             profile: {
                select: {
                   dateOfBirth: true,
@@ -126,7 +127,7 @@ export class UserRepository {
       }
 
       return {
-         userId: user.userId,
+         userId: user.id,
          dateOfBirth: user.profile?.dateOfBirth ?? null,
       };
    }

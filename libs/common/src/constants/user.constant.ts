@@ -42,6 +42,7 @@ export const USER_PATTERNS = {
    CREATE_USER: 'create_user',
    GET_USER_BY_ID: 'get_user_by_id',
    GET_USER_BY_USER_ID: 'get_user_by_user_id',
+   GET_USER_BY_ACCOUNT_ID: 'get_user_by_account_id',
    GET_USER_BY_USERNAME: 'get_user_by_username',
    GET_ALL_USERS: 'users.get_all',
    GET_DATE_OF_BIRTH: 'get_date_of_birth',
@@ -66,3 +67,9 @@ export const USER_PATTERNS = {
 } as const;
 
 export type UserPattern = (typeof USER_PATTERNS)[keyof typeof USER_PATTERNS];
+
+export const USER_ERROR_REASONS = {
+   USERNAME_REQUIRED: 'username_required',
+} as const;
+
+export type UserErrorReason = (typeof USER_ERROR_REASONS)[keyof typeof USER_ERROR_REASONS];

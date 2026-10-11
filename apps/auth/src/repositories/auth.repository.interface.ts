@@ -11,12 +11,12 @@ export interface AccountEmailRecord {
 
 export interface IAuthRepository {
    findByEmail(email: string): Promise<AccountEntity | null>;
-   findById(id: string): Promise<AccountEntity | null>;
-   findEmailById(id: string): Promise<AccountEmailRecord | null>;
+   findById(accountId: string): Promise<AccountEntity | null>;
+   findEmailById(accountId: string): Promise<AccountEmailRecord | null>;
    findAllEmails(): Promise<string[]>;
    createAccount(data: CreateAccountData, outboxEvent?: CreateOutboxEventData): Promise<AccountEntity>;
-   updateAccount(id: string, data: Partial<AccountEntity>): Promise<AccountEntity | null>;
-   deleteAccount(id: string): Promise<boolean>;
+   updateAccount(accountId: string, data: Partial<AccountEntity>): Promise<AccountEntity | null>;
+   deleteAccount(accountId: string): Promise<boolean>;
    findRoleByCode(code: string): Promise<RoleEntity | null>;
    assignRoleToAccount(accountId: string, roleId: string): Promise<void>;
 }

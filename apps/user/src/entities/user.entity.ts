@@ -55,7 +55,7 @@ export class UserSettingsEntity implements PrismaUserSettings {
 
 export class UserEntity implements PrismaUser {
    id: string;
-   userId: string;
+   accountId: string;
    username: string | null;
    status: UserStatus;
    deletedAt: Date | null;

@@ -213,10 +213,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
          ...(correlationId ? { correlationId } : {}),
       };
 
-      this.logger.error(
-         `[${request?.method || 'UNKNOWN'}] ${request?.url || ''} - Status: ${status} - ErrorCode: ${errorCode} - Message: ${message}`,
-         exception instanceof Error ? exception.stack : undefined,
-      );
+      if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+         this.logger.error(
+            `[${request?.method || 'UNKNOWN'}] ${request?.url || ''} - Status: ${status} - ErrorCode: ${errorCode} - Message: ${message}`,
+            exception instanceof Error ? exception.stack : undefined,
+         );
+      } else {
+         this.logger.warn(
+            `[${request?.method || 'UNKNOWN'}] ${request?.url || ''} - Status: ${status} - ErrorCode: ${errorCode} - Message: ${message}`,
+         );
+      }
 
       response.status(status).json(errorResponse);
    }

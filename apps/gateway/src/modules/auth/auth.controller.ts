@@ -29,6 +29,7 @@ import {
    AuditLogResponseDto,
    AUTH_COOKIES,
    AUTH_ERROR_CODES,
+   AUTH_ERROR_REASONS,
    AUTH_RESPONSE_MESSAGES,
    AuthResponseDto,
    AuthTokensDto,
@@ -198,13 +199,13 @@ export class AuthController {
       status: HttpStatus.BAD_REQUEST,
       description: 'Invalid or missing email address',
       errorCodes: [AUTH_ERROR_CODES.INVALID_EMAIL_FORMAT],
-      exampleParams: { reason: 'email_required' },
+      exampleParams: { reason: AUTH_ERROR_REASONS.EMAIL_REQUIRED },
    })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.CHECK_EMAIL_SUCCESS)
    async checkEmail(@Query('email') email: string): Promise<{ available: boolean; email: string }> {
       if (!email || !email.trim()) {
          throw new BadRequestException(AUTH_ERROR_CODES.INVALID_EMAIL_FORMAT, {
-            params: { reason: 'email_required' },
+            params: { reason: AUTH_ERROR_REASONS.EMAIL_REQUIRED },
          });
       }
       return this.authService.checkEmail(email);
@@ -473,7 +474,7 @@ export class AuthController {
          AUTH_ERROR_CODES.REFRESH_TOKEN_EXPIRED,
          AUTH_ERROR_CODES.TOKEN_REVOKED,
       ],
-      exampleParams: { reason: 'refresh_token_missing' },
+      exampleParams: { reason: AUTH_ERROR_REASONS.REFRESH_TOKEN_MISSING },
    })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.TOKEN_REFRESH_SUCCESS)
    async refreshToken(
@@ -487,7 +488,7 @@ export class AuthController {
 
       if (!token) {
          throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_REQUIRED, {
-            params: { reason: 'refresh_token_missing' },
+            params: { reason: AUTH_ERROR_REASONS.REFRESH_TOKEN_MISSING },
          });
       }
 
@@ -532,7 +533,7 @@ export class AuthController {
       @Body() body: RevokeTokenRequestDto,
       @Headers('authorization') authHeader?: string,
       @Headers('x-refresh-token') headerRefreshToken?: string,
-   ): Promise<void> {
+   ): Promise<{ success: boolean; message: string }> {
       const cookies = req.cookies as Record<string, string> | undefined;
 
       let token =
@@ -553,6 +554,7 @@ export class AuthController {
       }
 
       this.clearAuthCookies(res);
+      return { success: true, message: AUTH_RESPONSE_MESSAGES.TOKEN_REVOKE_SUCCESS };
    }
 
    @Public()
@@ -574,7 +576,7 @@ export class AuthController {
       @Req() req: Request,
       @Res({ passthrough: true }) res: Response,
       @Headers('authorization') authHeader?: string,
-   ): Promise<void> {
+   ): Promise<{ success: boolean; message: string }> {
       const cookies = req.cookies as Record<string, string> | undefined;
       let refreshToken = cookies?.[AUTH_COOKIES.REFRESH_TOKEN];
 
@@ -590,6 +592,7 @@ export class AuthController {
       }
 
       this.clearAuthCookies(res);
+      return { success: true, message: AUTH_RESPONSE_MESSAGES.LOGOUT_SUCCESS };
    }
 
    @Post('logout-all')
@@ -702,7 +705,7 @@ export class AuthController {
       const currentJti = this.extractCurrentJti(req);
       if (!currentJti) {
          throw new BadRequestException(AUTH_ERROR_CODES.CURRENT_SESSION_REQUIRED, {
-            params: { reason: 'refresh_token_missing' },
+            params: { reason: AUTH_ERROR_REASONS.REFRESH_TOKEN_MISSING },
          });
       }
 

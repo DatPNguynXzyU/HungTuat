@@ -70,9 +70,9 @@ describe('AuthRepository', () => {
 
    it('should create a user with a valid UUIDv7 id and enterprise defaults and optional outbox event in transaction', async () => {
       prismaService.account.create.mockImplementation(
-         ({ data }: { data: { id: string; email: string; passwordHash: string; createdAt?: Date } }) =>
+         ({ data }: { data: { accountId: string; email: string; passwordHash: string; createdAt?: Date } }) =>
             Promise.resolve({
-               id: data.id,
+               accountId: data.accountId,
                email: data.email,
                passwordHash: data.passwordHash,
                status: 'ACTIVE',
@@ -126,7 +126,7 @@ describe('AuthRepository', () => {
 
    it('should find user by email with case-insensitivity and deletedAt null check', async () => {
       prismaService.account.findFirst.mockResolvedValue({
-         id: 'test-id',
+         accountId: 'test-id',
          email: 'user@example.com',
          passwordHash: 'hash',
          status: 'ACTIVE',
@@ -196,7 +196,7 @@ describe('AuthRepository', () => {
 
    it('should find user by id filtering deletedAt null', async () => {
       prismaService.account.findFirst.mockResolvedValue({
-         id: 'user-id-123',
+         accountId: 'user-id-123',
          email: 'user2@example.com',
          passwordHash: 'hash',
          status: 'ACTIVE',
@@ -212,7 +212,7 @@ describe('AuthRepository', () => {
       const found = await repository.findById('user-id-123');
       expect(prismaService.account.findFirst).toHaveBeenCalledWith({
          where: {
-            id: 'user-id-123',
+            accountId: 'user-id-123',
             deletedAt: null,
          },
          include: {
@@ -234,7 +234,7 @@ describe('AuthRepository', () => {
       const found = await repository.findById('deleted-id');
       expect(prismaService.account.findFirst).toHaveBeenCalledWith({
          where: {
-            id: 'deleted-id',
+            accountId: 'deleted-id',
             deletedAt: null,
          },
          include: {
