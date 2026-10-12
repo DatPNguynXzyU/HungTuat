@@ -8,7 +8,13 @@ import {
 } from '@user/prisma-client';
 
 export class UserProfileEntity implements Omit<PrismaUserProfile, 'dateOfBirth' | 'gender'> {
-   id: string;
+   profileId: string;
+   get id(): string {
+      return this.profileId;
+   }
+   set id(val: string) {
+      this.profileId = val;
+   }
    userId: string;
    displayName: string | null;
    bio: string | null;
@@ -19,16 +25,25 @@ export class UserProfileEntity implements Omit<PrismaUserProfile, 'dateOfBirth' 
    createdAt: Date;
    updatedAt: Date;
 
-   constructor(partial: Partial<PrismaUserProfile>) {
+   constructor(partial: Partial<PrismaUserProfile & { id?: string }>) {
       const rest = { ...partial };
       delete (rest as { dateOfBirth?: unknown }).dateOfBirth;
       delete (rest as { gender?: unknown }).gender;
+      if (rest.id && !rest.profileId) {
+         rest.profileId = rest.id;
+      }
       Object.assign(this, rest);
    }
 }
 
 export class UserStatsEntity implements PrismaUserStats {
-   id: string;
+   statsId: string;
+   get id(): string {
+      return this.statsId;
+   }
+   set id(val: string) {
+      this.statsId = val;
+   }
    userId: string;
    followersCount: number;
    followingCount: number;
@@ -37,21 +52,35 @@ export class UserStatsEntity implements PrismaUserStats {
    createdAt: Date;
    updatedAt: Date;
 
-   constructor(partial: Partial<UserStatsEntity>) {
-      Object.assign(this, partial);
+   constructor(partial: Partial<UserStatsEntity & { statsId?: string }>) {
+      const rest = { ...partial };
+      if (rest.id && !rest.statsId) {
+         rest.statsId = rest.id;
+      }
+      Object.assign(this, rest);
    }
 }
 
 export class UserSettingsEntity implements PrismaUserSettings {
-   id: string;
+   settingsId: string;
+   get id(): string {
+      return this.settingsId;
+   }
+   set id(val: string) {
+      this.settingsId = val;
+   }
    userId: string;
    isVerified: boolean;
    isPrivate: boolean;
    createdAt: Date;
    updatedAt: Date;
 
-   constructor(partial: Partial<UserSettingsEntity>) {
-      Object.assign(this, partial);
+   constructor(partial: Partial<UserSettingsEntity & { settingsId?: string }>) {
+      const rest = { ...partial };
+      if (rest.id && !rest.settingsId) {
+         rest.settingsId = rest.id;
+      }
+      Object.assign(this, rest);
    }
 }
 
@@ -64,7 +93,13 @@ export type UserEntityInput = Partial<Omit<UserEntity, 'profile' | 'stats' | 'se
 };
 
 export class UserEntity implements PrismaUser {
-   id: string;
+   userId: string;
+   get id(): string {
+      return this.userId;
+   }
+   set id(val: string) {
+      this.userId = val;
+   }
    accountId: string;
    username: string | null;
    status: UserStatus;
@@ -129,9 +164,13 @@ export class UserEntity implements PrismaUser {
       const rest = { ...partial } as Partial<UserEntity> & {
          dateOfBirth?: unknown;
          gender?: unknown;
+         id?: string;
       };
       delete rest.dateOfBirth;
       delete rest.gender;
+      if (rest.id && !rest.userId) {
+         rest.userId = rest.id;
+      }
       Object.assign(this, rest);
       if (partial.profile) {
          this.profile = new UserProfileEntity(partial.profile);

@@ -7,6 +7,10 @@ install:
 prisma-push:
 	pnpm run prisma:push
 
+.PHONY: prisma-push-reset
+prisma-push-reset:
+	pnpm run prisma:push:reset
+
 .PHONY: prisma-generate
 prisma-generate:
 	pnpm run prisma:generate

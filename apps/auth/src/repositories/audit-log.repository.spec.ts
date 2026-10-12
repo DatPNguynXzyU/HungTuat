@@ -7,7 +7,7 @@ describe('AuditLogRepository', () => {
    let repository: AuditLogRepository;
 
    const sampleAuditLog = {
-      id: 'audit-id-1',
+      auditLogId: 'audit-id-1',
       accountId: 'account-id-1',
       actorEmail: 'test@example.com',
       action: 'AUTH.LOGIN_SUCCESS',
@@ -95,7 +95,7 @@ describe('AuditLogRepository', () => {
 
       expect(result?.id).toBe('audit-id-1');
       expect(mockSecurityAuditLogFindUnique).toHaveBeenCalledWith({
-         where: { id: 'audit-id-1' },
+         where: { auditLogId: 'audit-id-1' },
       });
    });
 

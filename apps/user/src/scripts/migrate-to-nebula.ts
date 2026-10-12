@@ -22,7 +22,7 @@ async function bootstrap() {
       for (const user of users) {
          const query = `
             INSERT VERTEX User(userId, username, createdAt, updatedAt) 
-            VALUES "${user.id}":("${user.id}", "${user.username || ''}", ${user.createdAt.getTime()}, ${user.updatedAt.getTime()});
+            VALUES "${user.userId}":("${user.userId}", "${user.username || ''}", ${user.createdAt.getTime()}, ${user.updatedAt.getTime()});
          `;
          await nebulaService.execute(query);
          logger.debug(`Migrated user: ${user.username}`);

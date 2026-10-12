@@ -275,7 +275,7 @@ async function main() {
          update: { name: perm.name, description: perm.description },
          create: { code: perm.code, name: perm.name, description: perm.description },
       });
-      permissionMap.set(perm.code, created.id);
+      permissionMap.set(perm.code, created.permissionId);
    }
 
    console.log('Seeding cooking network roles...');
@@ -300,13 +300,13 @@ async function main() {
             await prisma.rolePermission.upsert({
                where: {
                   roleId_permissionId: {
-                     roleId: role.id,
+                     roleId: role.roleId,
                      permissionId,
                   },
                },
                update: {},
                create: {
-                  roleId: role.id,
+                  roleId: role.roleId,
                   permissionId,
                },
             });
@@ -314,7 +314,7 @@ async function main() {
       }
 
       seededRoles.push({
-         id: role.id,
+         id: role.roleId,
          code: role.code,
          name: role.name,
          description: role.description,

@@ -6,6 +6,7 @@ import {
    DEFAULT_DEV_RSA_PUBLIC_KEY,
    DEFAULT_JWT_KEY_ID,
 } from '@common/constants/jwt.constant';
+import { ENV_KEYS } from '@common/constants/env-keys.constant';
 import { JwtUtil } from '@common/utils/jwt.util';
 
 @Injectable()
@@ -13,7 +14,7 @@ export class CommonConfigService {
    constructor(protected readonly configService: ConfigService<SharedEnvConfig, true>) {}
 
    get nodeEnv(): 'development' | 'production' | 'test' {
-      return this.configService.get('NODE_ENV', { infer: true });
+      return this.configService.get(ENV_KEYS.NODE_ENV, { infer: true });
    }
 
    get isProduction(): boolean {
@@ -29,19 +30,19 @@ export class CommonConfigService {
    }
 
    get serviceName(): string {
-      return this.configService.get('SERVICE_NAME', { infer: true });
+      return this.configService.get(ENV_KEYS.SERVICE_NAME, { infer: true });
    }
 
    get logLevel(): string {
-      return this.configService.get('LOG_LEVEL', { infer: true });
+      return this.configService.get(ENV_KEYS.LOG_LEVEL, { infer: true });
    }
 
    get jwtPublicKeyPath(): string | undefined {
-      return this.configService.get('JWT_PUBLIC_KEY_PATH', { infer: true });
+      return this.configService.get(ENV_KEYS.JWT_PUBLIC_KEY_PATH, { infer: true });
    }
 
    get jwtPrivateKeyPath(): string | undefined {
-      return this.configService.get('JWT_PRIVATE_KEY_PATH', { infer: true });
+      return this.configService.get(ENV_KEYS.JWT_PRIVATE_KEY_PATH, { infer: true });
    }
 
    get jwtPublicKey(): string {
@@ -49,7 +50,7 @@ export class CommonConfigService {
       if (fromFile) {
          return fromFile;
       }
-      const rawKey = this.configService.get('JWT_PUBLIC_KEY', { infer: true });
+      const rawKey = this.configService.get(ENV_KEYS.JWT_PUBLIC_KEY, { infer: true });
       return (rawKey ? JwtUtil.formatPemKey(rawKey) : '') || DEFAULT_DEV_RSA_PUBLIC_KEY;
    }
 
@@ -58,16 +59,16 @@ export class CommonConfigService {
       if (fromFile) {
          return fromFile;
       }
-      const rawKey = this.configService.get('JWT_PRIVATE_KEY', { infer: true });
+      const rawKey = this.configService.get(ENV_KEYS.JWT_PRIVATE_KEY, { infer: true });
       return (rawKey ? JwtUtil.formatPemKey(rawKey) : '') || DEFAULT_DEV_RSA_PRIVATE_KEY;
    }
 
    get jwtKeyId(): string {
-      return this.configService.get('JWT_KEY_ID', { infer: true }) || DEFAULT_JWT_KEY_ID;
+      return this.configService.get(ENV_KEYS.JWT_KEY_ID, { infer: true }) || DEFAULT_JWT_KEY_ID;
    }
 
    get jwtAlgorithm(): string {
-      return this.configService.get('JWT_ALGORITHM', { infer: true }) || 'RS256';
+      return this.configService.get(ENV_KEYS.JWT_ALGORITHM, { infer: true }) || 'RS256';
    }
 
    get jwtSecret(): string {
@@ -80,59 +81,61 @@ export class CommonConfigService {
 
    get argon2Secret(): string | undefined {
       return (
-         this.configService.get('ARGON2_SECRET', { infer: true }) ||
-         this.configService.get('ARGON2_SALT', { infer: true })
+         this.configService.get(ENV_KEYS.ARGON2_SECRET, { infer: true }) ||
+         this.configService.get(ENV_KEYS.ARGON2_SALT, { infer: true })
       );
    }
 
    get jwtAccessTokenExpiresIn(): number {
       return (
-         this.configService.get('JWT_ACCESS_TOKEN_EXPIRES_IN', { infer: true }) ||
-         this.configService.get('JWT_EXPIRES_IN', { infer: true }) ||
+         this.configService.get(ENV_KEYS.JWT_ACCESS_TOKEN_EXPIRES_IN, { infer: true }) ||
+         this.configService.get(ENV_KEYS.JWT_EXPIRES_IN, { infer: true }) ||
          900
       );
    }
 
    get jwtRefreshTokenExpiresIn(): number {
-      return this.configService.get('JWT_REFRESH_TOKEN_EXPIRES_IN', { infer: true }) || 604800;
+      return this.configService.get(ENV_KEYS.JWT_REFRESH_TOKEN_EXPIRES_IN, { infer: true }) || 604800;
    }
 
    get cookieName(): string {
-      return this.configService.get('COOKIE_NAME', { infer: true });
+      return this.configService.get(ENV_KEYS.COOKIE_NAME, { infer: true });
    }
 
    get accessTokenCookieMaxAge(): number {
       return (
-         this.configService.get('COOKIE_ACCESS_TOKEN_MAX_AGE', { infer: true }) || this.jwtAccessTokenExpiresIn * 1000
+         this.configService.get(ENV_KEYS.COOKIE_ACCESS_TOKEN_MAX_AGE, { infer: true }) ||
+         this.jwtAccessTokenExpiresIn * 1000
       );
    }
 
    get refreshTokenCookieMaxAge(): number {
       return (
-         this.configService.get('COOKIE_REFRESH_TOKEN_MAX_AGE', { infer: true }) || this.jwtRefreshTokenExpiresIn * 1000
+         this.configService.get(ENV_KEYS.COOKIE_REFRESH_TOKEN_MAX_AGE, { infer: true }) ||
+         this.jwtRefreshTokenExpiresIn * 1000
       );
    }
 
    get redis() {
       return {
-         host: this.configService.get('REDIS_HOST', { infer: true }),
-         port: this.configService.get('REDIS_PORT', { infer: true }),
-         password: this.configService.get('REDIS_PASSWORD', { infer: true }),
+         host: this.configService.get(ENV_KEYS.REDIS_HOST, { infer: true }),
+         port: this.configService.get(ENV_KEYS.REDIS_PORT, { infer: true }),
+         password: this.configService.get(ENV_KEYS.REDIS_PASSWORD, { infer: true }),
       };
    }
 
    get rabbitMq() {
       const uri =
-         this.configService.get('RABBIT_MQ_URI', { infer: true }) ||
-         this.configService.get('RABBITMQ_URI', { infer: true }) ||
+         this.configService.get(ENV_KEYS.RABBIT_MQ_URI, { infer: true }) ||
+         this.configService.get(ENV_KEYS.RABBITMQ_URI, { infer: true }) ||
          'amqp://guest:guest@localhost:5672';
 
       return {
          uri,
-         authQueue: this.configService.get('RABBIT_MQ_AUTH_SERVICE_QUEUE', { infer: true }),
-         userQueue: this.configService.get('RABBIT_MQ_USER_SERVICE_QUEUE', { infer: true }),
-         orderQueue: this.configService.get('RABBIT_MQ_ORDER_SERVICE_QUEUE', { infer: true }),
-         notificationQueue: this.configService.get('RABBIT_MQ_NOTIFICATION_SERVICE_QUEUE', { infer: true }),
+         authQueue: this.configService.get(ENV_KEYS.RABBIT_MQ_AUTH_SERVICE_QUEUE, { infer: true }),
+         userQueue: this.configService.get(ENV_KEYS.RABBIT_MQ_USER_SERVICE_QUEUE, { infer: true }),
+         orderQueue: this.configService.get(ENV_KEYS.RABBIT_MQ_ORDER_SERVICE_QUEUE, { infer: true }),
+         notificationQueue: this.configService.get(ENV_KEYS.RABBIT_MQ_NOTIFICATION_SERVICE_QUEUE, { infer: true }),
          getQueue: (serviceName: string): string => {
             const dynamicKey = `RABBIT_MQ_${serviceName}_QUEUE` as keyof SharedEnvConfig;
             const configuredQueue = this.configService.get(dynamicKey, { infer: true });
@@ -145,27 +148,27 @@ export class CommonConfigService {
 
    get nebula() {
       return {
-         graphAddress: this.configService.get('NEBULA_GRAPHD_HOST', { infer: true }),
-         graphPort: this.configService.get('NEBULA_GRAPHD_PORT', { infer: true }),
-         username: this.configService.get('NEBULA_USERNAME', { infer: true }),
-         password: this.configService.get('NEBULA_PASSWORD', { infer: true }),
-         space: this.configService.get('NEBULA_SPACE', { infer: true }),
+         graphAddress: this.configService.get(ENV_KEYS.NEBULA_GRAPHD_HOST, { infer: true }),
+         graphPort: this.configService.get(ENV_KEYS.NEBULA_GRAPHD_PORT, { infer: true }),
+         username: this.configService.get(ENV_KEYS.NEBULA_USERNAME, { infer: true }),
+         password: this.configService.get(ENV_KEYS.NEBULA_PASSWORD, { infer: true }),
+         space: this.configService.get(ENV_KEYS.NEBULA_SPACE, { infer: true }),
       };
    }
 
    get elasticsearch() {
       return {
-         node: this.configService.get('ELASTICSEARCH_NODE', { infer: true }) || 'http://localhost:9200',
-         username: this.configService.get('ELASTICSEARCH_USERNAME', { infer: true }),
-         password: this.configService.get('ELASTICSEARCH_PASSWORD', { infer: true }),
+         node: this.configService.get(ENV_KEYS.ELASTICSEARCH_NODE, { infer: true }) || 'http://localhost:9200',
+         username: this.configService.get(ENV_KEYS.ELASTICSEARCH_USERNAME, { infer: true }),
+         password: this.configService.get(ENV_KEYS.ELASTICSEARCH_PASSWORD, { infer: true }),
       };
    }
 
    get cloudinary() {
       return {
-         cloudName: this.configService.get('CLOUDINARY_CLOUD_NAME', { infer: true }) || '',
-         apiKey: this.configService.get('CLOUDINARY_API_KEY', { infer: true }) || '',
-         apiSecret: this.configService.get('CLOUDINARY_API_SECRET', { infer: true }) || '',
+         cloudName: this.configService.get(ENV_KEYS.CLOUDINARY_CLOUD_NAME, { infer: true }) || '',
+         apiKey: this.configService.get(ENV_KEYS.CLOUDINARY_API_KEY, { infer: true }) || '',
+         apiSecret: this.configService.get(ENV_KEYS.CLOUDINARY_API_SECRET, { infer: true }) || '',
       };
    }
 }

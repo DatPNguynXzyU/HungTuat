@@ -28,20 +28,20 @@ enum AuditStatus {
 }
 
 model Account {
-  accountId          String              @id @default(uuid()) @map("account_id")
-  email              String              @unique
-  phoneNumber        String?             @unique @map("phone_number")
-  passwordHash       String              @map("password_hash")
-  status             AccountStatus       @default(ACTIVE)
-  isEmailVerified    Boolean             @default(false) @map("is_email_verified")
-  lastLoginAt        DateTime?           @map("last_login_at")
-  version            Int                 @default(1)
-  deletedAt          DateTime?           @map("deleted_at")
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
-  accountRoles       AccountRole[]
-  sessions           AccountSession[]
-  auditLogs          SecurityAuditLog[]
+  accountId       String             @id @default(uuid()) @map("account_id")
+  email           String             @unique
+  phoneNumber     String?            @unique @map("phone_number")
+  passwordHash    String             @map("password_hash")
+  status          AccountStatus      @default(ACTIVE)
+  isEmailVerified Boolean            @default(false) @map("is_email_verified")
+  lastLoginAt     DateTime?          @map("last_login_at")
+  version         Int                @default(1)
+  deletedAt       DateTime?          @map("deleted_at")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  accountRoles    AccountRole[]
+  sessions        AccountSession[]
+  auditLogs       SecurityAuditLog[]
 
   @@index([status])
   @@index([deletedAt])
@@ -50,16 +50,16 @@ model Account {
 }
 
 model Role {
-  id                String           @id @default(uuid())
-  code              String           @unique
-  name              String
-  description       String?
-  version           Int              @default(1)
-  deletedAt         DateTime?        @map("deleted_at")
-  createdAt         DateTime         @default(now()) @map("created_at")
-  updatedAt         DateTime         @updatedAt @map("updated_at")
-  accountRoles      AccountRole[]
-  rolePermissions   RolePermission[]
+  roleId          String           @id @default(uuid()) @map("role_id")
+  code            String           @unique
+  name            String
+  description     String?
+  version         Int              @default(1)
+  deletedAt       DateTime?        @map("deleted_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  accountRoles    AccountRole[]
+  rolePermissions RolePermission[]
 
   @@index([code])
   @@index([deletedAt])
@@ -67,15 +67,15 @@ model Role {
 }
 
 model Permission {
-  id                String           @id @default(uuid())
-  code              String           @unique
-  name              String
-  description       String?
-  version           Int              @default(1)
-  deletedAt         DateTime?        @map("deleted_at")
-  createdAt         DateTime         @default(now()) @map("created_at")
-  updatedAt         DateTime         @updatedAt @map("updated_at")
-  rolePermissions   RolePermission[]
+  permissionId    String           @id @default(uuid()) @map("permission_id")
+  code            String           @unique
+  name            String
+  description     String?
+  version         Int              @default(1)
+  deletedAt       DateTime?        @map("deleted_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  rolePermissions RolePermission[]
 
   @@index([code])
   @@index([deletedAt])
@@ -83,13 +83,14 @@ model Permission {
 }
 
 model AccountRole {
-  accountId  String   @map("account_id")
-  roleId     String   @map("role_id")
-  createdAt  DateTime @default(now()) @map("created_at")
-  account    Account  @relation(fields: [accountId], references: [accountId], onDelete: Cascade)
-  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  accountId String   @map("account_id")
+  roleId    String   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  account   Account  @relation(fields: [accountId], references: [accountId], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [roleId], onDelete: Cascade)
 
   @@id([accountId, roleId])
+  @@index([roleId])
   @@map("account_roles")
 }
 
@@ -97,37 +98,38 @@ model RolePermission {
   roleId       String     @map("role_id")
   permissionId String     @map("permission_id")
   createdAt    DateTime   @default(now()) @map("created_at")
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [roleId], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [permissionId], onDelete: Cascade)
 
   @@id([roleId, permissionId])
+  @@index([permissionId])
   @@map("role_permissions")
 }
 
 model AccountSession {
-  id                String    @id @default(uuid())
-  accountId         String    @map("account_id")
-  refreshTokenJti   String    @unique @map("refresh_token_jti")
-  deviceType        String?   @map("device_type")
-  deviceName        String?   @map("device_name")
-  browser           String?
-  os                String?
-  userAgent         String?   @map("user_agent")
-  ipAddress         String?   @map("ip_address")
-  city              String?
-  region            String?
-  country           String?
-  countryCode       String?   @map("country_code")
-  deviceId          String?   @map("device_id")
-  clientType        String?   @default("web") @map("client_type")
-  appVersion        String?   @map("app_version")
-  isRevoked         Boolean   @default(false) @map("is_revoked")
-  lastActiveAt      DateTime  @default(now()) @map("last_active_at")
-  expiresAt         DateTime  @map("expires_at")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  sessionId       String   @id @default(uuid()) @map("session_id")
+  accountId       String   @map("account_id")
+  refreshTokenJti String   @unique @map("refresh_token_jti")
+  deviceType      String?  @map("device_type")
+  deviceName      String?  @map("device_name")
+  browser         String?
+  os              String?
+  userAgent       String?  @map("user_agent")
+  ipAddress       String?  @map("ip_address")
+  city            String?
+  region          String?
+  country         String?
+  countryCode     String?  @map("country_code")
+  deviceId        String?  @map("device_id")
+  clientType      String?  @default("web") @map("client_type")
+  appVersion      String?  @map("app_version")
+  isRevoked       Boolean  @default(false) @map("is_revoked")
+  lastActiveAt    DateTime @default(now()) @map("last_active_at")
+  expiresAt       DateTime @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  account           Account   @relation(fields: [accountId], references: [accountId], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [accountId], onDelete: Cascade)
 
   @@index([accountId, isRevoked])
   @@index([refreshTokenJti])
@@ -138,24 +140,24 @@ model AccountSession {
 }
 
 model SecurityAuditLog {
-  id           String       @id @default(uuid())
-  accountId    String?      @map("account_id")
-  actorEmail   String?      @map("actor_email")
-  action       String
-  status       AuditStatus  @default(SUCCESS)
-  ipAddress    String?      @map("ip_address")
-  userAgent    String?      @map("user_agent")
-  deviceType   String?      @map("device_type")
-  deviceName   String?      @map("device_name")
-  browser      String?
-  os           String?
-  city         String?
-  country      String?
-  reason       String?
-  metadata     Json?
-  createdAt    DateTime     @default(now()) @map("created_at")
+  auditLogId String      @id @default(uuid()) @map("audit_log_id")
+  accountId  String?     @map("account_id")
+  actorEmail String?     @map("actor_email")
+  action     String
+  status     AuditStatus @default(SUCCESS)
+  ipAddress  String?     @map("ip_address")
+  userAgent  String?     @map("user_agent")
+  deviceType String?     @map("device_type")
+  deviceName String?     @map("device_name")
+  browser    String?
+  os         String?
+  city       String?
+  country    String?
+  reason     String?
+  metadata   Json?
+  createdAt  DateTime    @default(now()) @map("created_at")
 
-  account      Account?     @relation(fields: [accountId], references: [accountId], onDelete: SetNull)
+  account Account? @relation(fields: [accountId], references: [accountId], onDelete: SetNull)
 
   @@index([accountId, createdAt])
   @@index([actorEmail, createdAt])
@@ -166,17 +168,17 @@ model SecurityAuditLog {
 }
 
 model OutboxEvent {
-  id             String        @id @default(uuid())
-  aggregateType  String        @map("aggregate_type")
-  aggregateId    String        @map("aggregate_id")
-  eventType      String        @map("event_type")
-  payload        Json
-  status         OutboxStatus  @default(PENDING)
-  retryCount     Int           @default(0) @map("retry_count")
-  lastError      String?       @map("last_error")
-  processedAt    DateTime?     @map("processed_at")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  eventId       String       @id @default(uuid()) @map("event_id")
+  aggregateType String       @map("aggregate_type")
+  aggregateId   String       @map("aggregate_id")
+  eventType     String       @map("event_type")
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  retryCount    Int          @default(0) @map("retry_count")
+  lastError     String?      @map("last_error")
+  processedAt   DateTime?    @map("processed_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
 
   @@index([status, createdAt])
   @@index([aggregateType, aggregateId])

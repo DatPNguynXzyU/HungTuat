@@ -9,19 +9,20 @@ export class FollowRepository {
    constructor(private readonly prisma: PrismaService) {}
 
    async create(data: Prisma.FollowCreateInput): Promise<FollowEntity> {
-      const id = data.id || uuidv7();
+      const followId =
+         (data as { followId?: string; id?: string }).followId || (data as { id?: string }).id || uuidv7();
       const follow = await this.prisma.follow.create({
          data: {
             ...data,
-            id,
+            followId,
          },
       });
       return new FollowEntity(follow);
    }
 
-   async findById(id: string): Promise<FollowEntity | null> {
+   async findById(followId: string): Promise<FollowEntity | null> {
       const follow = await this.prisma.follow.findUnique({
-         where: { id },
+         where: { followId },
       });
       if (!follow || follow.deletedAt) {
          return null;
@@ -141,17 +142,17 @@ export class FollowRepository {
       });
    }
 
-   async updateStatus(id: string, status: FollowStatus): Promise<FollowEntity> {
+   async updateStatus(followId: string, status: FollowStatus): Promise<FollowEntity> {
       const follow = await this.prisma.follow.update({
-         where: { id },
+         where: { followId },
          data: { status },
       });
       return new FollowEntity(follow);
    }
 
-   async softDelete(id: string): Promise<FollowEntity> {
+   async softDelete(followId: string): Promise<FollowEntity> {
       const follow = await this.prisma.follow.update({
-         where: { id },
+         where: { followId },
          data: { deletedAt: new Date() },
       });
       return new FollowEntity(follow);
@@ -162,12 +163,12 @@ export class FollowRepository {
       if (!follow) {
          return null;
       }
-      return this.softDelete(follow.id);
+      return this.softDelete(follow.followId);
    }
 
-   async restore(id: string): Promise<FollowEntity> {
+   async restore(followId: string): Promise<FollowEntity> {
       const follow = await this.prisma.follow.update({
-         where: { id },
+         where: { followId },
          data: { deletedAt: null },
       });
       return new FollowEntity(follow);

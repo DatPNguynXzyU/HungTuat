@@ -63,7 +63,7 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
          }
 
          this.logger.log(`Processing ${pendingEvents.length} pending outbox event(s)`);
-         await this.outboxRepository.markAsProcessing(pendingEvents.map((e) => e.id));
+         await this.outboxRepository.markAsProcessing(pendingEvents.map((e) => e.eventId));
 
          let successCount = 0;
          for (const event of pendingEvents) {
@@ -72,13 +72,13 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
                   firstValueFrom(this.notificationClient.emit(event.eventType, event.payload)),
                   firstValueFrom(this.userClient.emit(event.eventType, event.payload)),
                ]);
-               await this.outboxRepository.markAsPublished(event.id);
-               this.logger.log(`Outbox event published successfully: [${event.eventType}] ID: ${event.id}`);
+               await this.outboxRepository.markAsPublished(event.eventId);
+               this.logger.log(`Outbox event published successfully: [${event.eventType}] ID: ${event.eventId}`);
                successCount++;
             } catch (err: unknown) {
                const errMsg = err instanceof Error ? err.message : String(err);
-               this.logger.error(`Failed to publish outbox event ${event.id} (${event.eventType}): ${errMsg}`);
-               await this.outboxRepository.markAsFailed(event.id, errMsg, this.maxRetries);
+               this.logger.error(`Failed to publish outbox event ${event.eventId} (${event.eventType}): ${errMsg}`);
+               await this.outboxRepository.markAsFailed(event.eventId, errMsg, this.maxRetries);
             }
          }
 

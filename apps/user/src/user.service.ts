@@ -359,8 +359,8 @@ export class UserService {
       return updatedUser;
    }
 
-   async updateUsername(id: string, username: string): Promise<UserEntity> {
-      const user = await this.getUserById(id);
+   async updateUsername(userId: string, username: string): Promise<UserEntity> {
+      const user = await this.getUserById(userId);
       const normalizedUsername = username.toLowerCase().trim();
 
       if (normalizedUsername !== user.username?.toLowerCase().trim()) {
@@ -398,8 +398,8 @@ export class UserService {
       return updatedUser;
    }
 
-   async deleteUser(id: string): Promise<UserEntity> {
-      const user = await this.getUserById(id);
+   async deleteUser(userId: string): Promise<UserEntity> {
+      const user = await this.getUserById(userId);
 
       const deletedUser = await this.userRepository.softDelete(user.id);
 
@@ -419,8 +419,8 @@ export class UserService {
       return deletedUser;
    }
 
-   async restoreUser(id: string): Promise<UserEntity> {
-      const restoredUser = await this.userRepository.restore(id);
+   async restoreUser(userId: string): Promise<UserEntity> {
+      const restoredUser = await this.userRepository.restore(userId);
 
       // Re-index to Elasticsearch
       try {
@@ -460,8 +460,8 @@ export class UserService {
 
       // Create follow in PostgreSQL (for backward compatibility)
       const follow = await this.followRepository.create({
-         follower: { connect: { id: follower.id } },
-         following: { connect: { id: following.id } },
+         follower: { connect: { userId: follower.userId } },
+         following: { connect: { userId: following.userId } },
          status,
       });
 
@@ -475,7 +475,7 @@ export class UserService {
       }
 
       // Publish event
-      await this.outboxService.createOutboxEvent(follow.id, 'Follow', 'UserFollowed', {
+      await this.outboxService.createOutboxEvent(follow.followId, 'Follow', 'UserFollowed', {
          followerId: follower.id,
          followingId: following.id,
          status: follow.status,
@@ -496,7 +496,7 @@ export class UserService {
       }
 
       // Soft delete in PostgreSQL
-      await this.followRepository.softDelete(follow.id);
+      await this.followRepository.softDelete(follow.followId);
 
       // Delete in NebulaGraph
       await this.graphFollowRepository.deleteFollow(follower.id, following.id);
@@ -508,7 +508,7 @@ export class UserService {
       }
 
       // Publish event
-      await this.outboxService.createOutboxEvent(follow.id, 'Follow', 'UserUnfollowed', {
+      await this.outboxService.createOutboxEvent(follow.followId, 'Follow', 'UserUnfollowed', {
          followerId: follower.id,
          followingId: following.id,
       });
@@ -539,7 +539,7 @@ export class UserService {
       await this.userRepository.incrementFollowersCount(follow.followingId);
 
       // Publish event
-      await this.outboxService.createOutboxEvent(follow.id, 'Follow', 'FollowRequestAccepted', {
+      await this.outboxService.createOutboxEvent(follow.followId, 'Follow', 'FollowRequestAccepted', {
          followerId: follow.followerId,
          followingId: follow.followingId,
       });
@@ -568,7 +568,7 @@ export class UserService {
       await this.graphFollowRepository.updateFollowStatus(follow.followerId, follow.followingId, FollowStatus.REJECTED);
 
       // Publish event
-      await this.outboxService.createOutboxEvent(follow.id, 'Follow', 'FollowRequestRejected', {
+      await this.outboxService.createOutboxEvent(follow.followId, 'Follow', 'FollowRequestRejected', {
          followerId: follow.followerId,
          followingId: follow.followingId,
       });
@@ -586,7 +586,7 @@ export class UserService {
       // Convert graph results to FollowEntity format
       return graphResults.map((result) => {
          const follow = new FollowEntity({
-            id: `${result.followerId}-${result.followingId}`,
+            followId: `${result.followerId}-${result.followingId}`,
             followerId: result.followerId,
             followingId: result.followingId,
             status: result.status,
@@ -607,7 +607,7 @@ export class UserService {
       // Convert graph results to FollowEntity format
       return graphResults.map((result) => {
          const follow = new FollowEntity({
-            id: `${result.followerId}-${result.followingId}`,
+            followId: `${result.followerId}-${result.followingId}`,
             followerId: result.followerId,
             followingId: result.followingId,
             status: result.status,
@@ -639,12 +639,12 @@ export class UserService {
    async getFollowSuggestions(userId: string, limit = 10): Promise<UserSuggestionItemDto[]> {
       const user = await this.getUserById(userId);
 
-      // 1. Get IDs of users current user is already following
+      // Get IDs of users current user is already following
       const followingList = await this.followRepository.findFollowing(user.id, FollowStatus.ACCEPTED, 0, 1000);
       const alreadyFollowingIds = new Set(followingList.map((f) => f.followingId));
       alreadyFollowingIds.add(user.id);
 
-      // 2. Query Graph DB for 2-hop suggestions (friends of friends)
+      // Query Graph DB for 2-hop suggestions (friends of friends)
       let graphCandidateIds: string[] = [];
       try {
          const rawGraphIds = await this.graphFollowRepository.getFollowSuggestions(user.id, limit * 2);
@@ -656,7 +656,7 @@ export class UserService {
       const selectedGraphIds = Array.from(new Set(graphCandidateIds)).slice(0, limit);
       const graphIdSet = new Set(selectedGraphIds);
 
-      // 3. Fallback: If graph didn't find enough candidates, fetch top popular users (Cold-start)
+      // Fallback: If graph didn't find enough candidates, fetch top popular users (Cold-start)
       let popularUsers: UserEntity[] = [];
       const neededCount = limit - selectedGraphIds.length;
       if (neededCount > 0) {
@@ -664,7 +664,7 @@ export class UserService {
          popularUsers = await this.userRepository.findTopUsers(neededCount, excludeIds);
       }
 
-      // 4. Batch fetch entities for graph candidate IDs
+      // Batch fetch entities for graph candidate IDs
       const graphUserEntities =
          selectedGraphIds.length > 0 ? await this.userRepository.findByIds(selectedGraphIds) : [];
 
@@ -673,7 +673,7 @@ export class UserService {
          return [];
       }
 
-      // 5. Fetch relations & mutual followers count
+      // Fetch relations & mutual followers count
       const candidateIds = allCandidateEntities.map((u) => u.id);
       const { followerSet } = await this.followRepository.findFollowRelations(user.id, candidateIds);
 
@@ -693,7 +693,7 @@ export class UserService {
          }),
       );
 
-      // 6. Map to UserSuggestionItemDto
+      // Map to UserSuggestionItemDto
       return allCandidateEntities.map((candidate): UserSuggestionItemDto => {
          const isGraphCandidate = graphIdSet.has(candidate.id);
          return {
@@ -817,8 +817,8 @@ export class UserService {
       };
    }
 
-   async getAvatarUploadSignature(id: string) {
-      const user = await this.getUserById(id);
+   async getAvatarUploadSignature(userId: string) {
+      const user = await this.getUserById(userId);
       return this.cloudinaryService.generateUploadSignature({
          folder: 'omni/users/avatars',
          tags: `avatar,${user.id},${user.accountId}`,

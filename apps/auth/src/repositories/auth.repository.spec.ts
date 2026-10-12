@@ -250,7 +250,7 @@ describe('AuthRepository', () => {
 
    it('should find role by code with permissions and deletedAt null', async () => {
       prismaService.role.findFirst.mockResolvedValue({
-         id: 'role-user-id',
+         roleId: 'role-user-id',
          code: 'USER',
          name: 'Standard User',
          description: 'Standard role',
@@ -261,7 +261,7 @@ describe('AuthRepository', () => {
          rolePermissions: [
             {
                permission: {
-                  id: 'perm-1',
+                  permissionId: 'perm-1',
                   code: 'USERS:READ',
                   name: 'Read Users',
                   description: null,

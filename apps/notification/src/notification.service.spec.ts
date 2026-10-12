@@ -27,8 +27,8 @@ describe('NotificationService', () => {
 
       mockPrisma = {
          notificationLog: {
-            create: jest.fn().mockResolvedValue({ id: 'log_1' }),
-            update: jest.fn().mockResolvedValue({ id: 'log_1', status: NOTIFICATION_STATUS.SENT }),
+            create: jest.fn().mockResolvedValue({ notificationLogId: 'log_1' }),
+            update: jest.fn().mockResolvedValue({ notificationLogId: 'log_1', status: NOTIFICATION_STATUS.SENT }),
          },
       };
 
@@ -74,7 +74,7 @@ describe('NotificationService', () => {
       );
       expect(mockPrisma.notificationLog.update).toHaveBeenCalledWith(
          expect.objectContaining({
-            where: { id: 'log_1' },
+            where: { notificationLogId: 'log_1' },
             data: expect.objectContaining({
                status: NOTIFICATION_STATUS.SENT,
             }) as unknown,
@@ -126,7 +126,7 @@ describe('NotificationService', () => {
       );
       expect(mockPrisma.notificationLog.update).toHaveBeenCalledWith(
          expect.objectContaining({
-            where: { id: 'log_1' },
+            where: { notificationLogId: 'log_1' },
             data: expect.objectContaining({
                status: NOTIFICATION_STATUS.FAILED,
                errorMessage: 'Resend failed',

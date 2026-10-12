@@ -47,13 +47,13 @@ export class UserRepository {
    async create(data: CreateUserData): Promise<UserEntity> {
       const user = await this.prisma.user.create({
          data: {
-            id: uuidv7(),
+            userId: uuidv7(),
             accountId: data.accountId,
             username: data.username,
             status: data.status || UserStatus.ACTIVE,
             profile: {
                create: {
-                  id: uuidv7(),
+                  profileId: uuidv7(),
                   displayName: data.displayName,
                   bio: data.bio,
                   avatar: data.avatar,
@@ -66,12 +66,12 @@ export class UserRepository {
             },
             stats: {
                create: {
-                  id: uuidv7(),
+                  statsId: uuidv7(),
                },
             },
             settings: {
                create: {
-                  id: uuidv7(),
+                  settingsId: uuidv7(),
                   isPrivate: data.isPrivate ?? false,
                   isVerified: data.isVerified ?? false,
                },
@@ -83,9 +83,9 @@ export class UserRepository {
       return new UserEntity(user);
    }
 
-   async findById(id: string): Promise<UserEntity | null> {
+   async findById(userId: string): Promise<UserEntity | null> {
       const user = await this.prisma.user.findUnique({
-         where: { id },
+         where: { userId },
          include: userIncludeRelations,
       });
       if (!user || user.deletedAt) {
@@ -108,11 +108,11 @@ export class UserRepository {
    async findDateOfBirth(idOrAccountId: string): Promise<{ userId: string; dateOfBirth: Date | null } | null> {
       const user = await this.prisma.user.findFirst({
          where: {
-            OR: [{ id: idOrAccountId }, { accountId: idOrAccountId }],
+            OR: [{ userId: idOrAccountId }, { accountId: idOrAccountId }],
             deletedAt: null,
          },
          select: {
-            id: true,
+            userId: true,
             accountId: true,
             profile: {
                select: {
@@ -127,7 +127,7 @@ export class UserRepository {
       }
 
       return {
-         userId: user.id,
+         userId: user.userId,
          dateOfBirth: user.profile?.dateOfBirth ?? null,
       };
    }
@@ -166,13 +166,13 @@ export class UserRepository {
       return users.map((user) => new UserEntity(user));
    }
 
-   async findByIds(ids: string[]): Promise<UserEntity[]> {
-      if (!ids || ids.length === 0) {
+   async findByIds(userIds: string[]): Promise<UserEntity[]> {
+      if (!userIds || userIds.length === 0) {
          return [];
       }
       const users = await this.prisma.user.findMany({
          where: {
-            id: { in: ids },
+            userId: { in: userIds },
             deletedAt: null,
             status: UserStatus.ACTIVE,
          },
@@ -187,7 +187,7 @@ export class UserRepository {
             deletedAt: null,
             status: UserStatus.ACTIVE,
             ...(excludeUserIds.length > 0 && {
-               id: { notIn: excludeUserIds },
+               userId: { notIn: excludeUserIds },
             }),
          },
          take: limit,
@@ -197,7 +197,7 @@ export class UserRepository {
       return users.map((user) => new UserEntity(user));
    }
 
-   async update(id: string, data: UpdateUserData): Promise<UserEntity> {
+   async update(userId: string, data: UpdateUserData): Promise<UserEntity> {
       const {
          username,
          status,
@@ -230,7 +230,7 @@ export class UserRepository {
       };
 
       const user = await this.prisma.user.update({
-         where: { id },
+         where: { userId },
          data: {
             ...(username !== undefined && { username }),
             ...(status !== undefined && { status }),
@@ -257,53 +257,53 @@ export class UserRepository {
       return new UserEntity(user);
    }
 
-   async softDelete(id: string): Promise<UserEntity> {
+   async softDelete(userId: string): Promise<UserEntity> {
       const user = await this.prisma.user.update({
-         where: { id },
+         where: { userId },
          data: { deletedAt: new Date() },
          include: userIncludeRelations,
       });
       return new UserEntity(user);
    }
 
-   async restore(id: string): Promise<UserEntity> {
+   async restore(userId: string): Promise<UserEntity> {
       const user = await this.prisma.user.update({
-         where: { id },
+         where: { userId },
          data: { deletedAt: null },
          include: userIncludeRelations,
       });
       return new UserEntity(user);
    }
 
-   async incrementFollowersCount(id: string): Promise<void> {
+   async incrementFollowersCount(userId: string): Promise<void> {
       await this.prisma.userStats.upsert({
-         where: { userId: id },
+         where: { userId },
          update: { followersCount: { increment: 1 } },
-         create: { userId: id, followersCount: 1 },
+         create: { userId, followersCount: 1 },
       });
    }
 
-   async decrementFollowersCount(id: string): Promise<void> {
+   async decrementFollowersCount(userId: string): Promise<void> {
       await this.prisma.userStats.upsert({
-         where: { userId: id },
+         where: { userId },
          update: { followersCount: { decrement: 1 } },
-         create: { userId: id, followersCount: 0 },
+         create: { userId, followersCount: 0 },
       });
    }
 
-   async incrementFollowingCount(id: string): Promise<void> {
+   async incrementFollowingCount(userId: string): Promise<void> {
       await this.prisma.userStats.upsert({
-         where: { userId: id },
+         where: { userId },
          update: { followingCount: { increment: 1 } },
-         create: { userId: id, followingCount: 1 },
+         create: { userId, followingCount: 1 },
       });
    }
 
-   async decrementFollowingCount(id: string): Promise<void> {
+   async decrementFollowingCount(userId: string): Promise<void> {
       await this.prisma.userStats.upsert({
-         where: { userId: id },
+         where: { userId },
          update: { followingCount: { decrement: 1 } },
-         create: { userId: id, followingCount: 0 },
+         create: { userId, followingCount: 0 },
       });
    }
 }

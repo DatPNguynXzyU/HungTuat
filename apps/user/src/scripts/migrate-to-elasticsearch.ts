@@ -24,7 +24,7 @@ async function bootstrap() {
       for (const user of users) {
          try {
             await userSearchService.indexUser({
-               id: user.id,
+               id: user.userId,
                username: user.username || undefined,
                createdAt: user.createdAt,
                updatedAt: user.updatedAt,

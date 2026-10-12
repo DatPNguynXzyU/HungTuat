@@ -1,3 +1,5 @@
+import type { SetOptional } from '@common';
+
 export interface SessionEntity {
    id: string;
    accountId: string;
@@ -22,10 +24,7 @@ export interface SessionEntity {
    updatedAt?: string;
 }
 
-export type CreateSessionData = Omit<SessionEntity, 'id' | 'createdAt' | 'updatedAt' | 'isRevoked' | 'lastActiveAt'> & {
-   id?: string;
-   isRevoked?: boolean;
-   lastActiveAt?: string;
-   createdAt?: string;
-   updatedAt?: string;
-};
+export type CreateSessionData = SetOptional<
+   SessionEntity,
+   'id' | 'createdAt' | 'updatedAt' | 'isRevoked' | 'lastActiveAt'
+>;

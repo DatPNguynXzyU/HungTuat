@@ -11,7 +11,7 @@ export class OutboxRepository implements IOutboxRepository {
 
    private toEntity(event: OutboxEvent): OutboxEventEntity {
       return {
-         id: event.id,
+         eventId: event.eventId,
          aggregateType: event.aggregateType,
          aggregateId: event.aggregateId,
          eventType: event.eventType,
@@ -27,10 +27,10 @@ export class OutboxRepository implements IOutboxRepository {
 
    async create(data: CreateOutboxEventData, tx?: Prisma.TransactionClient): Promise<OutboxEventEntity> {
       const client = tx || this.prisma;
-      const id = data.id || uuidv7();
+      const id = data.eventId || uuidv7();
       const event = await client.outboxEvent.create({
          data: {
-            id,
+            eventId: id,
             aggregateType: data.aggregateType,
             aggregateId: data.aggregateId || id,
             eventType: data.eventType,
@@ -58,17 +58,17 @@ export class OutboxRepository implements IOutboxRepository {
       return events.map((e) => this.toEntity(e));
    }
 
-   async markAsProcessing(ids: string[]): Promise<void> {
-      if (ids.length === 0) return;
+   async markAsProcessing(eventIds: string[]): Promise<void> {
+      if (eventIds.length === 0) return;
       await this.prisma.outboxEvent.updateMany({
-         where: { id: { in: ids } },
+         where: { eventId: { in: eventIds } },
          data: { status: OutboxStatus.PROCESSING },
       });
    }
 
-   async markAsPublished(id: string): Promise<void> {
+   async markAsPublished(eventId: string): Promise<void> {
       await this.prisma.outboxEvent.update({
-         where: { id },
+         where: { eventId },
          data: {
             status: OutboxStatus.PUBLISHED,
             processedAt: new Date(),
@@ -77,15 +77,15 @@ export class OutboxRepository implements IOutboxRepository {
       });
    }
 
-   async markAsFailed(id: string, error: string, maxRetries = 5): Promise<void> {
-      const event = await this.prisma.outboxEvent.findUnique({ where: { id } });
+   async markAsFailed(eventId: string, error: string, maxRetries = 5): Promise<void> {
+      const event = await this.prisma.outboxEvent.findUnique({ where: { eventId } });
       if (!event) return;
 
       const newRetryCount = event.retryCount + 1;
       const nextStatus = newRetryCount >= maxRetries ? OutboxStatus.FAILED : OutboxStatus.PENDING;
 
       await this.prisma.outboxEvent.update({
-         where: { id },
+         where: { eventId },
          data: {
             status: nextStatus,
             retryCount: newRetryCount,

@@ -43,7 +43,7 @@ export class NotificationService {
                   status: NOTIFICATION_STATUS.PENDING,
                },
             });
-            logId = log.id;
+            logId = log.notificationLogId;
          } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             this.logger.warn(`Could not create notification log in DB: ${msg}`);
@@ -55,7 +55,7 @@ export class NotificationService {
          if (this.prisma && logId) {
             await this.prisma.notificationLog
                .update({
-                  where: { id: logId },
+                  where: { notificationLogId: logId },
                   data: {
                      status: NOTIFICATION_STATUS.SENT,
                      sentAt: new Date(),
@@ -69,7 +69,7 @@ export class NotificationService {
          if (this.prisma && logId) {
             await this.prisma.notificationLog
                .update({
-                  where: { id: logId },
+                  where: { notificationLogId: logId },
                   data: {
                      status: NOTIFICATION_STATUS.FAILED,
                      errorMessage: errMsg.slice(0, 1000),

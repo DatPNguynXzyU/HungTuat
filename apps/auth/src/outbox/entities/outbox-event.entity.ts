@@ -1,3 +1,5 @@
+import type { SetOptional } from '@common';
+
 export const OUTBOX_STATUS = {
    PENDING: 'PENDING',
    PROCESSING: 'PROCESSING',
@@ -8,7 +10,7 @@ export const OUTBOX_STATUS = {
 export type OutboxStatusType = (typeof OUTBOX_STATUS)[keyof typeof OUTBOX_STATUS];
 
 export interface OutboxEventEntity {
-   id: string;
+   eventId: string;
    aggregateType: string;
    aggregateId: string;
    eventType: string;
@@ -21,10 +23,7 @@ export interface OutboxEventEntity {
    updatedAt: string;
 }
 
-export interface CreateOutboxEventData {
-   id?: string;
-   aggregateType: string;
-   aggregateId?: string;
-   eventType: string;
-   payload: Record<string, unknown>;
-}
+export type CreateOutboxEventData = SetOptional<
+   Omit<OutboxEventEntity, 'status' | 'retryCount' | 'lastError' | 'processedAt' | 'createdAt' | 'updatedAt'>,
+   'eventId' | 'aggregateId'
+>;

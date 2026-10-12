@@ -11,7 +11,7 @@ export class SessionRepository implements ISessionRepository {
 
    private toEntity(session: AccountSession): SessionEntity {
       return {
-         id: session.id,
+         id: session.sessionId,
          accountId: session.accountId,
          refreshTokenJti: session.refreshTokenJti,
          deviceType: session.deviceType,
@@ -39,7 +39,7 @@ export class SessionRepository implements ISessionRepository {
       const id = data.id || uuidv7();
       const session = await this.prisma.accountSession.create({
          data: {
-            id,
+            sessionId: id,
             accountId: data.accountId,
             refreshTokenJti: data.refreshTokenJti,
             deviceType: data.deviceType,
@@ -65,9 +65,9 @@ export class SessionRepository implements ISessionRepository {
       return this.toEntity(session);
    }
 
-   async findById(id: string): Promise<SessionEntity | null> {
+   async findById(sessionId: string): Promise<SessionEntity | null> {
       const session = await this.prisma.accountSession.findUnique({
-         where: { id },
+         where: { sessionId },
       });
       return session ? this.toEntity(session) : null;
    }
@@ -96,10 +96,10 @@ export class SessionRepository implements ISessionRepository {
       return sessions.map((s) => this.toEntity(s));
    }
 
-   async updateSession(id: string, data: Partial<SessionEntity>): Promise<SessionEntity | null> {
+   async updateSession(sessionId: string, data: Partial<SessionEntity>): Promise<SessionEntity | null> {
       try {
          const session = await this.prisma.accountSession.update({
-            where: { id },
+            where: { sessionId },
             data: {
                ...(data.refreshTokenJti ? { refreshTokenJti: data.refreshTokenJti } : {}),
                ...(data.deviceType !== undefined ? { deviceType: data.deviceType } : {}),
@@ -158,15 +158,15 @@ export class SessionRepository implements ISessionRepository {
       }
    }
 
-   async revokeSession(id: string, accountId: string): Promise<SessionEntity | null> {
+   async revokeSession(sessionId: string, accountId: string): Promise<SessionEntity | null> {
       try {
          const existing = await this.prisma.accountSession.findFirst({
-            where: { id, accountId },
+            where: { sessionId, accountId },
          });
          if (!existing) return null;
 
          const updated = await this.prisma.accountSession.update({
-            where: { id },
+            where: { sessionId },
             data: {
                isRevoked: true,
             },

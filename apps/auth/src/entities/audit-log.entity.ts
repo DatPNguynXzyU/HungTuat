@@ -1,3 +1,4 @@
+import type { SetOptional } from '@common';
 import type { AuditStatus } from '@auth/prisma-client';
 
 export interface SecurityAuditLogEntity {
@@ -19,8 +20,6 @@ export interface SecurityAuditLogEntity {
    createdAt: string;
 }
 
-export type CreateAuditLogData = Omit<SecurityAuditLogEntity, 'id' | 'createdAt' | 'status'> & {
-   id?: string;
-   status?: AuditStatus;
-   createdAt?: string;
-};
+export type CreateAuditLogData = SetOptional<SecurityAuditLogEntity, 'id' | 'createdAt' | 'status'>;
+
+export { AuditStatus };

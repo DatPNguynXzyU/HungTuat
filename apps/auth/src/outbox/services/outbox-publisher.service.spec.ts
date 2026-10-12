@@ -75,7 +75,7 @@ describe('OutboxPublisherService', () => {
    it('should publish pending events to both notification and user services and mark them as published', async () => {
       const pendingEvents = [
          {
-            id: 'event-1',
+            eventId: 'event-1',
             aggregateType: 'USER',
             aggregateId: 'user-1',
             eventType: 'USER_REGISTERED',
@@ -103,7 +103,7 @@ describe('OutboxPublisherService', () => {
    it('should handle publication failure and mark as failed if unexpected throw', async () => {
       const pendingEvents = [
          {
-            id: 'event-2',
+            eventId: 'event-2',
             aggregateType: 'USER',
             aggregateId: 'user-2',
             eventType: 'USER_REGISTERED',

@@ -6,6 +6,6 @@ export const AUDIT_LOG_REPOSITORY = 'AUDIT_LOG_REPOSITORY';
 export interface IAuditLogRepository {
    createAuditLog(data: CreateAuditLogData): Promise<SecurityAuditLogEntity>;
    findAuditLogs(query: IAuditLogQuery): Promise<IAuditLogListResult>;
-   findById(id: string): Promise<SecurityAuditLogEntity | null>;
+   findById(auditLogId: string): Promise<SecurityAuditLogEntity | null>;
    findAccountAuditLogs(accountId: string, page?: number, limit?: number): Promise<IAuditLogListResult>;
 }

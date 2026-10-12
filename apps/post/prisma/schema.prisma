@@ -29,20 +29,20 @@ enum VideoProcessingStatus {
 }
 
 model Post {
-  id          String     @id @default(uuid())
-  userId      String
-  content     String     @db.Text
-  status      PostStatus @default(DRAFT)
-  viewCount   Int        @default(0)
-  likeCount   Int        @default(0)
-  shareCount  Int        @default(0)
-  commentCount Int       @default(0)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  publishedAt DateTime?
+  postId       String     @id @default(uuid()) @map("post_id")
+  userId       String     @map("user_id")
+  content      String     @db.Text
+  status       PostStatus @default(DRAFT)
+  viewCount    Int        @default(0) @map("view_count")
+  likeCount    Int        @default(0) @map("like_count")
+  shareCount   Int        @default(0) @map("share_count")
+  commentCount Int        @default(0) @map("comment_count")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  publishedAt  DateTime?  @map("published_at")
 
-  media       Media[]
-  tags        PostTag[]
+  media Media[]
+  tags  PostTag[]
 
   @@index([userId])
   @@index([status])
@@ -52,22 +52,22 @@ model Post {
 }
 
 model Media {
-  id          String     @id @default(uuid())
-  postId      String
-  type        MediaType
-  url         String
-  thumbnailUrl String?
-  width       Int?
-  height      Int?
-  duration    Int?       // For videos in seconds
-  size        BigInt?    // File size in bytes
-  mimeType    String?
-  metadata    Json?      // Additional metadata (resolution, codec, etc.)
-  processingStatus VideoProcessingStatus @default(PENDING)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  mediaId          String                @id @default(uuid()) @map("media_id")
+  postId           String                @map("post_id")
+  type             MediaType
+  url              String
+  thumbnailUrl     String?               @map("thumbnail_url")
+  width            Int?
+  height           Int?
+  duration         Int? // For videos in seconds
+  size             BigInt? // File size in bytes
+  mimeType         String?               @map("mime_type")
+  metadata         Json? // Additional metadata (resolution, codec, etc.)
+  processingStatus VideoProcessingStatus @default(PENDING) @map("processing_status")
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
 
-  post        Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
 
   @@index([postId])
   @@index([type])
@@ -76,14 +76,14 @@ model Media {
 }
 
 model Tag {
-  id        String     @id @default(uuid())
-  name      String     @unique
-  slug      String     @unique
-  usageCount Int       @default(0)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  tagId      String   @id @default(uuid()) @map("tag_id")
+  name       String   @unique
+  slug       String   @unique
+  usageCount Int      @default(0) @map("usage_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
-  posts     PostTag[]
+  posts PostTag[]
 
   @@index([slug])
   @@index([usageCount])
@@ -91,12 +91,12 @@ model Tag {
 }
 
 model PostTag {
-  postId    String
-  tagId     String
-  createdAt DateTime @default(now())
+  postId    String   @map("post_id")
+  tagId     String   @map("tag_id")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [tagId], onDelete: Cascade)
 
   @@id([postId, tagId])
   @@index([postId])

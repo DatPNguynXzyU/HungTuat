@@ -1,3 +1,5 @@
+import type { SetOptional } from '@common';
+
 export interface AccountEntity {
    id: string;
    email: string;
@@ -13,15 +15,8 @@ export interface AccountEntity {
    updatedAt?: string;
 }
 
-export type CreateAccountData = Omit<AccountEntity, 'id' | 'createdAt' | 'updatedAt' | 'roles'> & {
-   id?: string;
-   createdAt?: string;
+export type CreateAccountData = SetOptional<Omit<AccountEntity, 'roles'>, 'id' | 'createdAt'> & {
    roleId?: string;
-   status?: string;
-   isEmailVerified?: boolean;
-   lastLoginAt?: string | null;
-   version?: number;
-   deletedAt?: string | null;
 };
 
 export interface RoleEntity {

@@ -140,7 +140,7 @@ export class AuthRepository implements IAuthRepository {
          if (outboxEvent) {
             await tx.outboxEvent.create({
                data: {
-                  id: outboxEvent.id || uuidv7(),
+                  eventId: outboxEvent.eventId || uuidv7(),
                   aggregateType: outboxEvent.aggregateType,
                   aggregateId: outboxEvent.aggregateId || accountId,
                   eventType: outboxEvent.eventType,
@@ -221,7 +221,7 @@ export class AuthRepository implements IAuthRepository {
       if (!role) return null;
 
       return {
-         id: role.id,
+         id: role.roleId,
          code: role.code,
          name: role.name,
          description: role.description,

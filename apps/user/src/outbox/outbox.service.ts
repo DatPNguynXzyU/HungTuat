@@ -15,7 +15,7 @@ export class OutboxService {
    ) {
       return this.prisma.outbox.create({
          data: {
-            id: uuidv7(),
+            eventId: uuidv7(),
             aggregateId,
             aggregateType,
             eventType,
@@ -37,16 +37,16 @@ export class OutboxService {
       });
    }
 
-   async markAsProcessing(id: string) {
+   async markAsProcessing(eventId: string) {
       return this.prisma.outbox.update({
-         where: { id },
+         where: { eventId },
          data: { status: OutboxStatus.PROCESSING },
       });
    }
 
-   async markAsPublished(id: string) {
+   async markAsPublished(eventId: string) {
       return this.prisma.outbox.update({
-         where: { id },
+         where: { eventId },
          data: {
             status: OutboxStatus.PUBLISHED,
             publishedAt: new Date(),
@@ -54,9 +54,9 @@ export class OutboxService {
       });
    }
 
-   async markAsFailed(id: string, error: string) {
+   async markAsFailed(eventId: string, error: string) {
       return this.prisma.outbox.update({
-         where: { id },
+         where: { eventId },
          data: {
             status: OutboxStatus.FAILED,
             error,

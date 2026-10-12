@@ -12,7 +12,7 @@ export class AuditLogRepository implements IAuditLogRepository {
 
    private toEntity(log: SecurityAuditLog): SecurityAuditLogEntity {
       return {
-         id: log.id,
+         id: log.auditLogId,
          accountId: log.accountId,
          actorEmail: log.actorEmail,
          action: log.action,
@@ -41,7 +41,7 @@ export class AuditLogRepository implements IAuditLogRepository {
 
       const log = await this.prisma.securityAuditLog.create({
          data: {
-            id,
+            auditLogId: id,
             accountId: data.accountId || null,
             actorEmail: data.actorEmail || null,
             action: data.action,
@@ -117,9 +117,9 @@ export class AuditLogRepository implements IAuditLogRepository {
       };
    }
 
-   async findById(id: string): Promise<SecurityAuditLogEntity | null> {
+   async findById(auditLogId: string): Promise<SecurityAuditLogEntity | null> {
       const log = await this.prisma.securityAuditLog.findUnique({
-         where: { id },
+         where: { auditLogId },
       });
 
       return log ? this.toEntity(log) : null;

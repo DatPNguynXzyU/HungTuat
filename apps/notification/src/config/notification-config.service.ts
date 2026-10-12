@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CommonConfigService } from '@common';
+import { CommonConfigService, ENV_KEYS } from '@common';
 import { NotificationEnvConfig } from '@notification/config/notification-env.schema';
 
 @Injectable()
@@ -11,18 +11,18 @@ export class NotificationConfigService extends CommonConfigService {
 
    get resendToken(): string {
       return (
-         this.configService.get('RESEND_TOKEN', { infer: true }) ||
-         this.configService.get('RESEND_API_KEY', { infer: true }) ||
+         this.configService.get(ENV_KEYS.RESEND_TOKEN, { infer: true }) ||
+         this.configService.get(ENV_KEYS.RESEND_API_KEY, { infer: true }) ||
          ''
       );
    }
 
    get emailFrom(): string {
-      return this.configService.get('EMAIL_FROM', { infer: true });
+      return this.configService.get(ENV_KEYS.EMAIL_FROM, { infer: true });
    }
 
    get emailFromName(): string {
-      return this.configService.get('EMAIL_FROM_NAME', { infer: true });
+      return this.configService.get(ENV_KEYS.EMAIL_FROM_NAME, { infer: true });
    }
 
    get defaultSender(): string {
@@ -32,10 +32,10 @@ export class NotificationConfigService extends CommonConfigService {
    }
 
    get databaseUrl(): string | undefined {
-      return this.configService.get('DATABASE_URL', { infer: true });
+      return this.configService.get(ENV_KEYS.DATABASE_URL, { infer: true });
    }
 
    get postgresPort(): number {
-      return this.configService.get('POSTGRES_PORT', { infer: true });
+      return this.configService.get(ENV_KEYS.POSTGRES_PORT, { infer: true });
    }
 }

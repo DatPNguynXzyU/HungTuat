@@ -1,7 +1,7 @@
 import { Follow as PrismaFollow, FollowStatus } from '@user/prisma-client';
 
 export class FollowEntity implements PrismaFollow {
-   id: string;
+   followId: string;
    followerId: string;
    followingId: string;
    status: FollowStatus;

@@ -6,7 +6,7 @@ describe('SessionRepository', () => {
    let repository: SessionRepository;
 
    const sampleSession = {
-      id: 'session-id-1',
+      sessionId: 'session-id-1',
       accountId: 'user-id-1',
       refreshTokenJti: 'jti-1',
       deviceType: 'desktop',
@@ -88,7 +88,7 @@ describe('SessionRepository', () => {
 
       expect(result?.id).toBe('session-id-1');
       expect(mockAccountSessionFindUnique).toHaveBeenCalledWith({
-         where: { id: 'session-id-1' },
+         where: { sessionId: 'session-id-1' },
       });
    });
 
@@ -115,7 +115,7 @@ describe('SessionRepository', () => {
 
       expect(result?.isRevoked).toBe(true);
       expect(mockAccountSessionUpdate).toHaveBeenCalledWith({
-         where: { id: 'session-id-1' },
+         where: { sessionId: 'session-id-1' },
          data: { isRevoked: true },
       });
    });
