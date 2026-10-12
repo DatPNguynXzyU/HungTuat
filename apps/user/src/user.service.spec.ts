@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CloudinaryService, ConflictException } from '@common';
+import { of } from 'rxjs';
+import { CloudinaryService, ConflictException, SERVICES } from '@common';
 import { UserService } from './user.service';
 import { UserRepository, FollowRepository } from './repositories';
 import { OutboxService } from './outbox';
 import { GraphFollowRepository } from '@user/graph';
 import { UserGraphSyncService, UsernameBloomFilterService } from '@user/services';
-import { UserSearchService } from '@user/search';
 import { UserEntity, UserStatus } from '@user/entities';
 
 describe('UserService', () => {
@@ -70,11 +70,9 @@ describe('UserService', () => {
       addUsername: jest.fn().mockResolvedValue(undefined),
       isUsernameAvailable: jest.fn().mockResolvedValue(true),
    };
-   const mockUserSearchService = {
-      indexUser: jest.fn().mockResolvedValue(undefined),
-      updateUser: jest.fn().mockResolvedValue(undefined),
-      deleteUser: jest.fn().mockResolvedValue(undefined),
-      searchUsers: jest.fn().mockResolvedValue({ items: [], nextCursor: null, hasMore: false, total: 0 }),
+   const mockSearchClient = {
+      emit: jest.fn(),
+      send: jest.fn().mockReturnValue(of({ items: [], nextCursor: null, hasMore: false, total: 0 })),
    };
    const mockCloudinaryService = {
       uploadBase64: jest.fn().mockResolvedValue({
@@ -119,8 +117,8 @@ describe('UserService', () => {
                useValue: mockUsernameBloomFilterService,
             },
             {
-               provide: UserSearchService,
-               useValue: mockUserSearchService,
+               provide: SERVICES.SEARCH_SERVICE,
+               useValue: mockSearchClient,
             },
             {
                provide: CloudinaryService,
@@ -495,25 +493,27 @@ describe('UserService', () => {
 
    describe('searchUsers', () => {
       it('should return paginated user search results enriched with follow relation flags', async () => {
-         mockUserSearchService.searchUsers.mockResolvedValue({
-            items: [
-               {
-                  id: 'user-match-1',
-                  username: 'alex_test',
-                  displayName: 'Alex Test',
-                  avatar: 'https://cdn.example.com/avatar.jpg',
-                  bio: 'Developer',
-                  isVerified: true,
-                  followersCount: 50,
-                  followingCount: 20,
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-               },
-            ],
-            total: 1,
-            nextCursor: 'mock_next_cursor',
-            hasMore: true,
-         });
+         mockSearchClient.send.mockReturnValue(
+            of({
+               items: [
+                  {
+                     id: 'user-match-1',
+                     username: 'alex_test',
+                     displayName: 'Alex Test',
+                     avatar: 'https://cdn.example.com/avatar.jpg',
+                     bio: 'Developer',
+                     isVerified: true,
+                     followersCount: 50,
+                     followingCount: 20,
+                     createdAt: new Date(),
+                     updatedAt: new Date(),
+                  },
+               ],
+               total: 1,
+               nextCursor: 'mock_next_cursor',
+               hasMore: true,
+            }),
+         );
 
          const mockCaller = new UserEntity({
             id: 'caller-user-id',

@@ -106,7 +106,7 @@ export class AuthController {
 
    private extractCurrentJti(req?: Request): string | undefined {
       const cookies = req?.cookies as Record<string, string> | undefined;
-      const refreshToken = cookies?.[AUTH_COOKIES.REFRESH_TOKEN];
+      const refreshToken = cookies?.[this.config.refreshTokenCookieName] || cookies?.[AUTH_COOKIES.REFRESH_TOKEN];
 
       if (refreshToken) {
          try {
@@ -144,13 +144,13 @@ export class AuthController {
    }
 
    private setAuthCookies(res: Response, tokens: { accessToken: string; refreshToken: string }): void {
-      res.cookie(AUTH_COOKIES.ACCESS_TOKEN, tokens.accessToken, this.config.accessTokenCookieOptions);
-      res.cookie(AUTH_COOKIES.REFRESH_TOKEN, tokens.refreshToken, this.config.refreshTokenCookieOptions);
+      res.cookie(this.config.accessTokenCookieName, tokens.accessToken, this.config.accessTokenCookieOptions);
+      res.cookie(this.config.refreshTokenCookieName, tokens.refreshToken, this.config.refreshTokenCookieOptions);
    }
 
    private clearAuthCookies(res: Response): void {
-      res.clearCookie(AUTH_COOKIES.ACCESS_TOKEN, this.config.clearCookieOptions);
-      res.clearCookie(AUTH_COOKIES.REFRESH_TOKEN, this.config.clearCookieOptions);
+      res.clearCookie(this.config.accessTokenCookieName, this.config.clearCookieOptions);
+      res.clearCookie(this.config.refreshTokenCookieName, this.config.clearCookieOptions);
    }
 
    private buildTokensDto(accessToken: string, refreshToken: string): AuthTokensDto {
@@ -506,7 +506,11 @@ export class AuthController {
       @Headers('x-refresh-token') headerRefreshToken?: string,
    ): Promise<AuthResponseDto> {
       const cookies = req.cookies as Record<string, string> | undefined;
-      const token = cookies?.[AUTH_COOKIES.REFRESH_TOKEN] || headerRefreshToken || body?.refreshToken;
+      const token =
+         cookies?.[this.config.refreshTokenCookieName] ||
+         cookies?.[AUTH_COOKIES.REFRESH_TOKEN] ||
+         headerRefreshToken ||
+         body?.refreshToken;
 
       if (!token) {
          throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_REQUIRED, {
@@ -564,7 +568,9 @@ export class AuthController {
       const cookies = req.cookies as Record<string, string> | undefined;
 
       let token =
+         cookies?.[this.config.refreshTokenCookieName] ||
          cookies?.[AUTH_COOKIES.REFRESH_TOKEN] ||
+         cookies?.[this.config.accessTokenCookieName] ||
          cookies?.[AUTH_COOKIES.ACCESS_TOKEN] ||
          headerRefreshToken ||
          body?.token;
@@ -610,7 +616,7 @@ export class AuthController {
       @Headers('authorization') authHeader?: string,
    ): Promise<SimpleSuccessResponseDto> {
       const cookies = req.cookies as Record<string, string> | undefined;
-      let refreshToken = cookies?.[AUTH_COOKIES.REFRESH_TOKEN];
+      let refreshToken = cookies?.[this.config.refreshTokenCookieName] || cookies?.[AUTH_COOKIES.REFRESH_TOKEN];
 
       // Extract from Authorization: Bearer header if no cookie
       if (!refreshToken && authHeader?.startsWith('Bearer ')) {

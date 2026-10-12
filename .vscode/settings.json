@@ -11,6 +11,7 @@
       "**/.pnpm-store": true,
       "**/coverage": true,
       "**/.omni": true,
+      "**/pnpm-lock.yaml": true,
       "**/.codegraph": true
    },
    "search.exclude": {
@@ -28,6 +29,7 @@
       "**/node_modules/**": true,
       "**/dist/**": true,
       "**/.pnpm-store/**": true,
+      "**/pnpm-lock.yaml": true,
       "**/coverage/**": true,
       "**/.omni/**": true,
       "**/.codegraph/**": true

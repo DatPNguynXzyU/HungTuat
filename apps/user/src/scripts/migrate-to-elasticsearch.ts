@@ -1,8 +1,8 @@
 import { NestFactory } from '@nestjs/core';
-import { AppLogger } from '@common';
+import { ClientProxy } from '@nestjs/microservices';
+import { AppLogger, SERVICES, USER_EVENTS } from '@common';
 import { UserModule } from '@user/user.module';
 import { PrismaService } from '@user/prisma';
-import { UserSearchService } from '@user/search';
 
 async function bootstrap() {
    const app = await NestFactory.createApplicationContext(UserModule);
@@ -10,10 +10,10 @@ async function bootstrap() {
    logger.setContext('ElasticsearchUserMigration');
 
    const prismaService = app.get(PrismaService);
-   const userSearchService = app.get(UserSearchService);
+   const searchClient = app.get<ClientProxy>(SERVICES.SEARCH_SERVICE);
 
    try {
-      logger.log('Starting migration to Elasticsearch...');
+      logger.log('Starting migration to Elasticsearch via RabbitMQ...');
 
       const users = await prismaService.user.findMany();
       logger.log(`Found ${users.length} users to migrate`);
@@ -23,17 +23,20 @@ async function bootstrap() {
 
       for (const user of users) {
          try {
-            await userSearchService.indexUser({
+            searchClient.emit(USER_EVENTS.SYNC, {
                id: user.userId,
                username: user.username || undefined,
                createdAt: user.createdAt,
                updatedAt: user.updatedAt,
             });
             successCount++;
-            logger.debug(`Indexed user: ${user.username}`);
+            logger.debug(`Emitted sync event for user: ${user.username}`);
          } catch (error) {
             errorCount++;
-            logger.error(`Failed to index user: ${user.username}`, error instanceof Error ? error.stack : undefined);
+            logger.error(
+               `Failed to emit sync event for user: ${user.username}`,
+               error instanceof Error ? error.stack : undefined,
+            );
          }
       }
 

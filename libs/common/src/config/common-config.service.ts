@@ -79,13 +79,6 @@ export class CommonConfigService {
       return this.jwtPublicKey;
    }
 
-   get argon2Secret(): string | undefined {
-      return (
-         this.configService.get(ENV_KEYS.ARGON2_SECRET, { infer: true }) ||
-         this.configService.get(ENV_KEYS.ARGON2_SALT, { infer: true })
-      );
-   }
-
    get jwtAccessTokenExpiresIn(): number {
       return (
          this.configService.get(ENV_KEYS.JWT_ACCESS_TOKEN_EXPIRES_IN, { infer: true }) ||
@@ -98,8 +91,16 @@ export class CommonConfigService {
       return this.configService.get(ENV_KEYS.JWT_REFRESH_TOKEN_EXPIRES_IN, { infer: true }) || 604800;
    }
 
+   get accessTokenCookieName(): string {
+      return this.configService.get(ENV_KEYS.COOKIE_ACCESS_TOKEN_NAME, { infer: true }) || 'access_token';
+   }
+
    get cookieName(): string {
-      return this.configService.get(ENV_KEYS.COOKIE_NAME, { infer: true });
+      return this.accessTokenCookieName;
+   }
+
+   get refreshTokenCookieName(): string {
+      return this.configService.get(ENV_KEYS.COOKIE_REFRESH_TOKEN_NAME, { infer: true }) || 'refresh_token';
    }
 
    get accessTokenCookieMaxAge(): number {

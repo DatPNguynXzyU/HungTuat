@@ -11,6 +11,8 @@ export const authEnvSchema = sharedEnvSchema.extend({
    JWT_PRIVATE_KEY_PATH: z.string().default('apps/auth/keys/private.key'),
    JWT_PUBLIC_KEY_PATH: z.string().default('apps/auth/keys/public.key'),
    JWT_KEY_ID: z.string().default(DEFAULT_JWT_KEY_ID),
+   ARGON2_SECRET: z.string().default('default-argon2-secret-key'),
+   ARGON2_SALT: z.string().default('default-argon2-salt-key'),
 });
 
 export type AuthEnvConfig = z.infer<typeof authEnvSchema>;

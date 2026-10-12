@@ -8,3 +8,4 @@ export * from '@common/constants/audit-log.constant';
 export * from '@common/constants/notification.constant';
 export * from '@common/constants/jwt.constant';
 export * from '@common/constants/env-keys.constant';
+export * from '@common/constants/search.constant';

@@ -24,6 +24,7 @@ describe('JwtAuthGuard', () => {
          jwtPublicKey: publicKey,
          jwtSecret: publicKey,
          cookieName: 'access_token',
+         accessTokenCookieName: 'access_token',
       } as unknown as jest.Mocked<CommonConfigService>;
 
       mockReflector = {

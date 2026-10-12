@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { RedisModule, RmqModule, SERVICES, NebulaModule, ElasticsearchModule, CloudinaryModule } from '@common';
+import { RedisModule, RmqModule, SERVICES, NebulaModule, CloudinaryModule } from '@common';
 import { UserController } from '@user/user.controller';
 import { UserService } from '@user/user.service';
 import { UserConfigModule } from '@user/config';
@@ -8,7 +8,6 @@ import { PrismaModule } from '@user/prisma';
 import { USER_REPOSITORY, UserRepository, FOLLOW_REPOSITORY, FollowRepository } from '@user/repositories';
 import { GraphSchemaService, GraphFollowRepository } from '@user/graph';
 import { UserGraphSyncService, UsernameBloomFilterService } from '@user/services';
-import { UserSearchService } from '@user/search';
 import { UserLoggerModule } from '@user/logger';
 
 @Module({
@@ -19,7 +18,6 @@ import { UserLoggerModule } from '@user/logger';
       RedisModule,
       OutboxModule,
       NebulaModule.forRoot(),
-      ElasticsearchModule.forRoot(),
       CloudinaryModule.forRoot(),
       RmqModule.register({
          name: SERVICES.NOTIFICATION_SERVICE,
@@ -27,12 +25,14 @@ import { UserLoggerModule } from '@user/logger';
       RmqModule.register({
          name: SERVICES.AUTH_SERVICE,
       }),
+      RmqModule.register({
+         name: SERVICES.SEARCH_SERVICE,
+      }),
    ],
    controllers: [UserController],
    providers: [
       UserService,
       UsernameBloomFilterService,
-      UserSearchService,
       {
          provide: USER_REPOSITORY,
          useClass: UserRepository,
@@ -50,7 +50,6 @@ import { UserLoggerModule } from '@user/logger';
    exports: [
       UserService,
       UsernameBloomFilterService,
-      UserSearchService,
       USER_REPOSITORY,
       UserRepository,
       FOLLOW_REPOSITORY,

@@ -1,5 +1,9 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { ElasticsearchService, AppLogger } from '@common';
+import { Injectable, OnModuleInit, Optional } from '@nestjs/common';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter, Histogram } from 'prom-client';
+import { AppLogger } from '@common';
+import { ElasticsearchService } from '@search/core/elasticsearch';
+import { SEARCH_INDEXING_COUNTER, SEARCH_QUERY_COUNTER, SEARCH_QUERY_DURATION } from '@search/core/metrics';
 
 export interface UserDocument {
    id: string;
@@ -34,6 +38,15 @@ export class UserSearchService implements OnModuleInit {
    constructor(
       private readonly elasticsearchService: ElasticsearchService,
       private readonly logger: AppLogger,
+      @Optional()
+      @InjectMetric(SEARCH_QUERY_COUNTER)
+      private readonly queryCounter?: Counter<string>,
+      @Optional()
+      @InjectMetric(SEARCH_QUERY_DURATION)
+      private readonly queryDuration?: Histogram<string>,
+      @Optional()
+      @InjectMetric(SEARCH_INDEXING_COUNTER)
+      private readonly indexingCounter?: Counter<string>,
    ) {
       this.logger.setContext(UserSearchService.name);
    }
@@ -130,8 +143,10 @@ export class UserSearchService implements OnModuleInit {
                updatedAt: user.updatedAt ?? new Date(),
             },
          });
+         this.indexingCounter?.inc({ index: this.INDEX_NAME, operation: 'index', status: 'success' });
          this.logger.debug(`Indexed user: ${user.username ?? user.id}`);
       } catch (error) {
+         this.indexingCounter?.inc({ index: this.INDEX_NAME, operation: 'index', status: 'error' });
          this.logger.error(
             `Failed to index user: ${user.username ?? user.id}`,
             error instanceof Error ? error.stack : undefined,
@@ -169,8 +184,10 @@ export class UserSearchService implements OnModuleInit {
                updatedAt: user.updatedAt ?? new Date(),
             },
          });
+         this.indexingCounter?.inc({ index: this.INDEX_NAME, operation: 'update', status: 'success' });
          this.logger.debug(`Updated user in index: ${user.username ?? user.id}`);
       } catch (error) {
+         this.indexingCounter?.inc({ index: this.INDEX_NAME, operation: 'update', status: 'error' });
          this.logger.error(
             `Failed to update user in index: ${user.username ?? user.id}`,
             error instanceof Error ? error.stack : undefined,
@@ -186,8 +203,10 @@ export class UserSearchService implements OnModuleInit {
             index: this.INDEX_NAME,
             id: userId,
          });
+         this.indexingCounter?.inc({ index: this.INDEX_NAME, operation: 'delete', status: 'success' });
          this.logger.debug(`Deleted user from index: ${userId}`);
       } catch (error) {
+         this.indexingCounter?.inc({ index: this.INDEX_NAME, operation: 'delete', status: 'error' });
          this.logger.error(
             `Failed to delete user from index: ${userId}`,
             error instanceof Error ? error.stack : undefined,
@@ -205,6 +224,8 @@ export class UserSearchService implements OnModuleInit {
       if (!cleanQuery) {
          return { items: [], nextCursor: null, hasMore: false, total: 0 };
       }
+
+      const timer = this.queryDuration?.startTimer({ index: this.INDEX_NAME });
 
       let searchAfter: (string | number)[] | undefined = undefined;
       if (cursor && cursor.trim()) {
@@ -283,6 +304,9 @@ export class UserSearchService implements OnModuleInit {
             }
          }
 
+         this.queryCounter?.inc({ index: this.INDEX_NAME, status: 'success' });
+         timer?.({ status: 'success' });
+
          return {
             items: slicedHits.map((hit) => hit._source),
             nextCursor,
@@ -290,6 +314,8 @@ export class UserSearchService implements OnModuleInit {
             total: totalCount,
          };
       } catch (error) {
+         this.queryCounter?.inc({ index: this.INDEX_NAME, status: 'error' });
+         timer?.({ status: 'error' });
          this.logger.error(`Failed to search users: ${query}`, error instanceof Error ? error.stack : undefined);
          return { items: [], nextCursor: null, hasMore: false, total: 0 };
       }

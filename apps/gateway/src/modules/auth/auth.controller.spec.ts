@@ -43,6 +43,8 @@ describe('Gateway AuthController', () => {
       jwtPublicKey: DEFAULT_DEV_RSA_PUBLIC_KEY,
       jwtKeyId: DEFAULT_JWT_KEY_ID,
       cookieName: 'access_token',
+      accessTokenCookieName: 'access_token',
+      refreshTokenCookieName: 'refresh_token',
       isProduction: false,
       jwtAccessTokenExpiresIn: 900,
       accessTokenCookieOptions: {

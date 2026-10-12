@@ -35,6 +35,14 @@ start-user:
 start-notification:
 	pnpm run start:notification
 
+.PHONY: start-post
+start-post:
+	pnpm run start:post
+
+.PHONY: start-search
+start-search:
+	pnpm run start:search
+
 .PHONY: build
 build:
 	pnpm -r run build

@@ -103,12 +103,12 @@ export class JwtAuthGuard implements CanActivate {
       const cookies = request.cookies as Record<string, string> | undefined;
 
       if (cookies) {
-         if (cookies[AUTH_COOKIES.ACCESS_TOKEN]) {
-            return cookies[AUTH_COOKIES.ACCESS_TOKEN];
-         }
-         const customCookieName = this.config.cookieName;
+         const customCookieName = this.config.accessTokenCookieName;
          if (customCookieName && cookies[customCookieName]) {
             return cookies[customCookieName];
+         }
+         if (cookies[AUTH_COOKIES.ACCESS_TOKEN]) {
+            return cookies[AUTH_COOKIES.ACCESS_TOKEN];
          }
          if (cookies['jwt']) {
             return cookies['jwt'];

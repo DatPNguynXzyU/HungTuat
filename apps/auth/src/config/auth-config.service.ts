@@ -40,4 +40,11 @@ export class AuthConfigService extends CommonConfigService {
    override get jwtPublicKeyPath(): string {
       return this.configService.get(ENV_KEYS.JWT_PUBLIC_KEY_PATH, { infer: true }) || 'apps/auth/keys/public.key';
    }
+
+   get argon2Secret(): string | undefined {
+      return (
+         this.configService.get(ENV_KEYS.ARGON2_SECRET, { infer: true }) ||
+         this.configService.get(ENV_KEYS.ARGON2_SALT, { infer: true })
+      );
+   }
 }

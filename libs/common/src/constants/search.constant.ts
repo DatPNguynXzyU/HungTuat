@@ -1,0 +1,21 @@
+export const SEARCH_PATTERNS = {
+   SEARCH_USERS: 'search_users',
+   SEARCH_POSTS: 'search_posts',
+   GLOBAL_SEARCH: 'global_search',
+} as const;
+
+export type SearchPattern = (typeof SEARCH_PATTERNS)[keyof typeof SEARCH_PATTERNS];
+
+export const SEARCH_ERROR_CODES = {
+   SEARCH_FAILED: 'SEARCH.SEARCH_FAILED',
+   INDEXING_FAILED: 'SEARCH.INDEXING_FAILED',
+   INVALID_SEARCH_QUERY: 'SEARCH.INVALID_SEARCH_QUERY',
+} as const;
+
+export type SearchErrorCode = (typeof SEARCH_ERROR_CODES)[keyof typeof SEARCH_ERROR_CODES];
+
+export const SEARCH_RESPONSE_MESSAGES = {
+   SEARCH_SUCCESS: 'SEARCH.SEARCH_SUCCESS',
+} as const;
+
+export type SearchResponseMessage = (typeof SEARCH_RESPONSE_MESSAGES)[keyof typeof SEARCH_RESPONSE_MESSAGES];

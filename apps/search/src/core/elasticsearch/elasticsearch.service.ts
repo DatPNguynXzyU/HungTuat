@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { Client } from '@elastic/elasticsearch';
-import type { ElasticsearchConfig } from '@common/elasticsearch/elasticsearch.config';
+import type { ElasticsearchConfig } from '@search/core/elasticsearch/elasticsearch.config';
 
 @Injectable()
 export class ElasticsearchService implements OnModuleInit, OnModuleDestroy {

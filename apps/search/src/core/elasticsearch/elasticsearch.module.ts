@@ -1,7 +1,7 @@
 import { Module, DynamicModule, Global } from '@nestjs/common';
-import { ElasticsearchService } from '@common/elasticsearch/elasticsearch.service';
-import { ElasticsearchConfig, getElasticsearchConfig } from '@common/elasticsearch/elasticsearch.config';
-import { CommonConfigService } from '@common/config/common-config.service';
+import { ElasticsearchService } from '@search/core/elasticsearch/elasticsearch.service';
+import { ElasticsearchConfig, getElasticsearchConfig } from '@search/core/elasticsearch/elasticsearch.config';
+import { SearchConfigService } from '@search/config/search-config.service';
 
 @Global()
 @Module({})
@@ -12,11 +12,11 @@ export class ElasticsearchModule {
          providers: [
             {
                provide: 'ELASTICSEARCH_CONFIG',
-               useFactory: (configService: CommonConfigService) => {
+               useFactory: (configService: SearchConfigService) => {
                   const esConfig = getElasticsearchConfig(configService);
                   return config ? { ...esConfig, ...config } : esConfig;
                },
-               inject: [CommonConfigService],
+               inject: [SearchConfigService],
             },
             {
                provide: ElasticsearchService,

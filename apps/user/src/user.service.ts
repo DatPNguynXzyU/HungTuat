@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 import {
    BadRequestException,
    ConflictException,
@@ -9,6 +11,9 @@ import {
    ICursorPaginationMeta,
    UserSearchResultItemDto,
    UserSuggestionItemDto,
+   SERVICES,
+   USER_EVENTS,
+   SEARCH_PATTERNS,
 } from '@common';
 import { Prisma } from '@user/prisma-client';
 import { UserRepository, FollowRepository, CreateUserData } from '@user/repositories';
@@ -16,7 +21,6 @@ import { UserEntity, FollowEntity, FollowStatus, Gender } from '@user/entities';
 import { OutboxService } from '@user/outbox';
 import { GraphFollowRepository } from '@user/graph';
 import { UserGraphSyncService, UsernameBloomFilterService } from '@user/services';
-import { UserSearchService } from '@user/search';
 
 @Injectable()
 export class UserService {
@@ -29,7 +33,8 @@ export class UserService {
       private readonly graphFollowRepository: GraphFollowRepository,
       private readonly userGraphSyncService: UserGraphSyncService,
       private readonly usernameBloomFilterService: UsernameBloomFilterService,
-      private readonly userSearchService: UserSearchService,
+      @Inject(SERVICES.SEARCH_SERVICE)
+      private readonly searchClient: ClientProxy,
       private readonly cloudinaryService: CloudinaryService,
    ) {}
 
@@ -104,12 +109,8 @@ export class UserService {
          this.logger.warn(`Failed to sync newly created user ${user.id} to graph: ${String(err)}`);
       }
 
-      // Sync user to Elasticsearch
-      try {
-         await this.userSearchService.indexUser(user);
-      } catch (err) {
-         this.logger.warn(`Failed to sync newly created user ${user.id} to Elasticsearch: ${String(err)}`);
-      }
+      // Sync user to Search Service
+      this.emitSearchIndexEvent(USER_EVENTS.CREATED, user);
 
       await this.outboxService.createOutboxEvent(user.id, 'User', 'UserCreated', {
          userId: user.id,
@@ -305,12 +306,8 @@ export class UserService {
             this.logger.warn(`Failed to sync newly created user ${user.id} to graph: ${String(err)}`);
          }
 
-         // Sync to Elasticsearch
-         try {
-            await this.userSearchService.indexUser(user);
-         } catch (err) {
-            this.logger.warn(`Failed to sync newly created user ${user.id} to Elasticsearch: ${String(err)}`);
-         }
+         // Sync to Search Service
+         this.emitSearchIndexEvent(USER_EVENTS.CREATED, user);
 
          return user;
       }
@@ -342,12 +339,8 @@ export class UserService {
          this.logger.warn(`Failed to sync updated user ${user.id} to graph: ${String(err)}`);
       }
 
-      // Sync updated user to Elasticsearch
-      try {
-         await this.userSearchService.indexUser(updatedUser);
-      } catch (err) {
-         this.logger.warn(`Failed to sync updated user ${user.id} to Elasticsearch: ${String(err)}`);
-      }
+      // Sync updated user to Search Service
+      this.emitSearchIndexEvent(USER_EVENTS.UPDATED, updatedUser);
 
       // Publish event
       await this.outboxService.createOutboxEvent(user.id, 'User', 'UserProfileUpdated', {
@@ -388,12 +381,8 @@ export class UserService {
          this.logger.warn(`Failed to sync updated username for ${user.id} to graph: ${String(err)}`);
       }
 
-      // Sync updated user to Elasticsearch
-      try {
-         await this.userSearchService.indexUser(updatedUser);
-      } catch (err) {
-         this.logger.warn(`Failed to sync updated username for ${user.id} to Elasticsearch: ${String(err)}`);
-      }
+      // Sync updated user to Search Service
+      this.emitSearchIndexEvent(USER_EVENTS.UPDATED, updatedUser);
 
       return updatedUser;
    }
@@ -403,12 +392,8 @@ export class UserService {
 
       const deletedUser = await this.userRepository.softDelete(user.id);
 
-      // Remove from Elasticsearch
-      try {
-         await this.userSearchService.deleteUser(user.id);
-      } catch (err) {
-         this.logger.warn(`Failed to delete user ${user.id} from Elasticsearch: ${String(err)}`);
-      }
+      // Remove from Search Service
+      this.emitSearchDeleteEvent(user.id);
 
       // Publish event
       await this.outboxService.createOutboxEvent(user.id, 'User', 'UserDeleted', {
@@ -422,12 +407,8 @@ export class UserService {
    async restoreUser(userId: string): Promise<UserEntity> {
       const restoredUser = await this.userRepository.restore(userId);
 
-      // Re-index to Elasticsearch
-      try {
-         await this.userSearchService.indexUser(restoredUser);
-      } catch (err) {
-         this.logger.warn(`Failed to re-index restored user ${restoredUser.id} to Elasticsearch: ${String(err)}`);
-      }
+      // Re-index to Search Service
+      this.emitSearchIndexEvent(USER_EVENTS.CREATED, restoredUser);
 
       // Publish event
       await this.outboxService.createOutboxEvent(restoredUser.id, 'User', 'UserRestored', {
@@ -713,19 +694,62 @@ export class UserService {
       });
    }
 
-   // Elasticsearch User Search
+   // Search Users via Search Service
    async searchUsers(
       query: string,
       limit = 10,
       cursor?: string,
       currentUserId?: string,
    ): Promise<{ items: UserSearchResultItemDto[]; meta: ICursorPaginationMeta }> {
-      const {
-         items: esUsers,
-         nextCursor,
-         hasMore,
-         total,
-      } = await this.userSearchService.searchUsers(query, limit, cursor);
+      let esResult: {
+         items: Array<{
+            id: string;
+            email?: string | null;
+            username?: string | null;
+            displayName?: string | null;
+            avatar?: string | null;
+            bio?: string | null;
+            isVerified?: boolean;
+            followersCount?: number;
+            followingCount?: number;
+            createdAt?: Date;
+            updatedAt?: Date;
+         }>;
+         nextCursor: string | null;
+         hasMore: boolean;
+         total?: number;
+      };
+
+      try {
+         esResult = await firstValueFrom(
+            this.searchClient.send<
+               {
+                  items: Array<{
+                     id: string;
+                     email?: string | null;
+                     username?: string | null;
+                     displayName?: string | null;
+                     avatar?: string | null;
+                     bio?: string | null;
+                     isVerified?: boolean;
+                     followersCount?: number;
+                     followingCount?: number;
+                     createdAt?: Date;
+                     updatedAt?: Date;
+                  }>;
+                  nextCursor: string | null;
+                  hasMore: boolean;
+                  total?: number;
+               },
+               { query: string; limit?: number; cursor?: string }
+            >({ cmd: SEARCH_PATTERNS.SEARCH_USERS }, { query, limit, cursor }),
+         );
+      } catch (err) {
+         this.logger.error(`Search Service query failed for ${query}: ${String(err)}`);
+         esResult = { items: [], nextCursor: null, hasMore: false, total: 0 };
+      }
+
+      const { items: esUsers = [], nextCursor = null, hasMore = false, total = 0 } = esResult;
 
       if (esUsers.length === 0) {
          return {
@@ -823,5 +847,33 @@ export class UserService {
          folder: 'omni/users/avatars',
          tags: `avatar,${user.id},${user.accountId}`,
       });
+   }
+
+   private emitSearchIndexEvent(event: string, user: UserEntity): void {
+      try {
+         this.searchClient.emit(event, {
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName,
+
+            avatar: user.avatar,
+            bio: user.bio,
+            isVerified: user.isVerified,
+            followersCount: user.followersCount,
+            followingCount: user.followingCount,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+         });
+      } catch (err) {
+         this.logger.warn(`Failed to emit ${event} to Search Service for user ${user.id}: ${String(err)}`);
+      }
+   }
+
+   private emitSearchDeleteEvent(userId: string): void {
+      try {
+         this.searchClient.emit(USER_EVENTS.DELETED, { id: userId });
+      } catch (err) {
+         this.logger.warn(`Failed to emit ${USER_EVENTS.DELETED} to Search Service for user ${userId}: ${String(err)}`);
+      }
    }
 }

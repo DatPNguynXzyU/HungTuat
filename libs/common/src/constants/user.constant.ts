@@ -74,3 +74,12 @@ export const USER_ERROR_REASONS = {
 } as const;
 
 export type UserErrorReason = (typeof USER_ERROR_REASONS)[keyof typeof USER_ERROR_REASONS];
+
+export const USER_EVENTS = {
+   CREATED: 'user.created',
+   UPDATED: 'user.updated',
+   DELETED: 'user.deleted',
+   SYNC: 'user.sync',
+} as const;
+
+export type UserEvent = (typeof USER_EVENTS)[keyof typeof USER_EVENTS];
