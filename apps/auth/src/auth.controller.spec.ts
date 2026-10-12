@@ -25,10 +25,7 @@ import {
    SESSION_REPOSITORY,
    SessionRepository,
 } from '@auth/repositories';
-import { AuditLogService } from '@auth/services/audit-log.service';
-import { EmailBloomFilterService } from '@auth/services/email-bloom-filter.service';
-import { TokenService } from '@auth/services/token.service';
-import { TOKEN_SERVICE } from '@auth/services/token.service.interface';
+import { AuditLogService, EmailBloomFilterService, TokenService, TOKEN_SERVICE } from '@auth/services/infrastructure';
 
 interface MockUserRecord {
    accountId: string;

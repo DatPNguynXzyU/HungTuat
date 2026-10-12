@@ -22,6 +22,14 @@ import { OutboxService } from '@user/outbox';
 import { GraphFollowRepository } from '@user/graph';
 import { UserGraphSyncService, UsernameBloomFilterService } from '@user/services';
 
+/**
+ * @deprecated Monolithic UserService. Use modular domain services instead:
+ * - ProfileService (@user/modules/profile)
+ * - FollowService (@user/modules/follow)
+ * - UserSearchService (@user/modules/search)
+ * - AuthService (@user/modules/authentication)
+ * Kept for 1 sprint for backwards compatibility. Planned removal: Next sprint.
+ */
 @Injectable()
 export class UserService {
    private readonly logger = new Logger(UserService.name);

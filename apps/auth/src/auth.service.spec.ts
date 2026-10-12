@@ -21,9 +21,7 @@ import { AuthConfigService } from '@auth/config';
 import type { CreateAccountData } from '@auth/entities/account.entity';
 import { OutboxPublisherService } from '@auth/outbox/services/outbox-publisher.service';
 import { AUTH_REPOSITORY } from '@auth/repositories';
-import { AuditLogService } from '@auth/services/audit-log.service';
-import { EmailBloomFilterService } from '@auth/services/email-bloom-filter.service';
-import { TOKEN_SERVICE } from '@auth/services/token.service.interface';
+import { AuditLogService, EmailBloomFilterService, TOKEN_SERVICE } from '@auth/services/infrastructure';
 
 describe('AuthService', () => {
    let service: AuthService;

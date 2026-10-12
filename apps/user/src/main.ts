@@ -1,16 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { AllRpcExceptionsFilter, RmqService, SERVICES } from '@common';
-import { UserModule } from '@user/user.module';
+import { AppModule } from '@user/app.module';
 
 async function bootstrap() {
-   const appContext = await NestFactory.createApplicationContext(UserModule, {
+   const appContext = await NestFactory.createApplicationContext(AppModule, {
       bufferLogs: true,
    });
    const logger = appContext.get(Logger);
    const rmqService = appContext.get(RmqService);
 
-   const app = await NestFactory.createMicroservice(UserModule, rmqService.getOptions(SERVICES.USER_SERVICE));
+   const app = await NestFactory.createMicroservice(AppModule, rmqService.getOptions(SERVICES.USER_SERVICE));
 
    app.useLogger(logger);
    app.useGlobalFilters(new AllRpcExceptionsFilter());

@@ -1,0 +1,1 @@
+export { UserSuggestionItemDto } from '@common';

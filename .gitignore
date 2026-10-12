@@ -6,6 +6,7 @@
 
 # Logs
 logs/
+*.log
 
 # Node dependencies
 node_modules/
@@ -57,4 +58,3 @@ Thumbs.db
 
 # Overmind socket
 .overmind.sock
-apps/user/logs/*.log

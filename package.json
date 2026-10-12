@@ -116,7 +116,17 @@
          "^@post/prisma-client$": "<rootDir>/apps/post/src/generated/prisma-client",
          "^@post/prisma-client/(.*)$": "<rootDir>/apps/post/src/generated/prisma-client/$1",
          "^@post/(.*)$": "<rootDir>/apps/post/src/$1",
-         "^@search/(.*)$": "<rootDir>/apps/search/src/$1"
+         "^@search/(.*)$": "<rootDir>/apps/search/src/$1",
+         "^@user/core/(.*)$": "<rootDir>/apps/user/src/core/$1",
+         "^@user/modules/(.*)$": "<rootDir>/apps/user/src/modules/$1",
+         "^@user/shared/(.*)$": "<rootDir>/apps/user/src/shared/$1",
+         "^@user/core$": "<rootDir>/apps/user/src/core/index.ts",
+         "^@user/modules$": "<rootDir>/apps/user/src/modules/index.ts",
+         "^@user/shared$": "<rootDir>/apps/user/src/shared/index.ts",
+         "^@auth/services/domain$": "<rootDir>/apps/auth/src/services/domain/index.ts",
+         "^@auth/services/domain/(.*)$": "<rootDir>/apps/auth/src/services/domain/$1",
+         "^@auth/services/infrastructure$": "<rootDir>/apps/auth/src/services/infrastructure/index.ts",
+         "^@auth/services/infrastructure/(.*)$": "<rootDir>/apps/auth/src/services/infrastructure/$1"
       }
    },
    "dependencies": {

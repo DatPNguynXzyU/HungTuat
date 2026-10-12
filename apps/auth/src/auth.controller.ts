@@ -1,11 +1,9 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Optional } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
 import {
    AUTH_PATTERNS,
    AUTH_RESPONSE_MESSAGES,
-   BadRequestException,
    ChangePasswordDto,
-   COMMON_ERROR_CODES,
    CreateAuditLogDto,
    DEFAULT_ROLES,
    IDeviceInfo,
@@ -20,20 +18,46 @@ import {
 } from '@common';
 import type { IServiceMessage } from '@common';
 import { AuthService } from '@auth/auth.service';
-import { AuditLogService } from '@auth/services/audit-log.service';
+import { AuditLogService } from '@auth/services/infrastructure';
+import {
+   AuthCoreService,
+   AuthRegistrationService,
+   SessionManagementService,
+   PasswordManagementService,
+} from '@auth/services/domain';
 
 @Controller()
 export class AuthController {
    constructor(
-      private readonly authService: AuthService,
+      @Optional() private readonly authCoreService: AuthCoreService,
+      @Optional() private readonly authRegistrationService: AuthRegistrationService,
+      @Optional() private readonly sessionManagementService: SessionManagementService,
+      @Optional() private readonly passwordManagementService: PasswordManagementService,
       private readonly auditLogService: AuditLogService,
       private readonly rmqService: RmqService,
+      @Optional() private readonly authService?: AuthService,
    ) {}
+
+   private get core(): AuthCoreService | AuthService {
+      return this.authCoreService || this.authService!;
+   }
+
+   private get reg(): AuthRegistrationService | AuthService {
+      return this.authRegistrationService || this.authService!;
+   }
+
+   private get session(): SessionManagementService | AuthService {
+      return this.sessionManagementService || this.authService!;
+   }
+
+   private get pwd(): PasswordManagementService | AuthService {
+      return this.passwordManagementService || this.authService!;
+   }
 
    @MessagePattern({ cmd: AUTH_PATTERNS.GET_JWKS })
    getJwks(@Ctx() context: RmqContext) {
       try {
-         const result = this.authService.getJwks();
+         const result = this.core.getJwks();
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -45,7 +69,7 @@ export class AuthController {
    @MessagePattern({ cmd: AUTH_PATTERNS.CHECK_EMAIL })
    async checkEmail(@Payload() data: { email: string }, @Ctx() context: RmqContext) {
       try {
-         const result = await this.authService.checkEmail(data.email);
+         const result = await this.reg.checkEmail(data.email);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -60,7 +84,7 @@ export class AuthController {
       @Ctx() context: RmqContext,
    ) {
       try {
-         const result = await this.authService.sendRegisterOtp(data, data.deviceInfo);
+         const result = await this.reg.sendRegisterOtp(data, data.deviceInfo);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -75,7 +99,7 @@ export class AuthController {
       @Ctx() context: RmqContext,
    ) {
       try {
-         const result = await this.authService.verifyRegisterOtp(data, data.deviceInfo);
+         const result = await this.reg.verifyRegisterOtp(data, data.deviceInfo);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -87,7 +111,7 @@ export class AuthController {
    @MessagePattern({ cmd: AUTH_PATTERNS.REGISTER })
    async register(@Payload() data: RegisterDto & { deviceInfo?: IDeviceInfo }, @Ctx() context: RmqContext) {
       try {
-         const result = await this.authService.register(data, data.deviceInfo);
+         const result = await this.reg.register(data, data.deviceInfo);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -99,7 +123,7 @@ export class AuthController {
    @MessagePattern({ cmd: AUTH_PATTERNS.LOGIN })
    async login(@Payload() data: LoginDto & { deviceInfo?: IDeviceInfo }, @Ctx() context: RmqContext) {
       try {
-         const result = await this.authService.login(data, data.deviceInfo);
+         const result = await this.core.login(data, data.deviceInfo);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -111,7 +135,7 @@ export class AuthController {
    @MessagePattern({ cmd: AUTH_PATTERNS.REFRESH_TOKEN })
    async refreshToken(@Payload() data: { refreshToken: string; deviceInfo?: IDeviceInfo }, @Ctx() context: RmqContext) {
       try {
-         const result = await this.authService.refreshToken(data.refreshToken, data.deviceInfo);
+         const result = await this.core.refreshToken(data.refreshToken, data.deviceInfo);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -123,7 +147,7 @@ export class AuthController {
    @MessagePattern({ cmd: AUTH_PATTERNS.REVOKE_TOKEN })
    async revokeToken(@Payload() data: { token: string; deviceInfo?: IDeviceInfo }, @Ctx() context: RmqContext) {
       try {
-         await this.authService.revokeToken(data.token, data.deviceInfo);
+         await this.core.revokeToken(data.token, data.deviceInfo);
          this.rmqService.ack(context);
          return { success: true };
       } catch (error) {
@@ -139,7 +163,7 @@ export class AuthController {
    ) {
       try {
          const targetId = data.accountId || data.userId || '';
-         await this.authService.revokeAllAccountTokens(targetId, data.deviceInfo);
+         await this.core.revokeAllAccountTokens(targetId, data.deviceInfo);
          this.rmqService.ack(context);
          return { success: true, message: AUTH_RESPONSE_MESSAGES.TOKEN_REVOKE_SUCCESS };
       } catch (error) {
@@ -155,7 +179,7 @@ export class AuthController {
    ) {
       try {
          const targetId = data.accountId || data.userId || '';
-         await this.authService.logoutAll(targetId, data.deviceInfo);
+         await this.core.logoutAll(targetId, data.deviceInfo);
          this.rmqService.ack(context);
          return { success: true, message: AUTH_RESPONSE_MESSAGES.LOGOUT_ALL_SUCCESS };
       } catch (error) {
@@ -171,7 +195,7 @@ export class AuthController {
    ) {
       try {
          const targetId = data.accountId || data.userId || '';
-         const result = await this.authService.getSessions(targetId, data.currentJti);
+         const result = await this.session.getSessions(targetId, data.currentJti);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -187,7 +211,7 @@ export class AuthController {
    ) {
       try {
          const targetId = data.accountId || data.userId || '';
-         await this.authService.revokeSession(targetId, data.sessionId, data.deviceInfo);
+         await this.session.revokeSession(targetId, data.sessionId, data.deviceInfo);
          this.rmqService.ack(context);
          return { success: true };
       } catch (error) {
@@ -203,7 +227,7 @@ export class AuthController {
    ) {
       try {
          const targetId = data.accountId || data.userId || '';
-         const result = await this.authService.revokeOtherSessions(targetId, data.currentJti, data.deviceInfo);
+         const result = await this.session.revokeOtherSessions(targetId, data.currentJti, data.deviceInfo);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -218,14 +242,16 @@ export class AuthController {
       data: {
          accountId?: string;
          userId?: string;
-         changePasswordDto: ChangePasswordDto;
+         changePasswordDto?: ChangePasswordDto;
+         dto?: ChangePasswordDto;
          deviceInfo?: IDeviceInfo;
       },
       @Ctx() context: RmqContext,
    ) {
       try {
          const targetId = data.accountId || data.userId || '';
-         const result = await this.authService.changePassword(targetId, data.changePasswordDto, data.deviceInfo);
+         const dto = data.changePasswordDto || data.dto!;
+         const result = await this.pwd.changePassword(targetId, dto, data.deviceInfo);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -247,7 +273,7 @@ export class AuthController {
    ) {
       try {
          const targetId = data.accountId || data.userId || '';
-         const result = await this.authService.verifyChangePasswordOtp(targetId, data.dto, data.deviceInfo);
+         const result = await this.pwd.verifyChangePasswordOtp(targetId, data.dto, data.deviceInfo);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -259,7 +285,7 @@ export class AuthController {
    @MessagePattern({ cmd: AUTH_PATTERNS.VALIDATE_TOKEN })
    async validateToken(@Payload() data: { token: string }, @Ctx() context: RmqContext) {
       try {
-         const result = await this.authService.validateToken(data.token);
+         const result = await this.core.validateToken(data.token);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -271,7 +297,7 @@ export class AuthController {
    @MessagePattern({ cmd: AUTH_PATTERNS.GET_ROLE_PERMISSIONS })
    async getRolePermissions(@Payload() data: { roleCode: string }, @Ctx() context: RmqContext) {
       try {
-         const result = await this.authService.getRolePermissions(data.roleCode);
+         const result = await this.core.getRolePermissions(data.roleCode);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -284,7 +310,6 @@ export class AuthController {
    async getAuditLogs(@Payload() message: IServiceMessage<QueryAuditLogDto>, @Ctx() context: RmqContext) {
       try {
          checkRoles(message, [DEFAULT_ROLES.ADMIN]);
-
          const result = await this.auditLogService.getAuditLogs(message.data);
          this.rmqService.ack(context);
          return result;
@@ -298,7 +323,6 @@ export class AuthController {
    async getAuditLogById(@Payload() message: IServiceMessage<{ id: string }>, @Ctx() context: RmqContext) {
       try {
          checkRoles(message, [DEFAULT_ROLES.ADMIN]);
-
          const result = await this.auditLogService.getAuditLogById(message.data.id);
          this.rmqService.ack(context);
          return result;
@@ -339,12 +363,7 @@ export class AuthController {
    @MessagePattern({ cmd: AUTH_PATTERNS.GET_EMAIL })
    async getEmail(@Payload() data: { accountId: string }, @Ctx() context: RmqContext) {
       try {
-         if (!data?.accountId) {
-            throw new BadRequestException(COMMON_ERROR_CODES.INVALID_REQUEST, {
-               params: { field: 'accountId' },
-            });
-         }
-         const result = await this.authService.getEmail(data.accountId);
+         const result = await this.core.getEmail(data.accountId);
          this.rmqService.ack(context);
          return result;
       } catch (error) {

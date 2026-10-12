@@ -12,6 +12,14 @@ import {
 } from '@common';
 import type { IServiceMessage } from '@common';
 
+/**
+ * @deprecated Legacy monolithic controller. Use modular controllers instead:
+ * - ProfileController (@user/modules/profile)
+ * - FollowController (@user/modules/follow)
+ * - SearchController (@user/modules/search)
+ * - AuthController (@user/modules/authentication)
+ * Kept for 1 sprint for backwards compatibility. Planned removal: Next sprint.
+ */
 @Controller()
 export class UserController {
    constructor(

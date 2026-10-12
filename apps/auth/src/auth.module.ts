@@ -14,10 +14,13 @@ import {
    SESSION_REPOSITORY,
    SessionRepository,
 } from '@auth/repositories';
-import { AuditLogService } from '@auth/services/audit-log.service';
-import { EmailBloomFilterService } from '@auth/services/email-bloom-filter.service';
-import { TokenService } from '@auth/services/token.service';
-import { TOKEN_SERVICE } from '@auth/services/token.service.interface';
+import { TokenService, TOKEN_SERVICE, AuditLogService, EmailBloomFilterService } from '@auth/services/infrastructure';
+import {
+   AuthCoreService,
+   AuthRegistrationService,
+   SessionManagementService,
+   PasswordManagementService,
+} from '@auth/services/domain';
 
 @Module({
    imports: [
@@ -32,7 +35,14 @@ import { TOKEN_SERVICE } from '@auth/services/token.service.interface';
    ],
    controllers: [AuthController],
    providers: [
+      // Domain Services
+      AuthCoreService,
+      AuthRegistrationService,
+      SessionManagementService,
+      PasswordManagementService,
       AuthService,
+
+      // Infrastructure Services
       {
          provide: TOKEN_SERVICE,
          useClass: TokenService,
@@ -40,6 +50,8 @@ import { TOKEN_SERVICE } from '@auth/services/token.service.interface';
       TokenService,
       AuditLogService,
       EmailBloomFilterService,
+
+      // Repositories
       {
          provide: AUTH_REPOSITORY,
          useClass: AuthRepository,
@@ -57,6 +69,10 @@ import { TOKEN_SERVICE } from '@auth/services/token.service.interface';
       AuditLogRepository,
    ],
    exports: [
+      AuthCoreService,
+      AuthRegistrationService,
+      SessionManagementService,
+      PasswordManagementService,
       AuthService,
       TOKEN_SERVICE,
       TokenService,
