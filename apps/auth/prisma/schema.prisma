@@ -184,3 +184,31 @@ model OutboxEvent {
   @@index([aggregateType, aggregateId])
   @@map("outbox_events")
 }
+
+model AuditEventStream {
+  eventId   String   @id @default(uuid()) @map("event_id")
+  streamId  String   @map("stream_id")
+  eventType String   @map("event_type")
+  version   Int      @default(autoincrement()) @unique
+  data      Json
+  metadata  Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([streamId, version])
+  @@index([eventType])
+  @@map("audit_event_streams")
+}
+
+model AccountSecurityScore {
+  accountId            String   @id @map("account_id")
+  score                Int
+  riskLevel            String   @map("risk_level")
+  failedLoginAttempts  Int      @default(0) @map("failed_login_attempts")
+  successfulLogins     Int      @default(0) @map("successful_logins")
+  passwordChanges      Int      @default(0) @map("password_changes")
+  suspiciousActivities Int      @default(0) @map("suspicious_activities")
+  lastUpdated          DateTime @default(now()) @map("last_updated")
+
+  @@index([riskLevel])
+  @@map("account_security_scores")
+}

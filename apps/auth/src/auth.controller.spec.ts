@@ -351,7 +351,18 @@ describe('AuthController', () => {
             AuthRegistrationService,
             SessionManagementService,
             PasswordManagementService,
-            AuditLogService,
+            {
+               provide: AuditLogService,
+               useValue: {
+                  record: jest.fn().mockResolvedValue(null),
+                  getAuditLogs: jest.fn().mockResolvedValue({ data: [], total: 0 }),
+                  getAuditLogById: jest.fn().mockResolvedValue(null),
+                  getAccountAuditLogs: jest.fn().mockResolvedValue({ data: [], total: 0 }),
+                  getSecurityScore: jest.fn().mockResolvedValue(null),
+                  getThreatMetrics: jest.fn().mockResolvedValue(null),
+                  rebuildProjections: jest.fn().mockResolvedValue({ replayedCount: 0, durationMs: 0 }),
+               },
+            },
             EmailBloomFilterService,
             BloomFilterService,
             {

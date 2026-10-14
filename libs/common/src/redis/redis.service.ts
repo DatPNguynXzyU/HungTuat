@@ -101,6 +101,28 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       }
    }
 
+   async hincrby(key: string, field: string, increment: number): Promise<number> {
+      if (!this.client) return 0;
+      try {
+         return await this.client.hincrby(key, field, increment);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis HINCRBY failed for key "${key}" field "${field}": ${error.message}`);
+         return 0;
+      }
+   }
+
+   async hgetall(key: string): Promise<Record<string, string>> {
+      if (!this.client) return {};
+      try {
+         return await this.client.hgetall(key);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis HGETALL failed for key "${key}": ${error.message}`);
+         return {};
+      }
+   }
+
    async sadd(key: string, ...members: string[]): Promise<void> {
       if (!this.client || members.length === 0) return;
       try {
@@ -118,6 +140,39 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       } catch (err: unknown) {
          const error = err as Error;
          this.logger.warn(`Redis SREM failed for key "${key}": ${error.message}`);
+      }
+   }
+
+   async zincrby(key: string, increment: number, member: string): Promise<string | null> {
+      if (!this.client) return null;
+      try {
+         return await this.client.zincrby(key, increment, member);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis ZINCRBY failed for key "${key}": ${error.message}`);
+         return null;
+      }
+   }
+
+   async zrevrange(key: string, start: number, stop: number): Promise<string[]> {
+      if (!this.client) return [];
+      try {
+         return await this.client.zrevrange(key, start, stop);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis ZREVRANGE failed for key "${key}": ${error.message}`);
+         return [];
+      }
+   }
+
+   async zremrangebyrank(key: string, start: number, stop: number): Promise<number> {
+      if (!this.client) return 0;
+      try {
+         return await this.client.zremrangebyrank(key, start, stop);
+      } catch (err: unknown) {
+         const error = err as Error;
+         this.logger.warn(`Redis ZREMRANGEBYRANK failed for key "${key}": ${error.message}`);
+         return 0;
       }
    }
 

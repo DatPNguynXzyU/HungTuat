@@ -210,6 +210,42 @@ export const AuthRedisKeys = {
     * ```
     */
    bloomEmail: (): string => REDIS_KEY_PREFIX.BLOOM_EMAIL,
+
+   /**
+    * Redis hash key storing daily threat metrics (totalFailedLogins, uniqueLockedAccounts).
+    *
+    * Pattern: `auth:threat:metrics:<date>`
+    * @example
+    * ```ts
+    * AuthRedisKeys.threatMetrics('2026-10-14')
+    * // => "auth:threat:metrics:2026-10-14"
+    * ```
+    */
+   threatMetrics: (date: string): string => `${REDIS_KEY_PREFIX.THREAT_METRICS}${date}`,
+
+   /**
+    * Redis Sorted Set key tracking suspicious client IP addresses and their incident frequencies for a given date.
+    *
+    * Pattern: `auth:threat:ips:<date>`
+    * @example
+    * ```ts
+    * AuthRedisKeys.threatIps('2026-10-14')
+    * // => "auth:threat:ips:2026-10-14"
+    * ```
+    */
+   threatIps: (date: string): string => `${REDIS_KEY_PREFIX.THREAT_IPS}${date}`,
+
+   /**
+    * Redis hash key storing failure reason frequencies for a given date.
+    *
+    * Pattern: `auth:threat:reasons:<date>`
+    * @example
+    * ```ts
+    * AuthRedisKeys.threatReasons('2026-10-14')
+    * // => "auth:threat:reasons:2026-10-14"
+    * ```
+    */
+   threatReasons: (date: string): string => `${REDIS_KEY_PREFIX.THREAT_REASONS}${date}`,
 } as const;
 
 /**
@@ -220,3 +256,13 @@ export const AUTH_BLOOM_FILTERS = {
 } as const;
 
 export type AuthBloomFilter = (typeof AUTH_BLOOM_FILTERS)[keyof typeof AUTH_BLOOM_FILTERS];
+
+/**
+ * Standard Redis Hash field names for daily threat metrics tracking.
+ */
+export const THREAT_METRICS_FIELDS = {
+   TOTAL_FAILED_LOGINS: 'totalFailedLogins',
+   UNIQUE_LOCKED_ACCOUNTS: 'uniqueLockedAccounts',
+} as const;
+
+export type ThreatMetricsField = (typeof THREAT_METRICS_FIELDS)[keyof typeof THREAT_METRICS_FIELDS];

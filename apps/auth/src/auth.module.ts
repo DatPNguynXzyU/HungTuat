@@ -45,6 +45,14 @@ import {
    PasswordChangedEventHandler,
    SessionRevokedEventHandler,
 } from '@auth/domain/event-handlers';
+import {
+   AUDIT_EVENT_STORE,
+   AuditEventStore,
+   SecurityAuditLogProjection,
+   AccountSecurityScoreProjection,
+   ThreatDetectionMetricsProjection,
+   AuditProjectionRebuildService,
+} from '@auth/cqrs';
 
 @Module({
    imports: [
@@ -110,6 +118,17 @@ import {
       AuditLogService,
       EmailBloomFilterService,
 
+      // CQRS Audit Log Components
+      AuditEventStore,
+      {
+         provide: AUDIT_EVENT_STORE,
+         useExisting: AuditEventStore,
+      },
+      SecurityAuditLogProjection,
+      AccountSecurityScoreProjection,
+      ThreatDetectionMetricsProjection,
+      AuditProjectionRebuildService,
+
       // Repositories
       {
          provide: ACCOUNT_REPOSITORY,
@@ -159,6 +178,12 @@ import {
       SessionRepository,
       AUDIT_LOG_REPOSITORY,
       AuditLogRepository,
+      AUDIT_EVENT_STORE,
+      AuditEventStore,
+      SecurityAuditLogProjection,
+      AccountSecurityScoreProjection,
+      ThreatDetectionMetricsProjection,
+      AuditProjectionRebuildService,
       OutboxModule,
       UserRegisteredEventHandler,
       AccountLockedEventHandler,

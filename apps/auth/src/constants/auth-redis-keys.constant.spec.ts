@@ -56,4 +56,10 @@ describe('AuthRedisKeys', () => {
       expect(AuthRedisKeys.bloomInitialized('custom')).toBe(`${REDIS_KEY_PREFIX.BLOOM_INITIALIZED}custom`);
       expect(AuthRedisKeys.bloomEmail()).toBe(REDIS_KEY_PREFIX.BLOOM_EMAIL);
    });
+
+   it('should generate threat detection metrics keys', () => {
+      expect(AuthRedisKeys.threatMetrics('2026-10-14')).toBe(`${REDIS_KEY_PREFIX.THREAT_METRICS}2026-10-14`);
+      expect(AuthRedisKeys.threatIps('2026-10-14')).toBe(`${REDIS_KEY_PREFIX.THREAT_IPS}2026-10-14`);
+      expect(AuthRedisKeys.threatReasons('2026-10-14')).toBe(`${REDIS_KEY_PREFIX.THREAT_REASONS}2026-10-14`);
+   });
 });

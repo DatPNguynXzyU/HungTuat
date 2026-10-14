@@ -20,6 +20,13 @@ export const AUDIT_STATUS = {
    FAILURE: 'FAILURE',
 } as const;
 
+export const SECURITY_RISK_LEVELS = {
+   LOW: 'low',
+   MEDIUM: 'medium',
+   HIGH: 'high',
+   CRITICAL: 'critical',
+} as const;
+
 export const AUDIT_LOG_RESPONSE_MESSAGES = {
    GET_LIST_SUCCESS: 'AUDIT_LOGS.GET_LIST_SUCCESS',
    GET_DETAIL_SUCCESS: 'AUDIT_LOGS.GET_DETAIL_SUCCESS',
@@ -32,5 +39,6 @@ export const AUDIT_LOG_ERROR_CODES = {
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
 export type AuditStatus = (typeof AUDIT_STATUS)[keyof typeof AUDIT_STATUS];
+export type SecurityRiskLevel = (typeof SECURITY_RISK_LEVELS)[keyof typeof SECURITY_RISK_LEVELS];
 export type AuditLogResponseMessage = (typeof AUDIT_LOG_RESPONSE_MESSAGES)[keyof typeof AUDIT_LOG_RESPONSE_MESSAGES];
 export type AuditLogErrorCode = (typeof AUDIT_LOG_ERROR_CODES)[keyof typeof AUDIT_LOG_ERROR_CODES];

@@ -42,6 +42,22 @@ describe('RedisService', () => {
       await expect(service.expire('set_key', 3600)).resolves.not.toThrow();
    });
 
+   it('should handle hash methods (hincrby, hgetall) gracefully when client is not connected', async () => {
+      const incrResult = await service.hincrby('hash_key', 'field', 1);
+      expect(incrResult).toBe(0);
+      const allFields = await service.hgetall('hash_key');
+      expect(allFields).toEqual({});
+   });
+
+   it('should handle sorted set methods (zincrby, zrevrange, zremrangebyrank) gracefully when client is not connected', async () => {
+      const zincrResult = await service.zincrby('z_key', 1, 'mem');
+      expect(zincrResult).toBeNull();
+      const zrevResult = await service.zrevrange('z_key', 0, 10);
+      expect(zrevResult).toEqual([]);
+      const zremResult = await service.zremrangebyrank('z_key', 0, 10);
+      expect(zremResult).toBe(0);
+   });
+
    it('should handle deleteByPattern gracefully when client is not connected', async () => {
       const count = await service.deleteByPattern('pattern:*');
       expect(count).toBe(0);

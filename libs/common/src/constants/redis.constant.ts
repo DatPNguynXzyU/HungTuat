@@ -19,6 +19,9 @@ export const REDIS_KEY_PREFIX = {
    OTP_CHANGE_PASSWORD: 'auth:otp:change_password:',
    OTP_CHANGE_PASSWORD_ATTEMPTS: 'auth:otp_attempts:change_password:',
    OTP_CHANGE_PASSWORD_COOLDOWN: 'auth:otp_cooldown:change_password:',
+   THREAT_METRICS: 'auth:threat:metrics:',
+   THREAT_IPS: 'auth:threat:ips:',
+   THREAT_REASONS: 'auth:threat:reasons:',
 } as const;
 
 export const REDIS_TTL = {
@@ -34,4 +37,5 @@ export const REDIS_TTL = {
    OTP_VERIFICATION_TOKEN: 900, // 15 minutes in seconds
    OTP_CHANGE_PASSWORD_EXPIRES: 600, // 10 minutes in seconds
    OTP_CHANGE_PASSWORD_COOLDOWN: 60, // 60 seconds
+   THREAT_METRICS: 86400 * 7, // 7 days in seconds
 } as const;

@@ -1,5 +1,5 @@
 import type { SetOptional } from '@common';
-import type { AuditStatus } from '@auth/prisma-client';
+import { AuditStatus } from '@auth/prisma-client';
 
 export interface SecurityAuditLogEntity {
    id: string;
