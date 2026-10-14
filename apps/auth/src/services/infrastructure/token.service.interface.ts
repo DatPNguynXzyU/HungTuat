@@ -1,4 +1,5 @@
-import type { IDeviceInfo, IJwksResponse, JwtPayload } from '@common';
+import type { IDeviceInfo, JwtPayload } from '@common';
+import type { IJwksResponse } from '@contracts/auth';
 import type { SignOptions, VerifyOptions } from 'jsonwebtoken';
 
 export interface TokenPair {

@@ -1,1 +1,1 @@
-export { UserResponseDto as ProfileResponseDto } from '@common';
+export { UserResponseDto as ProfileResponseDto } from '@contracts/user';

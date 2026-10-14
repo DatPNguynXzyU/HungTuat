@@ -1,13 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-   AUTH_ERROR_CODES,
-   type IDeviceInfo,
-   JWT_TOKEN_TYPE,
-   type JwtPayload,
-   RedisService,
-   UnauthorizedException,
-   uuidv7,
-} from '@common';
+import { type IDeviceInfo, type JwtPayload, RedisService, UnauthorizedException, uuidv7 } from '@common';
+import { AUTH_ERROR_CODES, JWT_TOKEN_TYPE } from '@contracts/auth';
 import { SESSION_REPOSITORY, type ISessionRepository } from '@auth/repositories';
 import {
    AUTH_METRICS_STATUS,

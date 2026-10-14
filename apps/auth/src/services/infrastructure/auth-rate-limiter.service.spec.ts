@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AUTH_ERROR_CODES, COMMON_ERROR_CODES, RedisService, TooManyRequestsException } from '@common';
+import { COMMON_ERROR_CODES, RedisService, TooManyRequestsException } from '@common';
+import { AUTH_ERROR_CODES } from '@contracts/auth';
 import { AuthRateLimiter } from './auth-rate-limiter.service';
 import { AUTH_RATE_LIMITER } from './auth-rate-limiter.interface';
 

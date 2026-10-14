@@ -1,14 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import {
-   CloudinaryService,
-   ConflictException,
-   NotFoundException,
-   SERVICES,
-   USER_ERROR_CODES,
-   USER_EVENTS,
-   UserDateOfBirthResponseDto,
-} from '@common';
+import { CloudinaryService, ConflictException, NotFoundException, SERVICES } from '@common';
+import { USER_ERROR_CODES, USER_EVENTS, UserDateOfBirthResponseDto } from '@contracts/user';
 import { OutboxService } from '@user/core/outbox';
 import { UserEntity, Gender } from '@user/core/database/entities';
 import {

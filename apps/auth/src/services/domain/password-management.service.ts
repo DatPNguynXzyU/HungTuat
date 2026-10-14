@@ -2,27 +2,20 @@ import type { ITokenLifecycleService } from '@auth/services/infrastructure';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ClientProxy } from '@nestjs/microservices';
+import { BadRequestException, OtpUtil, REDIS_TTL, RedisService, SERVICES, UnauthorizedException } from '@common';
+import type { IDeviceInfo } from '@common';
 import {
    AUDIT_ACTIONS,
    AUDIT_STATUS,
    AUTH_ERROR_CODES,
    AUTH_RESPONSE_MESSAGES,
    AUTH_SECURITY,
-   BadRequestException,
-   NOTIFICATION_PATTERNS,
-   OtpUtil,
-   REDIS_TTL,
-   RedisService,
-   SERVICES,
-   UnauthorizedException,
-} from '@common';
-import type {
-   IDeviceInfo,
    ChangePasswordDto,
-   ChangePasswordResponseDto,
+   type ChangePasswordResponseDto,
    VerifyChangePasswordOtpDto,
-   VerifyChangePasswordOtpResponseDto,
-} from '@common';
+   type VerifyChangePasswordOtpResponseDto,
+} from '@contracts/auth';
+import { NOTIFICATION_PATTERNS } from '@contracts/notification';
 import { ACCOUNT_REPOSITORY, type IAccountRepository } from '@auth/repositories';
 import { AuthConfigService } from '@auth/config';
 import {

@@ -1,1 +1,1 @@
-export { CheckUsernameResponseDto } from '@common';
+export { CheckUsernameResponseDto } from '@contracts/user';

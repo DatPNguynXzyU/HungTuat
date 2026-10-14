@@ -2,17 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RmqContext } from '@nestjs/microservices';
 import { of } from 'rxjs';
-import {
-   BloomFilterService,
-   DEFAULT_DEV_RSA_PRIVATE_KEY,
-   DEFAULT_DEV_RSA_PUBLIC_KEY,
-   DEFAULT_JWT_KEY_ID,
-   DEFAULT_ROLES,
-   RbacCacheService,
-   RedisService,
-   RmqService,
-   SERVICES,
-} from '@common';
+import { BloomFilterService, DEFAULT_ROLES, RbacCacheService, RedisService, RmqService, SERVICES } from '@common';
+import { DEFAULT_DEV_RSA_PRIVATE_KEY, DEFAULT_DEV_RSA_PUBLIC_KEY, DEFAULT_JWT_KEY_ID } from '@contracts/auth';
 import { AuthController } from '@auth/auth.controller';
 import { AuthConfigService } from '@auth/config';
 import { OutboxPublisherService } from '@auth/outbox/services/outbox-publisher.service';

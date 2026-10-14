@@ -4,7 +4,7 @@ import { AuditEventStore } from '@auth/cqrs/write/audit-event-store';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import { AUDIT_CQRS_EVENTS } from '@auth/cqrs/constants/audit-cqrs.constant';
 import { AuditStatus } from '@auth/prisma-client';
-import { AUDIT_ACTIONS } from '@common';
+import { AUDIT_ACTIONS } from '@contracts/auth';
 import type { CreateAuditLogData } from '@auth/entities/audit-log.entity';
 
 describe('AuditEventStore', () => {

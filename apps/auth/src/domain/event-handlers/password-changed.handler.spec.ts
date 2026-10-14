@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { of, throwError } from 'rxjs';
-import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES, SERVICES } from '@common';
+import { SERVICES } from '@common';
+import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES } from '@contracts/notification';
 import { PasswordChangedEventHandler } from './password-changed.handler';
 import { PasswordChangedEvent } from '@auth/domain/events';
 

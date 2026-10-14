@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AuditStatus, Prisma, type SecurityAuditLog } from '@auth/prisma-client';
-import { uuidv7 } from '@common';
-import { AuditSanitizerUtil, type IAuditLogListResult, type IAuditLogQuery } from '@common';
+import { AuditSanitizerUtil, uuidv7 } from '@common';
+import type { IAuditLogListResult, IAuditLogQuery } from '@contracts/auth';
 import type { CreateAuditLogData, SecurityAuditLogEntity } from '@auth/entities/audit-log.entity';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import type { IAuditLogRepository } from '@auth/repositories/audit-log.repository.interface';

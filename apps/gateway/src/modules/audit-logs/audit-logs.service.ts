@@ -1,13 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import {
-   AUTH_PATTERNS,
-   IAuditLogListResult,
-   ISecurityAuditLog,
-   QueryAuditLogDto,
-   SERVICES,
-   IServiceMessage,
-} from '@common';
+import { IServiceMessage, SERVICES } from '@common';
+import { AUTH_PATTERNS, IAuditLogListResult, ISecurityAuditLog, QueryAuditLogDto } from '@contracts/auth';
 import { firstValueFrom } from 'rxjs';
 import type { JwtPayload } from '@common/utils/jwt.util';
 

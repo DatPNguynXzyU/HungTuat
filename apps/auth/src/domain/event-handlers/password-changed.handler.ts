@@ -1,7 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { OnEvent } from '@nestjs/event-emitter';
-import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES, SERVICES } from '@common';
+import { SERVICES } from '@common';
+import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES } from '@contracts/notification';
 import { firstValueFrom } from 'rxjs';
 import { AUTH_DOMAIN_EVENTS, PasswordChangedEvent } from '@auth/domain/events';
 

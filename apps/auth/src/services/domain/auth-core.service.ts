@@ -2,26 +2,26 @@ import type { IJwtService, ITokenLifecycleService } from '@auth/services/infrast
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
-   AUDIT_ACTIONS,
-   AUDIT_STATUS,
-   AUTH_ERROR_CODES,
-   AUTH_SECURITY,
    DEFAULT_ROLES,
    NotFoundException,
    RbacCacheService,
    REDIS_TTL,
    RedisService,
    UnauthorizedException,
-   USER_STATUS,
 } from '@common';
-import type {
-   IDeviceInfo,
-   IAuthResult,
-   IValidateTokenResult,
-   IJwksResponse,
+import type { IDeviceInfo } from '@common';
+import {
+   AUDIT_ACTIONS,
+   AUDIT_STATUS,
+   AUTH_ERROR_CODES,
+   AUTH_SECURITY,
+   USER_STATUS,
    LoginDto,
    UserEmailResponseDto,
-} from '@common';
+   type IAuthResult,
+   type IValidateTokenResult,
+   type IJwksResponse,
+} from '@contracts/auth';
 import { ACCOUNT_REPOSITORY, type IAccountRepository, RBAC_REPOSITORY, type IRbacRepository } from '@auth/repositories';
 import { AuthConfigService } from '@auth/config';
 import {

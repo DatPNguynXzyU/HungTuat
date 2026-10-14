@@ -1,6 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { DeviceDetectorUtil } from '@common/utils/device-detector.util';
-import { IDeviceInfo } from '@common/interfaces/auth.interface';
+import { IDeviceInfo } from '@common/interfaces/device.interface';
 import { Request } from 'express';
 
 export const ClientContext = createParamDecorator((data: unknown, ctx: ExecutionContext): IDeviceInfo => {

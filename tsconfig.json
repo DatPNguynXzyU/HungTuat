@@ -58,6 +58,30 @@
          "@app/common/*": [
             "libs/common/src/*"
          ],
+         "@contracts/auth": [
+            "libs/contracts/auth/src"
+         ],
+         "@contracts/auth/*": [
+            "libs/contracts/auth/src/*"
+         ],
+         "@contracts/user": [
+            "libs/contracts/user/src"
+         ],
+         "@contracts/user/*": [
+            "libs/contracts/user/src/*"
+         ],
+         "@contracts/notification": [
+            "libs/contracts/notification/src"
+         ],
+         "@contracts/notification/*": [
+            "libs/contracts/notification/src/*"
+         ],
+         "@contracts/search": [
+            "libs/contracts/search/src"
+         ],
+         "@contracts/search/*": [
+            "libs/contracts/search/src/*"
+         ],
          "@notification/*": [
             "apps/notification/src/*"
          ],

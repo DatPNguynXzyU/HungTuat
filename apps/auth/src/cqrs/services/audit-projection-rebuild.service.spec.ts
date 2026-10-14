@@ -8,7 +8,7 @@ import {
    ThreatDetectionMetricsProjection,
 } from '@auth/cqrs/read';
 import { AuditStatus } from '@auth/prisma-client';
-import { AUDIT_ACTIONS } from '@common';
+import { AUDIT_ACTIONS } from '@contracts/auth';
 
 describe('AuditProjectionRebuildService', () => {
    let service: AuditProjectionRebuildService;

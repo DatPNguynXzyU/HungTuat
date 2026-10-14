@@ -1,16 +1,16 @@
 import { Controller, Logger } from '@nestjs/common';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
+import { RmqService } from '@common';
 import {
    NOTIFICATION_EVENTS,
    NOTIFICATION_PATTERNS,
-   RmqService,
    SendEmailDto,
    SendOtpEmailDto,
    SendResetPasswordEmailDto,
    SendVerificationEmailDto,
    SendWelcomeEmailDto,
    SendChangePasswordOtpEmailDto,
-} from '@common';
+} from '@contracts/notification';
 import { NotificationService } from '@notification/notification.service';
 
 @Controller()

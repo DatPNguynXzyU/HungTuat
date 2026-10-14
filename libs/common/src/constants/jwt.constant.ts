@@ -8,6 +8,27 @@ export const JWT_TOKEN_TYPE = {
 
 export type JwtTokenType = (typeof JWT_TOKEN_TYPE)[keyof typeof JWT_TOKEN_TYPE];
 
+export const AUTH_COOKIES = {
+   ACCESS_TOKEN: 'access_token',
+   REFRESH_TOKEN: 'refresh_token',
+} as const;
+
+export const AUTH_ERROR_REASONS = {
+   EMAIL_REQUIRED: 'email_required',
+   REFRESH_TOKEN_MISSING: 'refresh_token_missing',
+   TOKEN_MISSING: 'token_missing',
+   TOKEN_REVOKED: 'token_revoked',
+   TOKEN_INVALID_OR_EXPIRED: 'token_invalid_or_expired',
+   INVALID_TOKEN_TYPE: 'invalid_token_type',
+   USER_TOKENS_REVOKED: 'user_tokens_revoked',
+   USER_NOT_AUTHENTICATED: 'user_not_authenticated',
+   INSUFFICIENT_ROLE: 'insufficient_role',
+   INSUFFICIENT_PERMISSIONS: 'insufficient_permissions',
+} as const;
+
+export type AuthCookie = (typeof AUTH_COOKIES)[keyof typeof AUTH_COOKIES];
+export type AuthErrorReason = (typeof AUTH_ERROR_REASONS)[keyof typeof AUTH_ERROR_REASONS];
+
 export const DEFAULT_DEV_RSA_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCx/CvjH0K6nAfI
 yEh2cMhJrYyMrmmXgKA39rKdH43qihXS9a155y/TRBKQ/3xe+pVOBNOCh7Nbx+vS

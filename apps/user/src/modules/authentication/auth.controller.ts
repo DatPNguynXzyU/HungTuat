@@ -1,6 +1,8 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, EventPattern, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { NOTIFICATION_EVENTS, RmqService, USER_PATTERNS } from '@common';
+import { RmqService } from '@common';
+import { NOTIFICATION_EVENTS } from '@contracts/notification';
+import { USER_PATTERNS } from '@contracts/user';
 import { AuthService } from './auth.service';
 
 @Controller()

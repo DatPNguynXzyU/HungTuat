@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { sharedEnvSchema, DEFAULT_JWT_KEY_ID } from '@common';
+import { sharedEnvSchema } from '@common';
+import { DEFAULT_JWT_KEY_ID } from '@contracts/auth';
 
 export const authEnvSchema = sharedEnvSchema.extend({
    SERVICE_NAME: z.string().default('auth-service'),

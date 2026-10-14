@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { RmqService, USER_PATTERNS } from '@common';
+import { RmqService } from '@common';
+import { USER_PATTERNS } from '@contracts/user';
 import { UserSearchService } from './user-search.service';
 
 @Controller()

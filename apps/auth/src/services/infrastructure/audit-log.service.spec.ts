@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AuditStatus } from '@auth/prisma-client';
-import { AUDIT_ACTIONS, SECURITY_RISK_LEVELS } from '@common';
+import { AUDIT_ACTIONS, SECURITY_RISK_LEVELS } from '@contracts/auth';
 import { AUDIT_LOG_REPOSITORY } from '@auth/repositories/audit-log.repository.interface';
 import { AUDIT_EVENT_STORE } from '@auth/cqrs/constants/audit-cqrs.constant';
 import { AccountSecurityScoreProjection, ThreatDetectionMetricsProjection } from '@auth/cqrs/read';

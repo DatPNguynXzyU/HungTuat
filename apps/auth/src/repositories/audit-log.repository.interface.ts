@@ -1,5 +1,5 @@
 import type { SecurityAuditLogEntity, CreateAuditLogData } from '@auth/entities/audit-log.entity';
-import type { IAuditLogQuery, IAuditLogListResult } from '@common';
+import type { IAuditLogQuery, IAuditLogListResult } from '@contracts/auth';
 
 export const AUDIT_LOG_REPOSITORY = 'AUDIT_LOG_REPOSITORY';
 

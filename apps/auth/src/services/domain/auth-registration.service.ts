@@ -2,32 +2,31 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ClientProxy } from '@nestjs/microservices';
 import {
+   BadRequestException,
+   DEFAULT_ROLES,
+   OtpUtil,
+   REDIS_TTL,
+   RedisService,
+   SERVICES,
+   RbacCacheService,
+   UnauthorizedException,
+} from '@common';
+import {
    AUDIT_ACTIONS,
    AUDIT_STATUS,
    AUTH_ERROR_CODES,
    AUTH_RESPONSE_MESSAGES,
    AUTH_SECURITY,
-   BadRequestException,
-   DEFAULT_ROLES,
-   NOTIFICATION_EVENTS,
-   NOTIFICATION_PATTERNS,
-   OtpUtil,
-   REDIS_TTL,
-   RedisService,
-   SERVICES,
    USER_STATUS,
-   RbacCacheService,
-   UnauthorizedException,
-} from '@common';
-import type {
-   IDeviceInfo,
-   IAuthResult,
-   SendRegisterOtpDto,
-   SendRegisterOtpResponseDto,
-   VerifyRegisterOtpDto,
-   VerifyRegisterOtpResponseDto,
    RegisterDto,
-} from '@common';
+   SendRegisterOtpDto,
+   type SendRegisterOtpResponseDto,
+   VerifyRegisterOtpDto,
+   type VerifyRegisterOtpResponseDto,
+   type IAuthResult,
+} from '@contracts/auth';
+import { NOTIFICATION_EVENTS, NOTIFICATION_PATTERNS } from '@contracts/notification';
+import type { IDeviceInfo } from '@common';
 import { ACCOUNT_REPOSITORY, type IAccountRepository, RBAC_REPOSITORY, type IRbacRepository } from '@auth/repositories';
 import { AuthConfigService } from '@auth/config';
 import { OUTBOX_REPOSITORY, type IOutboxRepository } from '@auth/outbox/repositories/outbox.repository.interface';

@@ -1,14 +1,14 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
+import { AppException } from '@common';
 import {
-   AppException,
    SendEmailDto,
    SendOtpEmailDto,
    SendResetPasswordEmailDto,
    SendVerificationEmailDto,
    SendWelcomeEmailDto,
    SendChangePasswordOtpEmailDto,
-} from '@common';
+} from '@contracts/notification';
 import { NotificationConfigService } from '@notification/config';
 import { NOTIFICATION_ERROR_CODES } from '@notification/constants';
 import { EmailTemplateService } from '@notification/services/email-template.service';

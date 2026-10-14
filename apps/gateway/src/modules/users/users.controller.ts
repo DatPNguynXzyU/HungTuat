@@ -25,14 +25,16 @@ import {
 import {
    ApiErrorResponse,
    ApiErrorResponses,
-   AvatarSignatureResponseDto,
    BadRequestException,
-   CheckUsernameResponseDto,
    COMMON_ERROR_CODES,
-   CreateUserProfileDto,
    CurrentUser,
    Public,
    ResponseMessage,
+} from '@common';
+import {
+   AvatarSignatureResponseDto,
+   CheckUsernameResponseDto,
+   CreateUserProfileDto,
    UpdateUserDto,
    USER_ERROR_CODES,
    USER_ERROR_REASONS,
@@ -44,7 +46,7 @@ import {
    UserSearchResponseDto,
    UserSuggestionItemDto,
    UserSuggestionQueryDto,
-} from '@common';
+} from '@contracts/user';
 import { UsersService } from '@/modules/users/users.service';
 import type { JwtPayload } from '@common/utils/jwt.util';
 

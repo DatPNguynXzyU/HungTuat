@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { SignOptions, VerifyOptions } from 'jsonwebtoken';
-import { DEFAULT_DEV_RSA_PUBLIC_KEY, type IJwksResponse, type JwtPayload, JwtUtil } from '@common';
+import { DEFAULT_DEV_RSA_PUBLIC_KEY, type JwtPayload, JwtUtil } from '@common';
+import { type IJwksResponse } from '@contracts/auth';
 import { AuthConfigService } from '@auth/config';
 import type { IJwtService } from './token.service.interface';
 

@@ -1,21 +1,18 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
+import { DEFAULT_ROLES, IDeviceInfo, RmqService, checkRoles } from '@common';
 import {
    AUTH_PATTERNS,
    AUTH_RESPONSE_MESSAGES,
    ChangePasswordDto,
    CreateAuditLogDto,
-   DEFAULT_ROLES,
-   IDeviceInfo,
    LoginDto,
    QueryAuditLogDto,
    RegisterDto,
-   RmqService,
    SendRegisterOtpDto,
    VerifyChangePasswordOtpDto,
    VerifyRegisterOtpDto,
-   checkRoles,
-} from '@common';
+} from '@contracts/auth';
 import type { IServiceMessage } from '@common';
 import { AuditLogService } from '@auth/services/infrastructure';
 import {

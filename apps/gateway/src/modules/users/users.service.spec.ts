@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { of } from 'rxjs';
-import { SERVICES, USER_PATTERNS } from '@common';
+import { SERVICES } from '@common';
+import { USER_PATTERNS } from '@contracts/user';
 import type { JwtPayload } from '@common';
 import { UsersService } from '@/modules/users/users.service';
 

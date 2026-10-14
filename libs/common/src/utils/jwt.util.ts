@@ -8,7 +8,7 @@ import {
    DEFAULT_JWT_KEY_ID,
    type JwtTokenType,
 } from '@common/constants/jwt.constant';
-import type { IJwksResponse, IJsonWebKey } from '@common/interfaces/auth.interface';
+import type { IJwksResponse, IJsonWebKey } from '@common/interfaces/jwt.interface';
 
 export interface JwtPayload {
    sub: string;

@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { IAuditLogListResult, IAuditLogQuery } from '@common';
+import type { IAuditLogListResult, IAuditLogQuery } from '@contracts/auth';
 import { AuditStatus } from '@auth/prisma-client';
 import type { CreateAuditLogData, SecurityAuditLogEntity } from '@auth/entities/audit-log.entity';
 import { AUDIT_LOG_REPOSITORY, type IAuditLogRepository } from '@auth/repositories/audit-log.repository.interface';

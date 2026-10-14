@@ -1,4 +1,3 @@
-import { ArgumentsHost } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { BadRequestException } from '@common/exceptions';
@@ -6,11 +5,9 @@ import { AllRpcExceptionsFilter } from '@common/filters/all-rpc-exceptions.filte
 
 describe('AllRpcExceptionsFilter', () => {
    let filter: AllRpcExceptionsFilter;
-   let mockHost: ArgumentsHost;
 
    beforeEach(() => {
       filter = new AllRpcExceptionsFilter();
-      mockHost = {} as ArgumentsHost;
    });
 
    it('should catch AppException and transform into RpcException with payload', async () => {
@@ -18,7 +15,7 @@ describe('AllRpcExceptionsFilter', () => {
          params: { email: 'test@example.com' },
       });
 
-      const result$ = filter.catch(appException, mockHost);
+      const result$ = filter.catch(appException);
 
       await expect(firstValueFrom(result$)).rejects.toThrow(RpcException);
 

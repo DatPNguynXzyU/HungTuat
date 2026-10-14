@@ -1,15 +1,14 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { NotFoundException, type IDeviceInfo } from '@common';
 import {
    AUDIT_ACTIONS,
    AUDIT_STATUS,
    AUTH_ERROR_CODES,
-   NotFoundException,
    type AuditStatus,
-   type IDeviceInfo,
    type IRevokeSessionResult,
    type IUserSessionInfo,
-} from '@common';
+} from '@contracts/auth';
 import type { SessionEntity } from '@auth/entities/session.entity';
 import { SESSION_REPOSITORY, type ISessionRepository } from '@auth/repositories';
 import { AuditLogService, TOKEN_LIFECYCLE_SERVICE, type ITokenLifecycleService } from '@auth/services/infrastructure';

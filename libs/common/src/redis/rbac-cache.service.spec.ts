@@ -1,8 +1,9 @@
 import { ClientProxy } from '@nestjs/microservices';
 import { of, throwError } from 'rxjs';
-import { AUTH_PATTERNS, REDIS_KEY_PREFIX } from '@common/constants';
+import { REDIS_KEY_PREFIX } from '@common/constants';
 import { RbacCacheService } from '@common/redis/rbac-cache.service';
 import { RedisService } from '@common/redis/redis.service';
+import { RBAC_INTERNAL_PATTERNS } from '@common/rmq/rmq.constants';
 
 describe('RbacCacheService', () => {
    let service: RbacCacheService;
@@ -78,7 +79,7 @@ describe('RbacCacheService', () => {
 
       const perms = await service.getRolePermissions('USER');
       expect(mockAuthClientSend).toHaveBeenCalledWith(
-         { cmd: AUTH_PATTERNS.GET_ROLE_PERMISSIONS },
+         { cmd: RBAC_INTERNAL_PATTERNS.GET_ROLE_PERMISSIONS },
          { roleCode: 'USER' },
       );
       expect(perms).toEqual(['USERS:READ', 'USERS:CREATE']);

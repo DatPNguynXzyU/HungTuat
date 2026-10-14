@@ -15,3 +15,7 @@ export const QUEUES = {
    POST: 'POST_QUEUE',
    SEARCH: 'SEARCH_QUEUE',
 } as const;
+
+export const RBAC_INTERNAL_PATTERNS = {
+   GET_ROLE_PERMISSIONS: 'auth.get_role_permissions',
+} as const;

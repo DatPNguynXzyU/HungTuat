@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NOTIFICATION_CHANNELS, NOTIFICATION_STATUS, NOTIFICATION_TEMPLATES } from '@common';
+import { NOTIFICATION_CHANNELS, NOTIFICATION_STATUS, NOTIFICATION_TEMPLATES } from '@contracts/notification';
 import { NotificationService } from '@notification/notification.service';
 import { PrismaService } from '@notification/prisma/prisma.service';
 import { ResendService } from '@notification/services/resend.service';

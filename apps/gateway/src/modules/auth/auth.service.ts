@@ -1,12 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { IDeviceInfo, SERVICES } from '@common';
 import {
    AUTH_PATTERNS,
    ChangePasswordDto,
    ChangePasswordResponseDto,
    IAuditLogListResult,
    IAuthResult,
-   IDeviceInfo,
    IJwksResponse,
    IRevokeSessionResult,
    IRevokeTokenResult,
@@ -16,13 +16,12 @@ import {
    RegisterDto,
    SendRegisterOtpDto,
    SendRegisterOtpResponseDto,
-   SERVICES,
    UserEmailResponseDto,
    VerifyChangePasswordOtpDto,
    VerifyChangePasswordOtpResponseDto,
    VerifyRegisterOtpDto,
    VerifyRegisterOtpResponseDto,
-} from '@common';
+} from '@contracts/auth';
 import { firstValueFrom } from 'rxjs';
 
 export type AuthResponseData = IAuthResult;

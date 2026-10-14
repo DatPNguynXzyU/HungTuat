@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DEFAULT_ROLES } from '@common/constants/roles.constant';
-import { AUTH_ERROR_REASONS } from '@common/constants/auth.constant';
+import { AUTH_ERROR_REASONS } from '@common/constants/jwt.constant';
 import { PERMISSIONS_KEY, PermissionCode } from '@common/constants/permissions.constant';
 import { IS_PUBLIC_KEY } from '@common/decorators/public.decorator';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';

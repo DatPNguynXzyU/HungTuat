@@ -4,13 +4,11 @@ import {
    AUTH_COOKIES,
    BadRequestException,
    CommonConfigService,
-   DEFAULT_DEV_RSA_PRIVATE_KEY,
-   DEFAULT_DEV_RSA_PUBLIC_KEY,
-   DEFAULT_JWT_KEY_ID,
    JwtPayload,
    JwtUtil,
    UnauthorizedException,
 } from '@common';
+import { DEFAULT_DEV_RSA_PRIVATE_KEY, DEFAULT_DEV_RSA_PUBLIC_KEY, DEFAULT_JWT_KEY_ID } from '@contracts/auth';
 import { GatewayConfigService } from '@/config';
 import { AuthController } from '@/modules/auth/auth.controller';
 import { AuthService } from '@/modules/auth/auth.service';

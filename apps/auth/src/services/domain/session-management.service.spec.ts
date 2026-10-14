@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { AUDIT_ACTIONS, AUDIT_STATUS, NotFoundException } from '@common';
+import { NotFoundException } from '@common';
+import { AUDIT_ACTIONS, AUDIT_STATUS } from '@contracts/auth';
 import type { IDeviceInfo } from '@common';
 import { SESSION_REPOSITORY } from '@auth/repositories';
 import { AuditLogService, AUTH_METRICS_SERVICE, TOKEN_LIFECYCLE_SERVICE } from '@auth/services/infrastructure';

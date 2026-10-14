@@ -12,4 +12,4 @@ export {
    type NotificationPattern,
    type NotificationStatus,
    type NotificationTemplate,
-} from '@common';
+} from '@contracts/notification';

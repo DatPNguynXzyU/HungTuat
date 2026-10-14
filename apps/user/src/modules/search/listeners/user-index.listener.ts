@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { SERVICES, USER_EVENTS } from '@common';
+import { SERVICES } from '@common';
+import { USER_EVENTS } from '@contracts/user';
 import { UserEntity } from '@user/core/database/entities';
 
 @Injectable()

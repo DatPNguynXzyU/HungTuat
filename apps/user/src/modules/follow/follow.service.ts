@@ -1,11 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import {
-   BadRequestException,
-   ConflictException,
-   NotFoundException,
-   USER_ERROR_CODES,
-   UserSuggestionItemDto,
-} from '@common';
+import { BadRequestException, ConflictException, NotFoundException } from '@common';
+import { USER_ERROR_CODES, UserSuggestionItemDto } from '@contracts/user';
 import { OutboxService } from '@user/core/outbox';
 import { FollowEntity, FollowStatus, UserEntity } from '@user/core/database/entities';
 import {

@@ -1,10 +1,9 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
-import { AUTH_PATTERNS } from '@common/constants/auth.constant';
 import { REDIS_KEY_PREFIX, REDIS_TTL } from '@common/constants/redis.constant';
 import { RedisService } from '@common/redis/redis.service';
-import { SERVICES } from '@common/rmq/rmq.constants';
+import { RBAC_INTERNAL_PATTERNS, SERVICES } from '@common/rmq/rmq.constants';
 
 export interface CachedRoleData {
    id: string;
@@ -59,7 +58,10 @@ export class RbacCacheService {
          try {
             const permissions = await firstValueFrom(
                this.authClient
-                  .send<string[], { roleCode: string }>({ cmd: AUTH_PATTERNS.GET_ROLE_PERMISSIONS }, { roleCode })
+                  .send<string[], { roleCode: string }>(
+                     { cmd: RBAC_INTERNAL_PATTERNS.GET_ROLE_PERMISSIONS },
+                     { roleCode },
+                  )
                   .pipe(timeout(5000)),
             );
             return permissions ?? null;

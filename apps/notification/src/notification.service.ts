@@ -9,7 +9,7 @@ import {
    SendVerificationEmailDto,
    SendWelcomeEmailDto,
    SendChangePasswordOtpEmailDto,
-} from '@common';
+} from '@contracts/notification';
 import { PrismaService } from '@notification/prisma/prisma.service';
 import { ResendService, SendEmailResult } from '@notification/services/resend.service';
 import type { Prisma } from '@notification/prisma-client';

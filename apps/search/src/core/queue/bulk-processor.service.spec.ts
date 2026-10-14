@@ -61,7 +61,7 @@ describe('BulkIndexProcessor', () => {
             id: 'u-1',
             data: { username: 'test' },
          },
-      } as Job<BulkOperation>;
+      } as unknown as Job<BulkOperation>;
 
       const processPromise = processor.process(job);
 
@@ -92,7 +92,7 @@ describe('BulkIndexProcessor', () => {
                id: `u-${i}`,
                data: { index: i },
             },
-         } as Job<BulkOperation>;
+         } as unknown as Job<BulkOperation>;
          promises.push(processor.process(job));
       }
 
@@ -112,7 +112,7 @@ describe('BulkIndexProcessor', () => {
             id: 'u-update',
             data: { doc: { name: 'updated' } },
          },
-      } as Job<BulkOperation>;
+      } as unknown as Job<BulkOperation>;
 
       const deleteJob = {
          data: {
@@ -120,7 +120,7 @@ describe('BulkIndexProcessor', () => {
             index: 'users',
             id: 'u-delete',
          },
-      } as Job<BulkOperation>;
+      } as unknown as Job<BulkOperation>;
 
       const p1 = processor.process(updateJob);
       const p2 = processor.process(deleteJob);
@@ -145,10 +145,10 @@ describe('BulkIndexProcessor', () => {
 
       const job1 = {
          data: { operation: 'index' as const, index: 'users', id: 'u-1', data: {} },
-      } as Job<BulkOperation>;
+      } as unknown as Job<BulkOperation>;
       const job2 = {
          data: { operation: 'index' as const, index: 'users', id: 'u-2', data: {} },
-      } as Job<BulkOperation>;
+      } as unknown as Job<BulkOperation>;
 
       const p1 = processor.process(job1);
       const p2 = processor.process(job2);
@@ -170,7 +170,7 @@ describe('BulkIndexProcessor', () => {
 
       const job = {
          data: { operation: 'index' as const, index: 'users', id: 'u-err', data: {} },
-      } as Job<BulkOperation>;
+      } as unknown as Job<BulkOperation>;
 
       const p = processor.process(job);
 
@@ -187,7 +187,7 @@ describe('BulkIndexProcessor', () => {
    it('should flush pending items on module destroy', async () => {
       const job = {
          data: { operation: 'delete' as const, index: 'users', id: 'u-destroy' },
-      } as Job<BulkOperation>;
+      } as unknown as Job<BulkOperation>;
 
       void processor.process(job);
 

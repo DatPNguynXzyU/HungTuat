@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { AUDIT_ACTIONS, SECURITY_RISK_LEVELS, type SecurityRiskLevel } from '@common';
+import { AUDIT_ACTIONS, SECURITY_RISK_LEVELS, type SecurityRiskLevel } from '@contracts/auth';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import { AUDIT_CQRS_EVENTS } from '@auth/cqrs/constants/audit-cqrs.constant';
 import type { CreateAuditLogData } from '@auth/entities/audit-log.entity';

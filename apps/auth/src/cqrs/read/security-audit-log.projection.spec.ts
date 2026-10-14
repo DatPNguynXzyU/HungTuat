@@ -2,7 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { SecurityAuditLogProjection } from '@auth/cqrs/read/security-audit-log.projection';
 import { AUDIT_LOG_REPOSITORY } from '@auth/repositories/audit-log.repository.interface';
 import { AuditStatus } from '@auth/prisma-client';
-import { AUDIT_ACTIONS } from '@common';
+import { AUDIT_ACTIONS } from '@contracts/auth';
 import type { CreateAuditLogData, SecurityAuditLogEntity } from '@auth/entities/audit-log.entity';
 
 describe('SecurityAuditLogProjection', () => {

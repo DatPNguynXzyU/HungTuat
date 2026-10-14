@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ClientProxy } from '@nestjs/microservices';
-import { AppLogger, SERVICES, USER_EVENTS } from '@common';
+import { AppLogger, SERVICES } from '@common';
+import { USER_EVENTS } from '@contracts/user';
 import { UserModule } from '@user/user.module';
 import { PrismaService } from '@user/core';
 

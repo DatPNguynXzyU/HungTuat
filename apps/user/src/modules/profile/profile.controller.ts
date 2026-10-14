@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { BadRequestException, checkOwnershipOrAdmin, RmqService, USER_ERROR_CODES, USER_PATTERNS } from '@common';
+import { BadRequestException, checkOwnershipOrAdmin, RmqService } from '@common';
+import { USER_ERROR_CODES, USER_PATTERNS } from '@contracts/user';
 import type { IServiceMessage } from '@common';
 import { Gender } from '@user/core/database/entities';
 import { ProfileService } from '@user/modules/profile/profile.service';

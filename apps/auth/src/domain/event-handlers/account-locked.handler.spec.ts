@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { of, throwError } from 'rxjs';
-import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES, SERVICES } from '@common';
+import { SERVICES } from '@common';
+import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES } from '@contracts/notification';
 import { AccountLockedEventHandler } from './account-locked.handler';
 import { AccountLockedEvent } from '@auth/domain/events';
 

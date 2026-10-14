@@ -1,7 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AccountSecurityScoreProjection } from '@auth/cqrs/read/security-score.projection';
 import { PrismaService } from '@auth/prisma/prisma.service';
-import { AUDIT_ACTIONS, SECURITY_RISK_LEVELS } from '@common';
+import { AUDIT_ACTIONS, SECURITY_RISK_LEVELS } from '@contracts/auth';
 import type { CreateAuditLogData } from '@auth/entities/audit-log.entity';
 
 describe('AccountSecurityScoreProjection', () => {

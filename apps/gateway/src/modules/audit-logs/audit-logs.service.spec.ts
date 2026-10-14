@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { of } from 'rxjs';
-import { AUTH_PATTERNS, SERVICES } from '@common';
+import { SERVICES } from '@common';
+import { AUTH_PATTERNS } from '@contracts/auth';
 import { AuditLogsService } from '@/modules/audit-logs/audit-logs.service';
 import type { JwtPayload } from '@common';
 

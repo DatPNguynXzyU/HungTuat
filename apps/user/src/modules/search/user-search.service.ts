@@ -1,7 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { SEARCH_PATTERNS, SERVICES, UserSearchResultItemDto, UserSearchResponseDto } from '@common';
+import { SERVICES } from '@common';
+import { SEARCH_PATTERNS } from '@contracts/search';
+import { UserSearchResultItemDto, UserSearchResponseDto } from '@contracts/user';
 import {
    UserProfileRepository,
    USER_PROFILE_REPOSITORY,

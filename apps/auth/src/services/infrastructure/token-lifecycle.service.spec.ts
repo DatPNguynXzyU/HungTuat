@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { RedisService, UnauthorizedException } from '@common';
 import {
    AUTH_ERROR_CODES,
    DEFAULT_DEV_RSA_PRIVATE_KEY,
@@ -6,9 +7,7 @@ import {
    DEFAULT_JWT_KEY_ID,
    ITokenAccountPayload,
    JWT_TOKEN_TYPE,
-   RedisService,
-   UnauthorizedException,
-} from '@common';
+} from '@contracts/auth';
 import { AuthConfigService } from '@auth/config';
 import { SESSION_REPOSITORY } from '@auth/repositories';
 import { JWT_SERVICE } from './token.service.interface';

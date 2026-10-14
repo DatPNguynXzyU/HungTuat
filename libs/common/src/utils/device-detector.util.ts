@@ -1,6 +1,6 @@
 import { UAParser } from 'ua-parser-js';
 import geoip from 'geoip-lite';
-import { IDeviceInfo } from '@common/interfaces/auth.interface';
+import { IDeviceInfo } from '@common/interfaces/device.interface';
 
 export interface DeviceHeaders {
    userAgent?: string;

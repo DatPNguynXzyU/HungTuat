@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { AUDIT_ACTIONS, REDIS_TTL } from '@common';
+import { REDIS_TTL } from '@common';
+import { AUDIT_ACTIONS } from '@contracts/auth';
 import { RedisService } from '@common/redis/redis.service';
 import { AuthRedisKeys, THREAT_METRICS_FIELDS } from '@auth/constants/auth-redis-keys.constant';
 import { AUDIT_CQRS_EVENTS } from '@auth/cqrs/constants/audit-cqrs.constant';

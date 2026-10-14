@@ -1,6 +1,8 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, EventPattern, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { AppLogger, RmqService, SEARCH_PATTERNS, USER_EVENTS, USER_PATTERNS } from '@common';
+import { AppLogger, RmqService } from '@common';
+import { USER_EVENTS, USER_PATTERNS } from '@contracts/user';
+import { SEARCH_PATTERNS } from '@contracts/search';
 import { UserSearchService } from '@search/domains/user-search/user-search.service';
 import { BulkIndexQueue } from '@search/core/queue';
 

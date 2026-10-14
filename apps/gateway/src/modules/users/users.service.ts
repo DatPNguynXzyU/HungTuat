@@ -1,13 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import {
-   CreateUserProfileDto,
-   IServiceMessage,
-   SERVICES,
-   UpdateUserDto,
-   UserDateOfBirthResponseDto,
-   USER_PATTERNS,
-} from '@common';
+import { IServiceMessage, SERVICES } from '@common';
+import { CreateUserProfileDto, UpdateUserDto, UserDateOfBirthResponseDto, USER_PATTERNS } from '@contracts/user';
 import { firstValueFrom } from 'rxjs';
 import type { JwtPayload } from '@common/utils/jwt.util';
 

@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Injectable, Optional } from '@nestjs/com
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { CommonConfigService } from '@common/config/common-config.service';
-import { AUTH_COOKIES, AUTH_ERROR_REASONS } from '@common/constants/auth.constant';
+import { AUTH_COOKIES, AUTH_ERROR_REASONS } from '@common/constants/jwt.constant';
 import { REDIS_KEY_PREFIX } from '@common/constants/redis.constant';
 import { IS_PUBLIC_KEY } from '@common/decorators/public.decorator';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';

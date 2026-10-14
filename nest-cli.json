@@ -74,6 +74,42 @@
          "compilerOptions": {
             "tsConfigPath": "apps/search/tsconfig.app.json"
          }
+      },
+      "contracts-auth": {
+         "type": "library",
+         "root": "libs/contracts/auth",
+         "entryFile": "index",
+         "sourceRoot": "libs/contracts/auth/src",
+         "compilerOptions": {
+            "tsConfigPath": "libs/contracts/auth/tsconfig.lib.json"
+         }
+      },
+      "contracts-user": {
+         "type": "library",
+         "root": "libs/contracts/user",
+         "entryFile": "index",
+         "sourceRoot": "libs/contracts/user/src",
+         "compilerOptions": {
+            "tsConfigPath": "libs/contracts/user/tsconfig.lib.json"
+         }
+      },
+      "contracts-notification": {
+         "type": "library",
+         "root": "libs/contracts/notification",
+         "entryFile": "index",
+         "sourceRoot": "libs/contracts/notification/src",
+         "compilerOptions": {
+            "tsConfigPath": "libs/contracts/notification/tsconfig.lib.json"
+         }
+      },
+      "contracts-search": {
+         "type": "library",
+         "root": "libs/contracts/search",
+         "entryFile": "index",
+         "sourceRoot": "libs/contracts/search/src",
+         "compilerOptions": {
+            "tsConfigPath": "libs/contracts/search/tsconfig.lib.json"
+         }
       }
    }
 }

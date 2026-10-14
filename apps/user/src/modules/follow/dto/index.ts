@@ -1,1 +1,1 @@
-export { UserSuggestionItemDto } from '@common';
+export { UserSuggestionItemDto } from '@contracts/user';

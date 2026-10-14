@@ -1,7 +1,7 @@
 import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CommonConfigService } from '@common/config/common-config.service';
-import { AUTH_ERROR_REASONS } from '@common/constants/auth.constant';
+import { AUTH_ERROR_REASONS } from '@common/constants/jwt.constant';
 import { DEFAULT_DEV_RSA_PRIVATE_KEY, DEFAULT_DEV_RSA_PUBLIC_KEY } from '@common/constants/jwt.constant';
 import { REDIS_KEY_PREFIX } from '@common/constants/redis.constant';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';

@@ -9,4 +9,4 @@ export const THREAT_DETECTION_PROJECTION = 'THREAT_DETECTION_PROJECTION';
 export const AUDIT_PROJECTION_REBUILD_SERVICE = 'AUDIT_PROJECTION_REBUILD_SERVICE';
 
 export { THREAT_METRICS_FIELDS, type ThreatMetricsField } from '@auth/constants/auth-redis-keys.constant';
-export { SECURITY_RISK_LEVELS, type SecurityRiskLevel } from '@common';
+export { SECURITY_RISK_LEVELS, type SecurityRiskLevel } from '@contracts/auth';

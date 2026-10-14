@@ -1,4 +1,4 @@
-import { AUTH_ERROR_CODES, type AuthErrorCode } from '@common';
+import { AUTH_ERROR_CODES, type AuthErrorCode } from '@contracts/auth';
 
 export interface RateLimitEndpointConfig {
    keyPrefix: string;

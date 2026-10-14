@@ -2,19 +2,21 @@ import { Controller, Get, HttpCode, HttpStatus, Param, Query } from '@nestjs/com
 import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
    ApiErrorResponses,
-   AUDIT_LOG_RESPONSE_MESSAGES,
-   AuditLogResponseDto,
    COMMON_ERROR_CODES,
    CurrentUser,
    DEFAULT_ROLES,
-   IAuditLogListResult,
-   ISecurityAuditLog,
    PERMISSIONS,
-   QueryAuditLogDto,
    RequirePermissions,
    RequireRoles,
    ResponseMessage,
 } from '@common';
+import {
+   AUDIT_LOG_RESPONSE_MESSAGES,
+   AuditLogResponseDto,
+   IAuditLogListResult,
+   ISecurityAuditLog,
+   QueryAuditLogDto,
+} from '@contracts/auth';
 import { AuditLogsService } from '@/modules/audit-logs/audit-logs.service';
 import type { JwtPayload } from '@common/utils/jwt.util';
 
