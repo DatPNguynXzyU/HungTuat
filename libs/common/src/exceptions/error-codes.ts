@@ -19,3 +19,5 @@ export const COMMON_ERROR_CODES = {
 } as const;
 
 export type CommonErrorCode = (typeof COMMON_ERROR_CODES)[keyof typeof COMMON_ERROR_CODES];
+
+export { AUTH_ERROR_CODES, type AuthErrorCode } from '@common/constants/auth.constant';

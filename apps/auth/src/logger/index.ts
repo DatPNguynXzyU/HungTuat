@@ -1,1 +1,1 @@
-export * from './auth-logger.module';
+export * from '@auth/logger/auth-logger.module';

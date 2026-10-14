@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { UUID_V7_REGEX } from '@common';
 import { AuthModule } from '@auth/auth.module';
-import { AuthService } from '@auth/auth.service';
+import { AuthRegistrationService, AuthCoreService } from '@auth/services/domain';
 import { PrismaService } from '@auth/prisma';
-
-const UUID_V7_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 describe('AuthModule (e2e)', () => {
    let moduleFixture: TestingModule;
-   let authService: AuthService;
+   let authRegistrationService: AuthRegistrationService;
+   let authCoreService: AuthCoreService;
    let prismaService: PrismaService;
 
    beforeAll(async () => {
@@ -15,7 +15,8 @@ describe('AuthModule (e2e)', () => {
          imports: [AuthModule],
       }).compile();
 
-      authService = moduleFixture.get<AuthService>(AuthService);
+      authRegistrationService = moduleFixture.get<AuthRegistrationService>(AuthRegistrationService);
+      authCoreService = moduleFixture.get<AuthCoreService>(AuthCoreService);
       prismaService = moduleFixture.get<PrismaService>(PrismaService);
    });
 
@@ -33,12 +34,13 @@ describe('AuthModule (e2e)', () => {
    });
 
    it('should compile and register/login user with UUIDv7 ID', async () => {
-      expect(authService).toBeDefined();
+      expect(authRegistrationService).toBeDefined();
+      expect(authCoreService).toBeDefined();
 
-      const user = await authService.register({
+      const user = await authRegistrationService.register({
          email: 'e2e@example.com',
-         password: 'password123',
-         confirmPassword: 'password123',
+         password: 'Password123!',
+         confirmPassword: 'Password123!',
       });
 
       expect(user.user.email).toBe('e2e@example.com');
@@ -46,7 +48,7 @@ describe('AuthModule (e2e)', () => {
       expect(UUID_V7_REGEX.test(user.user.id)).toBe(true);
       expect(user.accessToken).toBeDefined();
 
-      const validation = await authService.validateToken(user.accessToken);
+      const validation = await authCoreService.validateToken(user.accessToken);
       expect(validation.valid).toBe(true);
       expect(validation.user.email).toBe('e2e@example.com');
    });

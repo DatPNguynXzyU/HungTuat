@@ -3,8 +3,8 @@ import { CloudinaryService, SERVICES } from '@common';
 import { ProfileService } from '@user/modules/profile/profile.service';
 import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories/user-profile.repository';
 import { OutboxService } from '@user/core/outbox';
-import { UsernameBloomFilterService } from '@user/services/username-bloom-filter.service';
-import { UserGraphSyncService } from '@user/services/user-graph-sync.service';
+import { UsernameBloomFilterService } from '@user/modules/authentication';
+import { UserGraphSyncService } from '@user/modules/follow';
 import { UserEntity, UserStatus } from '@user/core/database/entities';
 
 describe('ProfileService', () => {

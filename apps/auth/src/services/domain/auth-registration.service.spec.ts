@@ -1,24 +1,47 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RbacCacheService, RedisService, SERVICES } from '@common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AUTH_ERROR_CODES, RbacCacheService, RedisService, SERVICES, UnauthorizedException } from '@common';
 import { AuthRegistrationService } from './auth-registration.service';
-import { AUTH_REPOSITORY } from '@auth/repositories';
+import { ACCOUNT_REPOSITORY, RBAC_REPOSITORY } from '@auth/repositories';
 import { AuthConfigService } from '@auth/config';
+import { OUTBOX_REPOSITORY } from '@auth/outbox/repositories/outbox.repository.interface';
 import { OutboxPublisherService } from '@auth/outbox';
-import { AuditLogService, EmailBloomFilterService, TOKEN_SERVICE } from '@auth/services/infrastructure';
+import {
+   AUTH_METRICS_SERVICE,
+   AUTH_RATE_LIMITER,
+   AuditLogService,
+   EmailBloomFilterService,
+   PASSWORD_HASHER,
+   TOKEN_LIFECYCLE_SERVICE,
+   VERIFICATION_TOKEN_SERVICE,
+} from '@auth/services/infrastructure';
 
 describe('AuthRegistrationService', () => {
    let service: AuthRegistrationService;
 
-   const mockAuthRepository = {
+   const mockAccountRepository = {
       findByEmail: jest.fn(),
-      findRoleByCode: jest.fn(),
-      createAccount: jest.fn(),
+      delete: jest.fn().mockResolvedValue(true),
    };
 
-   const mockTokenService = {
+   const mockRbacRepository = {
+      findRoleByCode: jest.fn(),
+   };
+
+   const mockPasswordHasher = {
+      hash: jest.fn().mockResolvedValue('$argon2id$hashed'),
+      verify: jest.fn().mockResolvedValue(true),
+   };
+
+   const mockVerificationTokenService = {
+      generate: jest.fn(),
+      validate: jest.fn(),
+      consume: jest.fn(),
+   };
+
+   const mockTokenLifecycleService = {
       generateTokenPair: jest.fn(),
-      generateVerificationToken: jest.fn(),
-      consumeVerificationToken: jest.fn(),
+      revokeAllAccountTokens: jest.fn().mockResolvedValue(undefined),
    };
 
    const mockEmailBloomFilterService = {
@@ -29,6 +52,11 @@ describe('AuthRegistrationService', () => {
 
    const mockOutboxPublisherService = {
       triggerPublish: jest.fn(),
+   };
+
+   const mockOutboxRepository = {
+      createAccountWithEvent: jest.fn(),
+      deleteByAggregateId: jest.fn().mockResolvedValue(undefined),
    };
 
    const mockRedisService = {
@@ -48,8 +76,36 @@ describe('AuthRegistrationService', () => {
       emit: jest.fn(),
    };
 
+   const mockRateLimiter = {
+      checkEmail: jest.fn().mockResolvedValue(undefined),
+      checkSendRegisterOtp: jest.fn().mockResolvedValue(undefined),
+      checkVerifyRegisterOtp: jest.fn().mockResolvedValue(undefined),
+      checkOrThrow: jest.fn().mockResolvedValue(undefined),
+      checkRateLimit: jest.fn(),
+      reset: jest.fn(),
+   };
+
    const mockConfig = {
       argon2Secret: 'test-secret',
+   };
+
+   const mockMetricsService = {
+      recordLoginAttempt: jest.fn(),
+      recordRegistrationAttempt: jest.fn(),
+      recordTokenOperation: jest.fn(),
+      recordOtpOperation: jest.fn(),
+      recordSessionOperation: jest.fn(),
+      setActiveSessions: jest.fn(),
+      setLockedAccounts: jest.fn(),
+      setOutboxPending: jest.fn(),
+      observeTokenGeneration: jest.fn(),
+      observeLoginDuration: jest.fn(),
+      observePasswordHash: jest.fn(),
+      observeOtpOperation: jest.fn(),
+      startTimer: jest.fn().mockReturnValue(100),
+      calculateDuration: jest.fn().mockReturnValue(0.05),
+      getMetrics: jest.fn(),
+      reset: jest.fn(),
    };
 
    beforeEach(async () => {
@@ -63,12 +119,28 @@ describe('AuthRegistrationService', () => {
                useValue: { getRole: jest.fn().mockResolvedValue({ id: 'r1', permissions: [] }), setRole: jest.fn() },
             },
             {
-               provide: AUTH_REPOSITORY,
-               useValue: mockAuthRepository,
+               provide: ACCOUNT_REPOSITORY,
+               useValue: mockAccountRepository,
             },
             {
-               provide: TOKEN_SERVICE,
-               useValue: mockTokenService,
+               provide: RBAC_REPOSITORY,
+               useValue: mockRbacRepository,
+            },
+            {
+               provide: VERIFICATION_TOKEN_SERVICE,
+               useValue: mockVerificationTokenService,
+            },
+            {
+               provide: TOKEN_LIFECYCLE_SERVICE,
+               useValue: mockTokenLifecycleService,
+            },
+            {
+               provide: PASSWORD_HASHER,
+               useValue: mockPasswordHasher,
+            },
+            {
+               provide: AUTH_RATE_LIMITER,
+               useValue: mockRateLimiter,
             },
             {
                provide: EmailBloomFilterService,
@@ -77,6 +149,10 @@ describe('AuthRegistrationService', () => {
             {
                provide: OutboxPublisherService,
                useValue: mockOutboxPublisherService,
+            },
+            {
+               provide: OUTBOX_REPOSITORY,
+               useValue: mockOutboxRepository,
             },
             {
                provide: RedisService,
@@ -93,6 +169,14 @@ describe('AuthRegistrationService', () => {
             {
                provide: AuthConfigService,
                useValue: mockConfig,
+            },
+            {
+               provide: EventEmitter2,
+               useValue: { emit: jest.fn() },
+            },
+            {
+               provide: AUTH_METRICS_SERVICE,
+               useValue: mockMetricsService,
             },
          ],
       }).compile();
@@ -113,5 +197,148 @@ describe('AuthRegistrationService', () => {
       const result = await service.sendRegisterOtp({ email: 'test@example.com' });
       expect(result.success).toBe(true);
       expect(mockNotificationClient.emit).toHaveBeenCalled();
+   });
+
+   describe('register with RegisterSaga', () => {
+      const mockCreatedAccount = {
+         id: 'new-account-id',
+         email: 'newuser@example.com',
+         roles: ['USER'],
+         status: 'ACTIVE',
+         isEmailVerified: true,
+         lastLoginAt: null,
+         createdAt: '2026-10-12T00:00:00.000Z',
+         updatedAt: '2026-10-12T00:00:00.000Z',
+      };
+
+      beforeEach(() => {
+         mockPasswordHasher.hash.mockResolvedValue('$argon2id$hashed');
+         mockOutboxRepository.createAccountWithEvent.mockResolvedValue(mockCreatedAccount);
+         mockTokenLifecycleService.generateTokenPair.mockResolvedValue({
+            accessToken: 'mock-reg-access',
+            refreshToken: 'mock-reg-refresh',
+         });
+      });
+
+      it('should successfully register, create account, generate tokens, add bloom, trigger publisher, and log audit', async () => {
+         const result = await service.register({
+            email: 'newuser@example.com',
+            password: 'Password123!',
+            confirmPassword: 'Password123!',
+         });
+
+         expect(result.user.id).toBe('new-account-id');
+         expect(result.accessToken).toBe('mock-reg-access');
+         expect(result.refreshToken).toBe('mock-reg-refresh');
+
+         expect(mockOutboxRepository.createAccountWithEvent).toHaveBeenCalled();
+         expect(mockTokenLifecycleService.generateTokenPair).toHaveBeenCalledWith(
+            expect.objectContaining({ id: 'new-account-id', email: 'newuser@example.com' }),
+            undefined,
+         );
+         expect(mockEmailBloomFilterService.addEmail).toHaveBeenCalledWith('newuser@example.com');
+         expect(mockOutboxPublisherService.triggerPublish).toHaveBeenCalled();
+         expect(mockAuditLogService.record).toHaveBeenCalled();
+      });
+
+      it('should successfully register with valid verification token matching email', async () => {
+         mockVerificationTokenService.consume.mockResolvedValue('newuser@example.com');
+
+         const result = await service.register({
+            email: 'newuser@example.com',
+            password: 'Password123!',
+            confirmPassword: 'Password123!',
+            verificationToken: 'vtok_018d45e07c2a7f61b54110c7936a28e8',
+         });
+
+         expect(result.user.id).toBe('new-account-id');
+         expect(mockVerificationTokenService.consume).toHaveBeenCalledWith('vtok_018d45e07c2a7f61b54110c7936a28e8');
+      });
+
+      it('should throw BadRequestException if email format is invalid', async () => {
+         await expect(
+            service.register({
+               email: 'not-an-email',
+               password: 'Password123!',
+               confirmPassword: 'Password123!',
+            }),
+         ).rejects.toThrow(AUTH_ERROR_CODES.INVALID_EMAIL_FORMAT);
+      });
+
+      it('should throw BadRequestException if password fails domain strength rules', async () => {
+         await expect(
+            service.register({
+               email: 'newuser@example.com',
+               password: 'weak',
+               confirmPassword: 'weak',
+            }),
+         ).rejects.toThrow(AUTH_ERROR_CODES.WEAK_PASSWORD);
+      });
+
+      it('should throw BadRequestException if verificationToken format is invalid', async () => {
+         await expect(
+            service.register({
+               email: 'newuser@example.com',
+               password: 'Password123!',
+               confirmPassword: 'Password123!',
+               verificationToken: 'invalid_prefix_token',
+            }),
+         ).rejects.toThrow(AUTH_ERROR_CODES.INVALID_VERIFICATION_TOKEN);
+      });
+
+      it('should throw UnauthorizedException if verificationToken is expired or not found', async () => {
+         mockVerificationTokenService.consume.mockResolvedValue(null);
+
+         await expect(
+            service.register({
+               email: 'newuser@example.com',
+               password: 'Password123!',
+               confirmPassword: 'Password123!',
+               verificationToken: 'vtok_018d45e07c2a7f61b54110c7936a28e8',
+            }),
+         ).rejects.toThrow(UnauthorizedException);
+      });
+
+      it('should throw BadRequestException EMAIL_MISMATCH if verificationToken belongs to different email', async () => {
+         mockVerificationTokenService.consume.mockResolvedValue('different@example.com');
+
+         await expect(
+            service.register({
+               email: 'newuser@example.com',
+               password: 'Password123!',
+               confirmPassword: 'Password123!',
+               verificationToken: 'vtok_018d45e07c2a7f61b54110c7936a28e8',
+            }),
+         ).rejects.toThrow(AUTH_ERROR_CODES.EMAIL_MISMATCH);
+      });
+
+      it('should rollback by deleting outbox events and deleting account if token generation fails', async () => {
+         mockTokenLifecycleService.generateTokenPair.mockRejectedValue(new Error('Redis session write failed'));
+
+         await expect(
+            service.register({
+               email: 'newuser@example.com',
+               password: 'Password123!',
+               confirmPassword: 'Password123!',
+            }),
+         ).rejects.toThrow('Redis session write failed');
+
+         expect(mockOutboxRepository.deleteByAggregateId).toHaveBeenCalledWith('new-account-id');
+         expect(mockAccountRepository.delete).toHaveBeenCalledWith('new-account-id');
+         expect(mockOutboxPublisherService.triggerPublish).not.toHaveBeenCalled();
+      });
+
+      it('should succeed even if audit log fails (non-blocking fire-and-forget)', async () => {
+         mockAuditLogService.record.mockRejectedValue(new Error('Audit log failure'));
+
+         const result = await service.register({
+            email: 'newuser@example.com',
+            password: 'Password123!',
+            confirmPassword: 'Password123!',
+         });
+
+         expect(result.user.id).toBe('new-account-id');
+         expect(result.accessToken).toBe('mock-reg-access');
+      });
    });
 });

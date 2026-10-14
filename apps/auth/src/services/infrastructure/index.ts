@@ -1,5 +1,12 @@
-export * from './token.service';
-export type { ITokenService } from './token.service.interface';
-export { TOKEN_SERVICE } from './token.service.interface';
-export * from './audit-log.service';
-export * from './email-bloom-filter.service';
+export * from '@auth/services/infrastructure/token.service.interface';
+export * from '@auth/services/infrastructure/jwt.service';
+export * from '@auth/services/infrastructure/verification-token.service';
+export * from '@auth/services/infrastructure/token-lifecycle.service';
+export * from '@auth/services/infrastructure/audit-log.service';
+export * from '@auth/services/infrastructure/email-bloom-filter.service';
+export * from '@auth/services/infrastructure/auth-rate-limiter.interface';
+export * from '@auth/services/infrastructure/auth-rate-limiter.service';
+export * from '@auth/services/infrastructure/auth-metrics.interface';
+export * from '@auth/services/infrastructure/auth-metrics.service';
+export * from '@auth/services/infrastructure/password-hasher.interface';
+export * from '@auth/services/infrastructure/password-hasher.service';

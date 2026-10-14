@@ -5,10 +5,10 @@ import { ProfileModule } from '@user/modules/profile';
 import { FollowModule } from '@user/modules/follow';
 import { SearchModule } from '@user/modules/search';
 import { AuthenticationModule } from '@user/modules/authentication';
-import { UserService } from '@user/user.service';
-import { USER_REPOSITORY, UserRepository, FOLLOW_REPOSITORY, FollowRepository } from '@user/repositories';
+import { USER_REPOSITORY, UserRepository, USER_PROFILE_REPOSITORY, UserProfileRepository } from '@user/modules/profile';
+import { FOLLOW_REPOSITORY, FollowRepository, UserGraphSyncService } from '@user/modules/follow';
+import { UsernameBloomFilterService } from '@user/modules/authentication';
 import { GraphSchemaService, GraphFollowRepository } from '@user/graph';
-import { UserGraphSyncService, UsernameBloomFilterService } from '@user/services';
 
 @Module({
    imports: [
@@ -39,12 +39,16 @@ import { UserGraphSyncService, UsernameBloomFilterService } from '@user/services
       AuthenticationModule,
    ],
    providers: [
-      UserService,
       UsernameBloomFilterService,
+      {
+         provide: USER_PROFILE_REPOSITORY,
+         useClass: UserProfileRepository,
+      },
       {
          provide: USER_REPOSITORY,
          useClass: UserRepository,
       },
+      UserProfileRepository,
       UserRepository,
       {
          provide: FOLLOW_REPOSITORY,
@@ -60,7 +64,8 @@ import { UserGraphSyncService, UsernameBloomFilterService } from '@user/services
       FollowModule,
       SearchModule,
       AuthenticationModule,
-      UserService,
+      USER_PROFILE_REPOSITORY,
+      UserProfileRepository,
       USER_REPOSITORY,
       UserRepository,
       FOLLOW_REPOSITORY,

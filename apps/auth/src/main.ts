@@ -4,18 +4,25 @@ import { AllRpcExceptionsFilter, RmqService, SERVICES } from '@common';
 import { AuthModule } from '@auth/auth.module';
 
 async function bootstrap() {
-   const appContext = await NestFactory.createApplicationContext(AuthModule, {
+   const app = await NestFactory.create(AuthModule, {
       bufferLogs: true,
    });
-   const logger = appContext.get(Logger);
-   const rmqService = appContext.get(RmqService);
-
-   const app = await NestFactory.createMicroservice(AuthModule, rmqService.getOptions(SERVICES.AUTH_SERVICE));
+   const logger = app.get(Logger);
+   const rmqService = app.get(RmqService);
 
    app.useLogger(logger);
-   app.useGlobalFilters(new AllRpcExceptionsFilter());
-   await app.listen();
-   logger.log('Auth Microservice is listening on RabbitMQ queue: AUTH_SERVICE');
+
+   // Connect RabbitMQ microservice
+   const microservice = app.connectMicroservice(rmqService.getOptions(SERVICES.AUTH_SERVICE));
+   microservice.useGlobalFilters(new AllRpcExceptionsFilter());
+
+   await app.startAllMicroservices();
+
+   const port = process.env.PORT || process.env.AUTH_PORT || 3001;
+   await app.listen(port);
+
+   logger.log(`Auth Microservice is listening on RabbitMQ queue: ${SERVICES.AUTH_SERVICE}`);
+   logger.log(`Auth HTTP server is listening on port ${port} (metrics: http://localhost:${port}/metrics)`);
 }
 
 void bootstrap();

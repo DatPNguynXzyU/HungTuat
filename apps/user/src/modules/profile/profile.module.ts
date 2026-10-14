@@ -8,8 +8,8 @@ import {
 } from '@user/modules/profile/repositories/user-profile.repository';
 import { ProfileService } from '@user/modules/profile/profile.service';
 import { ProfileController } from '@user/modules/profile/profile.controller';
-import { UsernameBloomFilterService } from '@user/services/username-bloom-filter.service';
-import { UserGraphSyncService } from '@user/services/user-graph-sync.service';
+import { UsernameBloomFilterService } from '@user/modules/authentication';
+import { UserGraphSyncService } from '@user/modules/follow';
 import { GraphSchemaService, GraphFollowRepository } from '@user/graph';
 
 @Module({

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RmqContext } from '@nestjs/microservices';
 import { of } from 'rxjs';
 import {
@@ -13,19 +14,41 @@ import {
    SERVICES,
 } from '@common';
 import { AuthController } from '@auth/auth.controller';
-import { AuthService } from '@auth/auth.service';
 import { AuthConfigService } from '@auth/config';
 import { OutboxPublisherService } from '@auth/outbox/services/outbox-publisher.service';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import {
+   ACCOUNT_REPOSITORY,
+   AccountRepository,
    AUDIT_LOG_REPOSITORY,
    AuditLogRepository,
-   AUTH_REPOSITORY,
-   AuthRepository,
+   RBAC_REPOSITORY,
+   RbacRepository,
    SESSION_REPOSITORY,
    SessionRepository,
 } from '@auth/repositories';
-import { AuditLogService, EmailBloomFilterService, TokenService, TOKEN_SERVICE } from '@auth/services/infrastructure';
+import { OUTBOX_REPOSITORY, OutboxRepository } from '@auth/outbox';
+import {
+   AUTH_METRICS_SERVICE,
+   AUTH_RATE_LIMITER,
+   AuthRateLimiter,
+   AuditLogService,
+   EmailBloomFilterService,
+   JWT_SERVICE,
+   JwtService,
+   PASSWORD_HASHER,
+   PasswordHasherService,
+   TOKEN_LIFECYCLE_SERVICE,
+   TokenLifecycleService,
+   VERIFICATION_TOKEN_SERVICE,
+   VerificationTokenService,
+} from '@auth/services/infrastructure';
+import {
+   AuthCoreService,
+   AuthRegistrationService,
+   SessionManagementService,
+   PasswordManagementService,
+} from '@auth/services/domain';
 
 interface MockUserRecord {
    accountId: string;
@@ -45,7 +68,11 @@ interface MockUserRecord {
 
 describe('AuthController', () => {
    let authController: AuthController;
-   let authService: AuthService;
+   let authCoreService: AuthCoreService;
+   let authRegistrationService: AuthRegistrationService;
+   let sessionManagementService: SessionManagementService;
+   let passwordManagementService: PasswordManagementService;
+   let redisService: RedisService;
 
    beforeEach(async () => {
       const usersMap = new Map<string, MockUserRecord>();
@@ -295,18 +322,70 @@ describe('AuthController', () => {
       const module: TestingModule = await Test.createTestingModule({
          controllers: [AuthController],
          providers: [
-            TokenService,
+            JwtService,
             {
-               provide: TOKEN_SERVICE,
-               useExisting: TokenService,
+               provide: JWT_SERVICE,
+               useExisting: JwtService,
             },
-            AuthService,
+            VerificationTokenService,
+            {
+               provide: VERIFICATION_TOKEN_SERVICE,
+               useExisting: VerificationTokenService,
+            },
+            TokenLifecycleService,
+            {
+               provide: TOKEN_LIFECYCLE_SERVICE,
+               useExisting: TokenLifecycleService,
+            },
+            AuthRateLimiter,
+            {
+               provide: AUTH_RATE_LIMITER,
+               useExisting: AuthRateLimiter,
+            },
+            PasswordHasherService,
+            {
+               provide: PASSWORD_HASHER,
+               useExisting: PasswordHasherService,
+            },
+            AuthCoreService,
+            AuthRegistrationService,
+            SessionManagementService,
+            PasswordManagementService,
             AuditLogService,
             EmailBloomFilterService,
             BloomFilterService,
             {
-               provide: AUTH_REPOSITORY,
-               useClass: AuthRepository,
+               provide: AUTH_METRICS_SERVICE,
+               useValue: {
+                  recordLoginAttempt: jest.fn(),
+                  recordRegistrationAttempt: jest.fn(),
+                  recordTokenOperation: jest.fn(),
+                  recordOtpOperation: jest.fn(),
+                  recordSessionOperation: jest.fn(),
+                  setActiveSessions: jest.fn(),
+                  setLockedAccounts: jest.fn(),
+                  setOutboxPending: jest.fn(),
+                  observeTokenGeneration: jest.fn(),
+                  observeLoginDuration: jest.fn(),
+                  observePasswordHash: jest.fn(),
+                  observeOtpOperation: jest.fn(),
+                  startTimer: jest.fn().mockReturnValue(100),
+                  calculateDuration: jest.fn().mockReturnValue(0.05),
+                  getMetrics: jest.fn(),
+                  reset: jest.fn(),
+               },
+            },
+            {
+               provide: ACCOUNT_REPOSITORY,
+               useClass: AccountRepository,
+            },
+            {
+               provide: RBAC_REPOSITORY,
+               useClass: RbacRepository,
+            },
+            {
+               provide: OUTBOX_REPOSITORY,
+               useClass: OutboxRepository,
             },
             {
                provide: SESSION_REPOSITORY,
@@ -337,6 +416,7 @@ describe('AuthController', () => {
                   jwtAccessTokenExpiresIn: 900,
                   jwtRefreshTokenExpiresIn: 604800,
                   jwtExpiresIn: 86400,
+                  argon2Secret: 'test-argon2-secret',
                },
             },
             {
@@ -353,16 +433,27 @@ describe('AuthController', () => {
                provide: RedisService,
                useValue: mockRedisService,
             },
+            {
+               provide: EventEmitter2,
+               useValue: { emit: jest.fn() },
+            },
          ],
       }).compile();
 
       authController = module.get<AuthController>(AuthController);
-      authService = module.get<AuthService>(AuthService);
+      authCoreService = module.get<AuthCoreService>(AuthCoreService);
+      authRegistrationService = module.get<AuthRegistrationService>(AuthRegistrationService);
+      sessionManagementService = module.get<SessionManagementService>(SessionManagementService);
+      passwordManagementService = module.get<PasswordManagementService>(PasswordManagementService);
+      redisService = module.get<RedisService>(RedisService);
    });
 
    it('should be defined', () => {
       expect(authController).toBeDefined();
-      expect(authService).toBeDefined();
+      expect(authCoreService).toBeDefined();
+      expect(authRegistrationService).toBeDefined();
+      expect(sessionManagementService).toBeDefined();
+      expect(passwordManagementService).toBeDefined();
    });
 
    it('should handle getJwks message', () => {
@@ -400,7 +491,7 @@ describe('AuthController', () => {
 
       // Verify OTP after retrieving from Redis
       const otpKey = `auth:otp:register:otpuser@example.com`;
-      const otp = await authService['redisService'].get(otpKey);
+      const otp = await redisService.get(otpKey);
       expect(otp).toBeDefined();
 
       const verifyRes = await authController.verifyRegisterOtp(
@@ -419,8 +510,8 @@ describe('AuthController', () => {
 
       const registerDto = {
          email: 'test@example.com',
-         password: 'password123',
-         confirmPassword: 'password123',
+         password: 'Password123!',
+         confirmPassword: 'Password123!',
       };
 
       const registerRes = await authController.register(registerDto, mockContext);
@@ -429,7 +520,7 @@ describe('AuthController', () => {
       expect(registerRes.accessToken).toBeDefined();
       expect(registerRes.refreshToken).toBeDefined();
 
-      const loginRes = await authController.login({ email: 'test@example.com', password: 'password123' }, mockContext);
+      const loginRes = await authController.login({ email: 'test@example.com', password: 'Password123!' }, mockContext);
 
       expect(loginRes.user.email).toBe('test@example.com');
       expect(loginRes.accessToken).toBeDefined();
@@ -443,7 +534,7 @@ describe('AuthController', () => {
       } as unknown as RmqContext;
 
       const registerRes = await authController.register(
-         { email: 'refresh@example.com', password: 'password123', confirmPassword: 'password123' },
+         { email: 'refresh@example.com', password: 'Password123!', confirmPassword: 'Password123!' },
          mockContext,
       );
 
@@ -501,7 +592,7 @@ describe('AuthController', () => {
          getMessage: jest.fn(),
       } as unknown as RmqContext;
 
-      jest.spyOn(authService, 'revokeToken').mockResolvedValue(undefined);
+      jest.spyOn(authCoreService, 'revokeToken').mockResolvedValue(undefined);
 
       const result = await authController.revokeToken({ token: 'test-token' }, mockContext);
       expect(result).toEqual({ success: true });
@@ -513,7 +604,7 @@ describe('AuthController', () => {
          getMessage: jest.fn(),
       } as unknown as RmqContext;
 
-      jest.spyOn(authService, 'revokeSession').mockResolvedValue(undefined);
+      jest.spyOn(sessionManagementService, 'revokeSession').mockResolvedValue(undefined);
 
       const result = await authController.revokeSession({ userId: 'user-1', sessionId: 'sess-1' }, mockContext);
       expect(result).toEqual({ success: true });
@@ -547,7 +638,7 @@ describe('AuthController', () => {
          getMessage: jest.fn(),
       } as unknown as RmqContext;
 
-      jest.spyOn(authService, 'getEmail').mockResolvedValue({
+      jest.spyOn(authCoreService, 'getEmail').mockResolvedValue({
          id: 'account-123',
          email: 'test@example.com',
          isEmailVerified: true,

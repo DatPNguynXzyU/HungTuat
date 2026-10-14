@@ -1,12 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BloomFilterService, REDIS_KEY_PREFIX, RedisService } from '@common';
-import { AUTH_REPOSITORY } from '@auth/repositories/auth.repository.interface';
+import { BloomFilterService, RedisService } from '@common';
+import { AuthRedisKeys } from '@auth/constants';
+import { ACCOUNT_REPOSITORY } from '@auth/repositories';
 import { EmailBloomFilterService } from './email-bloom-filter.service';
 
 describe('EmailBloomFilterService', () => {
    let service: EmailBloomFilterService;
    let bloomFilterService: Partial<BloomFilterService>;
-   let authRepository: {
+   let accountRepository: {
       findAllEmails: jest.Mock;
       findByEmail: jest.Mock;
    };
@@ -22,7 +23,7 @@ describe('EmailBloomFilterService', () => {
          contains: jest.fn().mockResolvedValue(false),
       };
 
-      authRepository = {
+      accountRepository = {
          findAllEmails: jest.fn().mockResolvedValue(['admin@example.com', 'user@example.com']),
          findByEmail: jest.fn().mockResolvedValue(null),
       };
@@ -40,8 +41,8 @@ describe('EmailBloomFilterService', () => {
                useValue: bloomFilterService,
             },
             {
-               provide: AUTH_REPOSITORY,
-               useValue: authRepository,
+               provide: ACCOUNT_REPOSITORY,
+               useValue: accountRepository,
             },
             {
                provide: RedisService,
@@ -62,8 +63,8 @@ describe('EmailBloomFilterService', () => {
 
       await service.onModuleInit();
 
-      expect(authRepository.findAllEmails).toHaveBeenCalled();
-      expect(bloomFilterService.addBatch).toHaveBeenCalledWith(REDIS_KEY_PREFIX.BLOOM_EMAIL, [
+      expect(accountRepository.findAllEmails).toHaveBeenCalled();
+      expect(bloomFilterService.addBatch).toHaveBeenCalledWith(AuthRedisKeys.bloomEmail(), [
          'admin@example.com',
          'user@example.com',
       ]);
@@ -75,14 +76,14 @@ describe('EmailBloomFilterService', () => {
 
       await service.onModuleInit();
 
-      expect(authRepository.findAllEmails).not.toHaveBeenCalled();
+      expect(accountRepository.findAllEmails).not.toHaveBeenCalled();
       expect(bloomFilterService.addBatch).not.toHaveBeenCalled();
    });
 
    it('should add email with normalized lowercase trim', async () => {
       await service.addEmail('  NewUser@Domain.COM  ');
 
-      expect(bloomFilterService.add).toHaveBeenCalledWith(REDIS_KEY_PREFIX.BLOOM_EMAIL, 'newuser@domain.com');
+      expect(bloomFilterService.add).toHaveBeenCalledWith(AuthRedisKeys.bloomEmail(), 'newuser@domain.com');
    });
 
    it('should check if email might exist via bloom filter', async () => {
@@ -90,7 +91,7 @@ describe('EmailBloomFilterService', () => {
 
       const exists = await service.mightContain('test@example.com');
 
-      expect(bloomFilterService.contains).toHaveBeenCalledWith(REDIS_KEY_PREFIX.BLOOM_EMAIL, 'test@example.com');
+      expect(bloomFilterService.contains).toHaveBeenCalledWith(AuthRedisKeys.bloomEmail(), 'test@example.com');
       expect(exists).toBe(true);
    });
 
@@ -100,26 +101,26 @@ describe('EmailBloomFilterService', () => {
       const available = await service.isEmailAvailable('unique@example.com');
 
       expect(available).toBe(true);
-      expect(authRepository.findByEmail).not.toHaveBeenCalled();
+      expect(accountRepository.findByEmail).not.toHaveBeenCalled();
    });
 
    it('should query DB when bloom filter returns true and return false if user exists', async () => {
       (bloomFilterService.contains as jest.Mock).mockResolvedValue(true);
-      authRepository.findByEmail.mockResolvedValue({ id: 'user-1', email: 'taken@example.com' });
+      accountRepository.findByEmail.mockResolvedValue({ id: 'user-1', email: 'taken@example.com' });
 
       const available = await service.isEmailAvailable('taken@example.com');
 
       expect(available).toBe(false);
-      expect(authRepository.findByEmail).toHaveBeenCalledWith('taken@example.com');
+      expect(accountRepository.findByEmail).toHaveBeenCalledWith('taken@example.com');
    });
 
    it('should query DB when bloom filter returns true and return true if DB confirms it is a false positive', async () => {
       (bloomFilterService.contains as jest.Mock).mockResolvedValue(true);
-      authRepository.findByEmail.mockResolvedValue(null);
+      accountRepository.findByEmail.mockResolvedValue(null);
 
       const available = await service.isEmailAvailable('false-positive@example.com');
 
       expect(available).toBe(true);
-      expect(authRepository.findByEmail).toHaveBeenCalledWith('false-positive@example.com');
+      expect(accountRepository.findByEmail).toHaveBeenCalledWith('false-positive@example.com');
    });
 });

@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ClientProxy } from '@nestjs/microservices';
 import { AppLogger, SERVICES, USER_EVENTS } from '@common';
 import { UserModule } from '@user/user.module';
-import { PrismaService } from '@user/prisma';
+import { PrismaService } from '@user/core';
 
 async function bootstrap() {
    const app = await NestFactory.createApplicationContext(UserModule);

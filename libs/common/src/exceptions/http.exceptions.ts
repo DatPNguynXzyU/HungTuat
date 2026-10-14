@@ -141,6 +141,22 @@ export class ServiceUnavailableException extends AppException {
    }
 }
 
+export class TooManyRequestsException extends AppException {
+   constructor(
+      errorCodeOrOptions: AppExceptionInput = COMMON_ERROR_CODES.TOO_MANY_REQUESTS,
+      options?: Omit<IAppExceptionOptions, 'errorCode' | 'statusCode'>,
+   ) {
+      if (typeof errorCodeOrOptions === 'string') {
+         super(
+            { errorCode: errorCodeOrOptions, ...options, statusCode: HttpStatus.TOO_MANY_REQUESTS },
+            HttpStatus.TOO_MANY_REQUESTS,
+         );
+      } else {
+         super({ statusCode: HttpStatus.TOO_MANY_REQUESTS, ...errorCodeOrOptions }, HttpStatus.TOO_MANY_REQUESTS);
+      }
+   }
+}
+
 // Aliases for explicit clarity when needed
 export {
    BadRequestException as BadRequestAppException,
@@ -152,4 +168,5 @@ export {
    TimeoutException as TimeoutAppException,
    InternalServerException as InternalServerAppException,
    ServiceUnavailableException as ServiceUnavailableAppException,
+   TooManyRequestsException as TooManyRequestsAppException,
 };

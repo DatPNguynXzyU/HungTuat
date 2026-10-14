@@ -128,9 +128,5 @@
          "^@auth/services/infrastructure$": "<rootDir>/apps/auth/src/services/infrastructure/index.ts",
          "^@auth/services/infrastructure/(.*)$": "<rootDir>/apps/auth/src/services/infrastructure/$1"
       }
-   },
-   "dependencies": {
-      "uuid": "^14.0.2",
-      "uuidv7": "^1.2.1"
    }
 }

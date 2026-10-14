@@ -27,6 +27,16 @@ export const NOTIFICATION_TEMPLATES = {
    RESET_PASSWORD_EMAIL: 'RESET_PASSWORD_EMAIL',
    OTP_EMAIL: 'OTP_EMAIL',
    CHANGE_PASSWORD_OTP_EMAIL: 'CHANGE_PASSWORD_OTP_EMAIL',
+   PASSWORD_CHANGED: 'PASSWORD_CHANGED',
+   SECURITY_ALERT_ACCOUNT_LOCKED: 'SECURITY_ALERT_ACCOUNT_LOCKED',
+} as const;
+
+export const NOTIFICATION_EMAIL_SUBJECTS = {
+   WELCOME: 'Welcome to OmniServices!',
+   VERIFICATION: 'Verify Your Email Address - OmniServices',
+   RESET_PASSWORD: 'Reset Your Password - OmniServices',
+   ACCOUNT_LOCKED: 'Security Alert: Account Temporarily Locked',
+   PASSWORD_CHANGED: 'Security Alert: Password Changed Successfully',
 } as const;
 
 export const NOTIFICATION_STATUS = {

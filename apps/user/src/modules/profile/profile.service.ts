@@ -16,8 +16,8 @@ import {
    CreateUserData,
    USER_PROFILE_REPOSITORY,
 } from '@user/modules/profile/repositories/user-profile.repository';
-import { UsernameBloomFilterService } from '@user/services/username-bloom-filter.service';
-import { UserGraphSyncService } from '@user/services/user-graph-sync.service';
+import { UsernameBloomFilterService } from '@user/modules/authentication';
+import { UserGraphSyncService } from '@user/modules/follow';
 
 @Injectable()
 export class ProfileService {
