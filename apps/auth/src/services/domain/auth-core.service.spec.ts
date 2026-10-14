@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RbacCacheService, RedisService } from '@common';
 import { AUTH_METRICS_REASONS, AUTH_METRICS_STATUS } from '@auth/constants';
-import { AuthCoreService } from './auth-core.service';
+import { AuthCoreService } from '@auth/services/domain/auth-core.service';
 import { ACCOUNT_REPOSITORY, RBAC_REPOSITORY } from '@auth/repositories';
 import { AuthConfigService } from '@auth/config';
 import {

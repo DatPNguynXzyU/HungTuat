@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { COMMON_ERROR_CODES, RedisService, TooManyRequestsException } from '@common';
 import { AUTH_RATE_LIMIT_CONFIG } from '@auth/constants';
-import { IAuthRateLimiter, RateLimitResult } from './auth-rate-limiter.interface';
+import { IAuthRateLimiter, RateLimitResult } from '@auth/services/infrastructure/auth-rate-limiter.interface';
 
 @Injectable()
 export class AuthRateLimiter implements IAuthRateLimiter {

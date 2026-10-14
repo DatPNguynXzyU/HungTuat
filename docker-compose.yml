@@ -6,6 +6,7 @@ include:
    - apps/user/docker-compose.yml
    - apps/post/docker-compose.yml
    - apps/search/docker-compose.yml
+   - apps/media/docker-compose.yml
 
 services:
    redis:

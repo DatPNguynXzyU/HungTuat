@@ -1,5 +1,5 @@
 import { validate } from 'class-validator';
-import { Match } from './match.decorator';
+import { Match } from '@common/decorators/match.decorator';
 
 class TestMatchDto {
    password!: string;

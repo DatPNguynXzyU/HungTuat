@@ -25,6 +25,7 @@ export const USER_RESPONSE_MESSAGES = {
    GET_LIST_SUCCESS: 'USERS.GET_LIST_SUCCESS',
    GET_PROFILE_SUCCESS: 'USERS.GET_PROFILE_SUCCESS',
    UPDATE_PROFILE_SUCCESS: 'USERS.UPDATE_PROFILE_SUCCESS',
+   UPSERT_PROFILE_SUCCESS: 'USERS.UPSERT_PROFILE_SUCCESS',
    GET_DETAIL_SUCCESS: 'USERS.GET_DETAIL_SUCCESS',
    UPDATE_SUCCESS: 'USERS.UPDATE_SUCCESS',
    SEARCH_SUCCESS: 'USERS.SEARCH_SUCCESS',
@@ -48,6 +49,7 @@ export const USER_PATTERNS = {
    GET_ALL_USERS: 'users.get_all',
    GET_DATE_OF_BIRTH: 'get_date_of_birth',
    UPDATE_USER_PROFILE: 'update_user_profile',
+   UPSERT_USER_PROFILE: 'upsert_user_profile',
    UPDATE_USER: 'update_user',
    UPDATE_USERNAME: 'update_username',
    DELETE_USER: 'delete_user',
@@ -83,3 +85,42 @@ export const USER_EVENTS = {
 } as const;
 
 export type UserEvent = (typeof USER_EVENTS)[keyof typeof USER_EVENTS];
+
+export const USER_AGGREGATES = {
+   USER: 'User',
+   FOLLOW: 'Follow',
+} as const;
+
+export type UserAggregate = (typeof USER_AGGREGATES)[keyof typeof USER_AGGREGATES];
+
+export const USER_OUTBOX_EVENTS = {
+   USER_CREATED: 'UserCreated',
+   USER_UPDATED: 'UserUpdated',
+   USER_DELETED: 'UserDeleted',
+   USER_RESTORED: 'UserRestored',
+   USER_FOLLOWED: 'UserFollowed',
+   USER_UNFOLLOWED: 'UserUnfollowed',
+   USER_FOLLOW_COMPENSATED: 'UserFollowCompensated',
+   USER_UNFOLLOW_COMPENSATED: 'UserUnfollowCompensated',
+   FOLLOW_REQUEST_ACCEPTED: 'FollowRequestAccepted',
+   FOLLOW_REQUEST_REJECTED: 'FollowRequestRejected',
+   FOLLOW_REQUEST_ACCEPT_COMPENSATED: 'FollowRequestAcceptCompensated',
+   FOLLOW_REQUEST_REJECT_COMPENSATED: 'FollowRequestRejectCompensated',
+} as const;
+
+export type UserOutboxEvent = (typeof USER_OUTBOX_EVENTS)[keyof typeof USER_OUTBOX_EVENTS];
+
+export const USER_RETRY_QUEUES = {
+   SYNC_USER_TO_GRAPH: 'sync-user-to-graph',
+   SYNC_FOLLOW_TO_GRAPH: 'sync-follow-to-graph',
+   SYNC_UNFOLLOW_FROM_GRAPH: 'sync-unfollow-from-graph',
+} as const;
+
+export type UserRetryQueue = (typeof USER_RETRY_QUEUES)[keyof typeof USER_RETRY_QUEUES];
+
+export const USER_SUGGESTION_REASONS = {
+   MUTUAL_FRIENDS: 'mutual_friends',
+   POPULAR: 'popular',
+} as const;
+
+export type UserSuggestionReason = (typeof USER_SUGGESTION_REASONS)[keyof typeof USER_SUGGESTION_REASONS];

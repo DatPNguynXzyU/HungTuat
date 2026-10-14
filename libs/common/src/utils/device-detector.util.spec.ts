@@ -1,4 +1,4 @@
-import { DeviceDetectorUtil } from './device-detector.util';
+import { DeviceDetectorUtil } from '@common/utils/device-detector.util';
 
 describe('DeviceDetectorUtil', () => {
    describe('parse', () => {

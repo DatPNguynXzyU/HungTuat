@@ -1,1 +1,1 @@
-export * from './follow-sync.service';
+export * from '@user/modules/follow/services/follow-sync.service';

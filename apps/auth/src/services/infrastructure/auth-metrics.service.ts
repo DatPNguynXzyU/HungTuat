@@ -16,7 +16,7 @@ import {
    SessionOperation,
    TokenGenerationType,
    TokenOperation,
-} from './auth-metrics.interface';
+} from '@auth/services/infrastructure/auth-metrics.interface';
 
 @Injectable()
 export class AuthMetricsService implements IAuthMetricsService {

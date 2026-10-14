@@ -1,4 +1,4 @@
-import { Result } from './result';
+import { Result } from '@common/domain/value-objects/result';
 
 describe('Result', () => {
    describe('ok', () => {

@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MEDIA_PROVIDERS, type MediaProvider, MEDIA_TYPES, type MediaType, MEDIA_ERROR_CODES } from '@contracts/media';
 import { BadRequestException } from '@common';
-import type { IStorageProvider } from './storage.interface';
-import { CloudinaryProvider } from './providers/cloudinary.provider';
-import { CloudflareR2Provider } from './providers/r2.provider';
+import type { IStorageProvider } from '@media/storage/storage.interface';
+import { CloudinaryProvider } from '@media/storage/providers/cloudinary.provider';
+import { CloudflareR2Provider } from '@media/storage/providers/r2.provider';
 
 @Injectable()
 export class StorageStrategyFactory {

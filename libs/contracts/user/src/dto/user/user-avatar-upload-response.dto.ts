@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserResponseDto } from './user-response.dto';
+import { UserResponseDto } from '@contracts/user/dto/user/user-response.dto';
 
 export class UserAvatarUploadResponseDto {
    @ApiProperty({

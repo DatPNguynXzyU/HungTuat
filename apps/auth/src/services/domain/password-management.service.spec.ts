@@ -3,7 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RedisService, SERVICES, UnauthorizedException } from '@common';
 import { AUTH_ERROR_CODES } from '@contracts/auth';
 import { AUTH_METRICS_OTP_OPERATIONS, AUTH_METRICS_OTP_TYPES, AUTH_METRICS_STATUS } from '@auth/constants';
-import { PasswordManagementService } from './password-management.service';
+import { PasswordManagementService } from '@auth/services/domain/password-management.service';
 import { ACCOUNT_REPOSITORY } from '@auth/repositories';
 import { AuthConfigService } from '@auth/config';
 import {

@@ -3,7 +3,7 @@ import type { SignOptions, VerifyOptions } from 'jsonwebtoken';
 import { DEFAULT_DEV_RSA_PUBLIC_KEY, type JwtPayload, JwtUtil } from '@common';
 import { type IJwksResponse } from '@contracts/auth';
 import { AuthConfigService } from '@auth/config';
-import type { IJwtService } from './token.service.interface';
+import type { IJwtService } from '@auth/services/infrastructure/token.service.interface';
 
 @Injectable()
 export class JwtService implements IJwtService {

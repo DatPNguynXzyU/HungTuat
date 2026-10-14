@@ -1,2 +1,2 @@
-export * from './graph-schema.service';
-export * from './graph-follow.repository';
+export * from '@user/graph/graph-schema.service';
+export * from '@user/graph/graph-follow.repository';

@@ -1,2 +1,2 @@
-export * from './constants/user.constant';
-export * from './dto/user';
+export * from '@contracts/user/constants';
+export * from '@contracts/user/dto/user';

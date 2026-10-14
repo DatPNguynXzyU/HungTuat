@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MEDIA_ENV_KEYS, type MediaEnvConfig } from './media-env.schema';
+import { MEDIA_ENV_KEYS, type MediaEnvConfig } from '@media/config/media-env.schema';
 
 @Injectable()
 export class MediaConfigService {

@@ -1,4 +1,4 @@
-import { AuthRedisKeys, AUTH_BLOOM_FILTERS, AUTH_REDIS_KEY_PREFIX } from './auth-redis-keys.constant';
+import { AuthRedisKeys, AUTH_BLOOM_FILTERS, AUTH_REDIS_KEY_PREFIX } from '@auth/constants';
 
 describe('AuthRedisKeys', () => {
    it('should generate refresh token keys and patterns', () => {

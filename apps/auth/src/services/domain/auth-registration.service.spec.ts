@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RbacCacheService, RedisService, SERVICES, UnauthorizedException } from '@common';
 import { AUTH_ERROR_CODES } from '@contracts/auth';
-import { AuthRegistrationService } from './auth-registration.service';
+import { AuthRegistrationService } from '@auth/services/domain/auth-registration.service';
 import { ACCOUNT_REPOSITORY, RBAC_REPOSITORY } from '@auth/repositories';
 import { AuthConfigService } from '@auth/config';
 import { OUTBOX_REPOSITORY } from '@auth/outbox/repositories/outbox.repository.interface';

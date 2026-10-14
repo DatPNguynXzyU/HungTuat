@@ -13,6 +13,7 @@ import {
 import {
    AUDIT_ACTIONS,
    AUDIT_STATUS,
+   AUTH_AGGREGATES,
    AUTH_ERROR_CODES,
    AUTH_RESPONSE_MESSAGES,
    AUTH_SECURITY,
@@ -406,7 +407,7 @@ export class AuthRegistrationService {
                isEmailVerified,
             },
             {
-               aggregateType: 'ACCOUNT',
+               aggregateType: AUTH_AGGREGATES.ACCOUNT,
                eventType: NOTIFICATION_EVENTS.USER_REGISTERED,
                payload: {
                   email: normalizedEmail,

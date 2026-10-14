@@ -1,2 +1,2 @@
-export * from './domain';
-export * from './infrastructure';
+export * from '@auth/services/domain';
+export * from '@auth/services/infrastructure';

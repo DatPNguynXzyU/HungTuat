@@ -10,10 +10,11 @@ export const FOLLOW_REPOSITORY = 'FOLLOW_REPOSITORY';
 export class FollowRepository {
    constructor(private readonly prisma: PrismaService) {}
 
-   async create(data: Prisma.FollowCreateInput): Promise<FollowEntity> {
+   async create(data: Prisma.FollowCreateInput, tx?: Prisma.TransactionClient): Promise<FollowEntity> {
+      const client = tx ?? this.prisma;
       const followId =
          (data as { followId?: string; id?: string }).followId || (data as { id?: string }).id || uuidv7();
-      const follow = await this.prisma.follow.create({
+      const follow = await client.follow.create({
          data: {
             ...data,
             followId,
@@ -144,35 +145,62 @@ export class FollowRepository {
       });
    }
 
-   async updateStatus(followId: string, status: FollowStatus): Promise<FollowEntity> {
-      const follow = await this.prisma.follow.update({
+   async updateStatus(followId: string, status: FollowStatus, tx?: Prisma.TransactionClient): Promise<FollowEntity> {
+      const client = tx ?? this.prisma;
+      const follow = await client.follow.update({
          where: { followId },
          data: { status },
       });
       return new FollowEntity(follow);
    }
 
-   async softDelete(followId: string): Promise<FollowEntity> {
-      const follow = await this.prisma.follow.update({
+   async softDelete(followId: string, tx?: Prisma.TransactionClient): Promise<FollowEntity> {
+      const client = tx ?? this.prisma;
+      const follow = await client.follow.update({
          where: { followId },
          data: { deletedAt: new Date() },
       });
       return new FollowEntity(follow);
    }
 
-   async softDeleteByFollowerAndFollowing(followerId: string, followingId: string): Promise<FollowEntity | null> {
+   async softDeleteByFollowerAndFollowing(
+      followerId: string,
+      followingId: string,
+      tx?: Prisma.TransactionClient,
+   ): Promise<FollowEntity | null> {
       const follow = await this.findByFollowerAndFollowing(followerId, followingId);
       if (!follow) {
          return null;
       }
-      return this.softDelete(follow.followId);
+      return this.softDelete(follow.followId, tx);
    }
 
-   async restore(followId: string): Promise<FollowEntity> {
-      const follow = await this.prisma.follow.update({
+   async restore(followId: string, tx?: Prisma.TransactionClient): Promise<FollowEntity> {
+      const client = tx ?? this.prisma;
+      const follow = await client.follow.update({
          where: { followId },
          data: { deletedAt: null },
       });
       return new FollowEntity(follow);
+   }
+
+   async delete(followId: string, tx?: Prisma.TransactionClient): Promise<FollowEntity> {
+      const client = tx ?? this.prisma;
+      const follow = await client.follow.delete({
+         where: { followId },
+      });
+      return new FollowEntity(follow);
+   }
+
+   async deleteByFollowerAndFollowing(
+      followerId: string,
+      followingId: string,
+      tx?: Prisma.TransactionClient,
+   ): Promise<FollowEntity | null> {
+      const follow = await this.findByFollowerAndFollowing(followerId, followingId);
+      if (!follow) {
+         return null;
+      }
+      return this.delete(follow.followId, tx);
    }
 }

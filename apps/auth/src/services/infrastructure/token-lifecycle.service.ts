@@ -9,9 +9,14 @@ import {
    AuthRedisKeys,
    TOKEN_REVOCATION_VALUE,
 } from '@auth/constants';
-import type { IJwtService, ITokenAccountPayload, ITokenLifecycleService, TokenPair } from './token.service.interface';
-import { JWT_SERVICE } from './token.service.interface';
-import { AUTH_METRICS_SERVICE, type IAuthMetricsService } from './auth-metrics.interface';
+import type {
+   IJwtService,
+   ITokenAccountPayload,
+   ITokenLifecycleService,
+   TokenPair,
+} from '@auth/services/infrastructure/token.service.interface';
+import { JWT_SERVICE } from '@auth/services/infrastructure/token.service.interface';
+import { AUTH_METRICS_SERVICE, type IAuthMetricsService } from '@auth/services/infrastructure/auth-metrics.interface';
 
 @Injectable()
 export class TokenLifecycleService implements ITokenLifecycleService {

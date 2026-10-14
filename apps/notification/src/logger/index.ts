@@ -1,1 +1,1 @@
-export * from './notification-logger.module';
+export * from '@notification/logger/notification-logger.module';

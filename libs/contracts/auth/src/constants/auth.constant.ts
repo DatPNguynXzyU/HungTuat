@@ -1,4 +1,4 @@
-import { AUTH_COOKIES } from './jwt.constant';
+import { AUTH_COOKIES } from '@contracts/auth/constants/jwt.constant';
 
 export const USER_STATUS = {
    ACTIVE: 'ACTIVE',
@@ -107,3 +107,15 @@ export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
 export type AuthPattern = (typeof AUTH_PATTERNS)[keyof typeof AUTH_PATTERNS];
 export type AuthResponseMessage = (typeof AUTH_RESPONSE_MESSAGES)[keyof typeof AUTH_RESPONSE_MESSAGES];
 export type AuthErrorCode = (typeof AUTH_ERROR_CODES)[keyof typeof AUTH_ERROR_CODES];
+
+export const AUTH_AGGREGATES = {
+   ACCOUNT: 'ACCOUNT',
+} as const;
+
+export type AuthAggregate = (typeof AUTH_AGGREGATES)[keyof typeof AUTH_AGGREGATES];
+
+export const AUTH_OUTBOX_EVENTS = {
+   USER_REGISTERED: 'user.registered',
+} as const;
+
+export type AuthOutboxEvent = (typeof AUTH_OUTBOX_EVENTS)[keyof typeof AUTH_OUTBOX_EVENTS];

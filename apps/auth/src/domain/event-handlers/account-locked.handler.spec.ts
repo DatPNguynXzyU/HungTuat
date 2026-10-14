@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { of, throwError } from 'rxjs';
 import { SERVICES } from '@common';
 import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES } from '@contracts/notification';
-import { AccountLockedEventHandler } from './account-locked.handler';
-import { AccountLockedEvent } from '@auth/domain/events';
+import { AccountLockedEventHandler } from '@auth/domain/event-handlers/account-locked.handler';
+import { AccountLockedEvent } from '@auth/domain/events/account-locked.event';
 
 describe('AccountLockedEventHandler', () => {
    let handler: AccountLockedEventHandler;

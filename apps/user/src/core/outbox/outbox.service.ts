@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { uuidv7 } from '@common';
 import { PrismaService } from '@user/core/database/prisma';
-import { OutboxStatus } from '@user/prisma-client';
+import { OutboxStatus, Prisma } from '@user/prisma-client';
 
 @Injectable()
 export class OutboxService {
@@ -12,8 +12,10 @@ export class OutboxService {
       aggregateType: string,
       eventType: string,
       payload: Record<string, unknown>,
+      tx?: Prisma.TransactionClient,
    ) {
-      return this.prisma.outbox.create({
+      const client = tx ?? this.prisma;
+      return client.outbox.create({
          data: {
             eventId: uuidv7(),
             aggregateId,

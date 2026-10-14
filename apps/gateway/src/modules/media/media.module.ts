@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { RmqModule, SERVICES } from '@common';
-import { MediaController } from './media.controller';
-import { MediaService } from './media.service';
+import { MediaController } from '@gateway/modules/media/media.controller';
+import { MediaService } from '@gateway/modules/media/media.service';
 
 @Module({
    imports: [

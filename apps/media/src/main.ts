@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AllRpcExceptionsFilter, RmqService, SERVICES } from '@common';
-import { MediaModule } from './media.module';
+import { MediaModule } from '@gateway/modules/media/media.module';
 
 async function bootstrap() {
    const appContext = await NestFactory.createApplicationContext(MediaModule, {

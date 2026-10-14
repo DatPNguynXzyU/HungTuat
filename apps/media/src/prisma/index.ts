@@ -1,2 +1,2 @@
-export * from './prisma.service';
-export * from './prisma.module';
+export * from '@media/prisma/prisma.service';
+export * from '@media/prisma/prisma.module';

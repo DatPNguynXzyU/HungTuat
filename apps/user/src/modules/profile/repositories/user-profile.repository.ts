@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { uuidv7 } from '@common';
 import { PrismaService } from '@user/core/database/prisma';
 import { UserEntity, Gender, UserStatus } from '@user/core/database/entities';
+import { Prisma } from '@user/prisma-client';
 
 export interface CreateUserData {
    accountId: string;
@@ -278,32 +279,36 @@ export class UserProfileRepository {
       return new UserEntity(user);
    }
 
-   async incrementFollowersCount(userId: string): Promise<void> {
-      await this.prisma.userStats.upsert({
+   async incrementFollowersCount(userId: string, tx?: Prisma.TransactionClient): Promise<void> {
+      const client = tx ?? this.prisma;
+      await client.userStats.upsert({
          where: { userId },
          update: { followersCount: { increment: 1 } },
          create: { userId, followersCount: 1 },
       });
    }
 
-   async decrementFollowersCount(userId: string): Promise<void> {
-      await this.prisma.userStats.upsert({
+   async decrementFollowersCount(userId: string, tx?: Prisma.TransactionClient): Promise<void> {
+      const client = tx ?? this.prisma;
+      await client.userStats.upsert({
          where: { userId },
          update: { followersCount: { decrement: 1 } },
          create: { userId, followersCount: 0 },
       });
    }
 
-   async incrementFollowingCount(userId: string): Promise<void> {
-      await this.prisma.userStats.upsert({
+   async incrementFollowingCount(userId: string, tx?: Prisma.TransactionClient): Promise<void> {
+      const client = tx ?? this.prisma;
+      await client.userStats.upsert({
          where: { userId },
          update: { followingCount: { increment: 1 } },
          create: { userId, followingCount: 1 },
       });
    }
 
-   async decrementFollowingCount(userId: string): Promise<void> {
-      await this.prisma.userStats.upsert({
+   async decrementFollowingCount(userId: string, tx?: Prisma.TransactionClient): Promise<void> {
+      const client = tx ?? this.prisma;
+      await client.userStats.upsert({
          where: { userId },
          update: { followingCount: { decrement: 1 } },
          create: { userId, followingCount: 0 },

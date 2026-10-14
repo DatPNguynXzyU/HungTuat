@@ -1,2 +1,2 @@
-export * from './update-profile.dto';
-export * from './profile-response.dto';
+export * from '@user/modules/profile/dto/update-profile.dto';
+export * from '@user/modules/profile/dto/profile-response.dto';

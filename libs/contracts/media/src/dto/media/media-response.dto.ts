@@ -6,7 +6,7 @@ import {
    type MediaType,
    MEDIA_STATUSES,
    type MediaStatus,
-} from '../../constants/media.constant';
+} from '@contracts/media/constants/media.constant';
 
 export class MediaResponseDto {
    @ApiProperty({

@@ -1,1 +1,1 @@
-export * from './user-profile.repository';
+export * from '@user/modules/profile/repositories//user-profile.repository';

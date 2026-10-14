@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RmqService } from '@common';
-import { SearchController } from './search.controller';
-import { UserSearchService } from './user-search.service';
+import { SearchController } from '@user/modules/search/search.controller';
+import { UserSearchService } from '@user/modules/search/user-search.service';
 
 describe('SearchController', () => {
    let controller: SearchController;

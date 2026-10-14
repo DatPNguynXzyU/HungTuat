@@ -4,12 +4,29 @@ import { firstValueFrom } from 'rxjs';
 import { SERVICES } from '@common';
 import { SEARCH_PATTERNS } from '@contracts/search';
 import { UserSearchResultItemDto, UserSearchResponseDto } from '@contracts/user';
-import {
-   UserProfileRepository,
-   USER_PROFILE_REPOSITORY,
-} from '@user/modules/profile/repositories/user-profile.repository';
 import { FollowRepository, FOLLOW_REPOSITORY } from '@user/modules/follow/repositories/follow.repository';
-import { UserIndexListener } from './listeners/user-index.listener';
+import { UserResolverService } from '@user/shared/services/user-resolver.service';
+
+export interface ElasticsearchUserHit {
+   id: string;
+   email?: string | null;
+   username?: string | null;
+   displayName?: string | null;
+   avatar?: string | null;
+   bio?: string | null;
+   isVerified?: boolean;
+   followersCount?: number;
+   followingCount?: number;
+   createdAt?: Date;
+   updatedAt?: Date;
+}
+
+export interface ElasticsearchSearchResult {
+   items: ElasticsearchUserHit[];
+   nextCursor: string | null;
+   hasMore: boolean;
+   total?: number;
+}
 
 @Injectable()
 export class UserSearchService {
@@ -18,11 +35,9 @@ export class UserSearchService {
    constructor(
       @Inject(SERVICES.SEARCH_SERVICE)
       private readonly searchClient: ClientProxy,
-      @Inject(USER_PROFILE_REPOSITORY)
-      private readonly userProfileRepository: UserProfileRepository,
+      private readonly userResolverService: UserResolverService,
       @Inject(FOLLOW_REPOSITORY)
       private readonly followRepository: FollowRepository,
-      private readonly userIndexListener: UserIndexListener,
    ) {}
 
    async searchUsers(
@@ -31,48 +46,14 @@ export class UserSearchService {
       cursor?: string,
       currentUserId?: string,
    ): Promise<UserSearchResponseDto> {
-      let esResult: {
-         items: Array<{
-            id: string;
-            email?: string | null;
-            username?: string | null;
-            displayName?: string | null;
-            avatar?: string | null;
-            bio?: string | null;
-            isVerified?: boolean;
-            followersCount?: number;
-            followingCount?: number;
-            createdAt?: Date;
-            updatedAt?: Date;
-         }>;
-         nextCursor: string | null;
-         hasMore: boolean;
-         total?: number;
-      };
+      let esResult: ElasticsearchSearchResult;
 
       try {
          esResult = await firstValueFrom(
-            this.searchClient.send<
-               {
-                  items: Array<{
-                     id: string;
-                     email?: string | null;
-                     username?: string | null;
-                     displayName?: string | null;
-                     avatar?: string | null;
-                     bio?: string | null;
-                     isVerified?: boolean;
-                     followersCount?: number;
-                     followingCount?: number;
-                     createdAt?: Date;
-                     updatedAt?: Date;
-                  }>;
-                  nextCursor: string | null;
-                  hasMore: boolean;
-                  total?: number;
-               },
-               { query: string; limit?: number; cursor?: string }
-            >({ cmd: SEARCH_PATTERNS.SEARCH_USERS }, { query, limit, cursor }),
+            this.searchClient.send<ElasticsearchSearchResult, { query: string; limit?: number; cursor?: string }>(
+               { cmd: SEARCH_PATTERNS.SEARCH_USERS },
+               { query, limit, cursor },
+            ),
          );
       } catch (err) {
          this.logger.error(`Search Service query failed for ${query}: ${String(err)}`);
@@ -96,10 +77,7 @@ export class UserSearchService {
       let resolvedCurrentUserId = currentUserId;
       if (currentUserId) {
          try {
-            let user = await this.userProfileRepository.findById(currentUserId);
-            if (!user) {
-               user = await this.userProfileRepository.findByAccountId(currentUserId);
-            }
+            const user = await this.userResolverService.findUser(currentUserId);
             if (user) {
                resolvedCurrentUserId = user.id;
             }
@@ -141,9 +119,5 @@ export class UserSearchService {
             total,
          },
       };
-   }
-
-   getListener(): UserIndexListener {
-      return this.userIndexListener;
    }
 }

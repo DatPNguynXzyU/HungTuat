@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BloomFilterService, RedisService } from '@common';
 import { AuthRedisKeys } from '@auth/constants';
 import { ACCOUNT_REPOSITORY } from '@auth/repositories';
-import { EmailBloomFilterService } from './email-bloom-filter.service';
+import { EmailBloomFilterService } from '@auth/services/infrastructure/email-bloom-filter.service';
 
 describe('EmailBloomFilterService', () => {
    let service: EmailBloomFilterService;

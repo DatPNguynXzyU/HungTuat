@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { AppLogger } from '@common';
-import { UserEntity } from '@user/core/database/entities';
+import { Injectable, Optional } from '@nestjs/common';
+import { AppLogger, RetryQueueService } from '@common';
+import { USER_RETRY_QUEUES } from '@contracts/user';
+import { FollowStatus, UserEntity } from '@user/core/database/entities';
 import { FollowGraphRepository } from '@user/modules/follow/repositories/follow-graph.repository';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class FollowSyncService {
    constructor(
       private readonly graphFollowRepository: FollowGraphRepository,
       logger: AppLogger,
+      @Optional() private readonly retryQueueService?: RetryQueueService,
    ) {
       this.logger = logger;
       this.logger.setContext(FollowSyncService.name);
@@ -68,6 +70,35 @@ export class FollowSyncService {
          );
          throw error;
       }
+   }
+
+   async processSyncRetries(): Promise<{ processed: number }> {
+      let total = 0;
+      if (!this.retryQueueService) return { processed: 0 };
+
+      total += await this.retryQueueService.processJobs<UserEntity>(
+         USER_RETRY_QUEUES.SYNC_USER_TO_GRAPH,
+         async (user) => {
+            await this.syncUserToGraph(new UserEntity(user));
+         },
+      );
+
+      total += await this.retryQueueService.processJobs<{
+         followerId: string;
+         followingId: string;
+         status?: FollowStatus;
+      }>(USER_RETRY_QUEUES.SYNC_FOLLOW_TO_GRAPH, async (job) => {
+         await this.graphFollowRepository.createFollow(job.followerId, job.followingId, job.status);
+      });
+
+      total += await this.retryQueueService.processJobs<{ followerId: string; followingId: string }>(
+         USER_RETRY_QUEUES.SYNC_UNFOLLOW_FROM_GRAPH,
+         async (job) => {
+            await this.graphFollowRepository.deleteFollow(job.followerId, job.followingId);
+         },
+      );
+
+      return { processed: total };
    }
 }
 

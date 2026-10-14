@@ -1,10 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { of } from 'rxjs';
 import { SERVICES } from '@common';
-import { UserSearchService } from './user-search.service';
-import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories/user-profile.repository';
+import { UserSearchService } from '@user/modules/search/user-search.service';
 import { FOLLOW_REPOSITORY } from '@user/modules/follow/repositories/follow.repository';
-import { UserIndexListener } from './listeners/user-index.listener';
+import { UserResolverService } from '@user/shared/services/user-resolver.service';
 
 describe('UserSearchService', () => {
    let service: UserSearchService;
@@ -14,21 +13,16 @@ describe('UserSearchService', () => {
       emit: jest.fn(),
    };
 
-   const mockUserProfileRepository = {
-      findById: jest.fn(),
-      findByAccountId: jest.fn(),
+   const mockUserResolverService = {
+      findUser: jest.fn(),
+      resolveUser: jest.fn(),
    };
 
    const mockFollowRepository = {
       findFollowRelations: jest.fn().mockResolvedValue({
-         followingSet: new Set<string>(),
+         followingSet: new Set<string>(['u2']),
          followerSet: new Set<string>(),
       }),
-   };
-
-   const mockUserIndexListener = {
-      emitSearchIndexEvent: jest.fn(),
-      emitSearchDeleteEvent: jest.fn(),
    };
 
    beforeEach(async () => {
@@ -42,16 +36,12 @@ describe('UserSearchService', () => {
                useValue: mockSearchClient,
             },
             {
-               provide: USER_PROFILE_REPOSITORY,
-               useValue: mockUserProfileRepository,
+               provide: UserResolverService,
+               useValue: mockUserResolverService,
             },
             {
                provide: FOLLOW_REPOSITORY,
                useValue: mockFollowRepository,
-            },
-            {
-               provide: UserIndexListener,
-               useValue: mockUserIndexListener,
             },
          ],
       }).compile();
@@ -63,7 +53,7 @@ describe('UserSearchService', () => {
       expect(service).toBeDefined();
    });
 
-   it('should search users and return items', async () => {
+   it('should search users and return items without currentUserId', async () => {
       mockSearchClient.send.mockReturnValue(
          of({
             items: [
@@ -82,5 +72,33 @@ describe('UserSearchService', () => {
       const result = await service.searchUsers('john');
       expect(result.items).toHaveLength(1);
       expect(result.items[0].username).toBe('john');
+      expect(result.items[0].isFollowing).toBe(false);
+   });
+
+   it('should resolve currentUserId and calculate follow relations', async () => {
+      mockSearchClient.send.mockReturnValue(
+         of({
+            items: [
+               {
+                  id: 'u2',
+                  username: 'jane',
+                  displayName: 'Jane Doe',
+               },
+            ],
+            nextCursor: null,
+            hasMore: false,
+            total: 1,
+         }),
+      );
+
+      mockUserResolverService.findUser.mockResolvedValue({
+         id: 'u1-resolved',
+         accountId: 'acc-1',
+      });
+
+      const result = await service.searchUsers('jane', 20, undefined, 'acc-1');
+      expect(mockUserResolverService.findUser).toHaveBeenCalledWith('acc-1');
+      expect(mockFollowRepository.findFollowRelations).toHaveBeenCalledWith('u1-resolved', ['u2']);
+      expect(result.items[0].isFollowing).toBe(true);
    });
 });

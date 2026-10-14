@@ -10,10 +10,10 @@ import {
 } from '@contracts/auth';
 import { AuthConfigService } from '@auth/config';
 import { SESSION_REPOSITORY } from '@auth/repositories';
-import { JWT_SERVICE } from './token.service.interface';
-import { JwtService } from './jwt.service';
-import { TokenLifecycleService } from './token-lifecycle.service';
-import { AUTH_METRICS_SERVICE } from './auth-metrics.interface';
+import { JWT_SERVICE } from '@auth/services/infrastructure/token.service.interface';
+import { JwtService } from '@auth/services/infrastructure/jwt.service';
+import { TokenLifecycleService } from '@auth/services/infrastructure/token-lifecycle.service';
+import { AUTH_METRICS_SERVICE } from '@auth/services/infrastructure/auth-metrics.interface';
 import {
    AUTH_METRICS_STATUS,
    AUTH_METRICS_TOKEN_OPERATIONS,

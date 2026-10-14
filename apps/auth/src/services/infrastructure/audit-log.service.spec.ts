@@ -5,7 +5,7 @@ import { AUDIT_LOG_REPOSITORY } from '@auth/repositories/audit-log.repository.in
 import { AUDIT_EVENT_STORE } from '@auth/cqrs/constants/audit-cqrs.constant';
 import { AccountSecurityScoreProjection, ThreatDetectionMetricsProjection } from '@auth/cqrs/read';
 import { AuditProjectionRebuildService } from '@auth/cqrs/services/audit-projection-rebuild.service';
-import { AuditLogService } from './audit-log.service';
+import { AuditLogService } from '@auth/services/infrastructure/audit-log.service';
 
 describe('AuditLogService', () => {
    let service: AuditLogService;

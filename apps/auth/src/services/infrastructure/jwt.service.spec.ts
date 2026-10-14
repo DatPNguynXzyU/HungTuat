@@ -2,7 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { DEFAULT_DEV_RSA_PRIVATE_KEY, type JwtPayload } from '@common';
 import { DEFAULT_DEV_RSA_PUBLIC_KEY, DEFAULT_JWT_KEY_ID, JWT_TOKEN_TYPE } from '@contracts/auth';
 import { AuthConfigService } from '@auth/config';
-import { JwtService } from './jwt.service';
+import { JwtService } from '@auth/services/infrastructure/jwt.service';
 
 describe('JwtService', () => {
    let service: JwtService;

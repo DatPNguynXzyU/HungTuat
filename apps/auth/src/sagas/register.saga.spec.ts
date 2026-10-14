@@ -1,6 +1,6 @@
 import type { AccountEntity } from '@auth/entities';
 import type { ITokenLifecycleService } from '@auth/services/infrastructure';
-import { RegisterSaga } from './register.saga';
+import { RegisterSaga } from '@auth/sagas/register.saga';
 
 describe('RegisterSaga', () => {
    let saga: RegisterSaga;

@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsDateString, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
-import { GenderDto } from './update-user.dto';
+import { GenderDto } from '@contracts/user/dto/user/update-user.dto';
 
 export class CreateUserProfileDto {
    @ApiPropertyOptional({

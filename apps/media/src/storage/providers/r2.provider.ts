@@ -9,7 +9,7 @@ import type {
    UploadOptions,
    UploadSignatureResult,
    StorageUploadResult,
-} from '../storage.interface';
+} from '@media/storage/storage.interface';
 
 @Injectable()
 export class CloudflareR2Provider implements IStorageProvider {

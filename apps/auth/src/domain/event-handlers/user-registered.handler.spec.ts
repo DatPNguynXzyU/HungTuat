@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { of, throwError } from 'rxjs';
 import { SERVICES } from '@common';
 import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES } from '@contracts/notification';
-import { UserRegisteredEventHandler } from './user-registered.handler';
-import { UserRegisteredEvent } from '@auth/domain/events';
+import { UserRegisteredEventHandler } from '@auth/domain/event-handlers/user-registered.handler';
+import { UserRegisteredEvent } from '@auth/domain/events/user-registered.event';
 
 describe('UserRegisteredEventHandler', () => {
    let handler: UserRegisteredEventHandler;

@@ -11,7 +11,7 @@ import {
    UploadFileDto,
    UploadUrlResponseDto,
 } from '@contracts/media';
-import { MediaService } from './media.service';
+import { MediaService } from '@gateway/modules/media/media.service';
 
 @ApiTags('Media')
 @Controller('media')

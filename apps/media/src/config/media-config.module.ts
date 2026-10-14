@@ -1,8 +1,8 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CommonConfigService } from '@common';
-import { validateMediaEnv } from './media-env.schema';
-import { MediaConfigService } from './media-config.service';
+import { validateMediaEnv } from '@media/config/media-env.schema';
+import { MediaConfigService } from '@media/config/media-config.service';
 
 @Global()
 @Module({

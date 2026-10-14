@@ -1,1 +1,1 @@
-export * from './constants/search.constant';
+export * from '@contracts/search/constants/search.constant';

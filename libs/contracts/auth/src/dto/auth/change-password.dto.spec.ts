@@ -1,5 +1,5 @@
 import { validate } from 'class-validator';
-import { ChangePasswordDto } from './change-password.dto';
+import { ChangePasswordDto } from '@contracts/auth/dto/auth/change-password.dto';
 
 describe('ChangePasswordDto', () => {
    it('should validate a correct DTO', async () => {

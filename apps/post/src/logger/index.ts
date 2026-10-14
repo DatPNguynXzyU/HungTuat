@@ -1,1 +1,1 @@
-export * from './post-logger.module';
+export * from '@post/logger/post-logger.module';

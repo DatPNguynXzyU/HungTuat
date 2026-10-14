@@ -1,6 +1,6 @@
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
-import { SendRegisterOtpDto } from './send-register-otp.dto';
+import { SendRegisterOtpDto } from '@contracts/auth/dto/auth/send-register-otp.dto';
 
 describe('SendRegisterOtpDto', () => {
    it('should pass validation with valid email', async () => {

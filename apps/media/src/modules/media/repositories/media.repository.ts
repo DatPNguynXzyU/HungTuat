@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Media, Prisma } from '@media/prisma-client';
 import { PrismaService } from '@media/prisma';
-import type { IMediaRepository } from './media.repository.interface';
+import type { IMediaRepository } from '@media/modules/media/repositories/media.repository.interface';
 
 @Injectable()
 export class MediaRepository implements IMediaRepository {

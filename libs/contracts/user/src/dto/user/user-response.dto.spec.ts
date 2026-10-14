@@ -1,5 +1,5 @@
 import { plainToInstance } from 'class-transformer';
-import { UserProfileDto, UserResponseDto } from './user-response.dto';
+import { UserProfileDto, UserResponseDto } from '@contracts/user/dto/user/user-response.dto';
 
 describe('UserResponseDto & UserProfileDto', () => {
    it('should instantiate UserResponseDto and verify profile does not have dateOfBirth or gender', () => {

@@ -1,5 +1,5 @@
 import { v4 } from 'uuid';
-import { isValidUuidV7, UUID_V7_REGEX, uuidv7 } from './uuid.util';
+import { isValidUuidV7, UUID_V7_REGEX, uuidv7 } from '@common/utils/uuid.util';
 
 describe('UUID Utility', () => {
    describe('uuidv7', () => {

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MEDIA_PROVIDERS, type MediaProvider } from '../../constants/media.constant';
+import { MEDIA_PROVIDERS, type MediaProvider } from '@contracts/media/constants/media.constant';
 
 export class UploadUrlResponseDto {
    @ApiProperty({

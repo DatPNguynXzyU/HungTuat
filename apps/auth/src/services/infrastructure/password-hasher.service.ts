@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import argon2, { type VerifyOptions } from 'argon2';
 import { AuthConfigService } from '@auth/config';
-import type { IPasswordHasher } from './password-hasher.interface';
+import type { IPasswordHasher } from '@auth/services/infrastructure/password-hasher.interface';
 
 /**
  * Concrete implementation of IPasswordHasher using Argon2id.

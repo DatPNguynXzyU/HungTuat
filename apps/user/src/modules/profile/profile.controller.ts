@@ -224,6 +224,46 @@ export class ProfileController {
       try {
          const { id, gender, dateOfBirth, ...updateData } = message.data;
 
+         const existingUser = await this.profileService.getUserById(id);
+         checkOwnershipOrAdmin(message, existingUser.accountId);
+
+         const result = await this.profileService.updateUserProfile(id, {
+            ...updateData,
+            ...(gender && { gender: gender as Gender }),
+            ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
+         });
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         return result;
+      } catch (error) {
+         if (context) {
+            this.rmqService.ack(context);
+         }
+         throw error;
+      }
+   }
+
+   @MessagePattern({ cmd: USER_PATTERNS.UPSERT_USER_PROFILE })
+   async upsertUserProfile(
+      @Payload()
+      message: IServiceMessage<{
+         id: string;
+         username?: string;
+         displayName?: string;
+         gender?: string;
+         dateOfBirth?: string | Date;
+         bio?: string;
+         avatar?: string;
+         coverImage?: string;
+         website?: string;
+         location?: string;
+      }>,
+      @Ctx() context?: RmqContext,
+   ) {
+      try {
+         const { id, gender, dateOfBirth, ...updateData } = message.data;
+
          let targetOwnerId = id;
          try {
             const existingUser = await this.profileService.getUserById(id);
@@ -236,7 +276,7 @@ export class ProfileController {
 
          checkOwnershipOrAdmin(message, targetOwnerId);
 
-         const result = await this.profileService.updateUserProfile(id, {
+         const result = await this.profileService.upsertUserProfile(id, {
             ...updateData,
             ...(gender && { gender: gender as Gender }),
             ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),

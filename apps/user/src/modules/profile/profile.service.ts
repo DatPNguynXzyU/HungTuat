@@ -1,7 +1,7 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { ConflictException, NotFoundException, SERVICES } from '@common';
+import { ConflictException, NotFoundException, RetryQueueService, SERVICES } from '@common';
 import {
    MEDIA_PATTERNS,
    MEDIA_TYPES,
@@ -17,9 +17,17 @@ import {
    CreateUserData,
    USER_PROFILE_REPOSITORY,
 } from '@user/modules/profile/repositories/user-profile.repository';
-import { UsernameBloomFilterService } from '@user/modules/authentication';
-import { UserGraphSyncService } from '@user/modules/follow';
-import { USER_ERROR_CODES, USER_EVENTS, UserDateOfBirthResponseDto } from '@contracts/user';
+import { UsernameBloomFilterService } from '@user/modules/authentication/services/username-bloom-filter.service';
+import {
+   USER_AGGREGATES,
+   USER_ERROR_CODES,
+   USER_EVENTS,
+   USER_OUTBOX_EVENTS,
+   USER_RETRY_QUEUES,
+   UserDateOfBirthResponseDto,
+} from '@contracts/user';
+import { UserGraphSyncService } from '@user/modules/follow/services/follow-sync.service';
+import { UserResolverService } from '@user/shared/services';
 
 @Injectable()
 export class ProfileService {
@@ -28,6 +36,7 @@ export class ProfileService {
    constructor(
       @Inject(USER_PROFILE_REPOSITORY)
       private readonly userProfileRepository: UserProfileRepository,
+      private readonly userResolverService: UserResolverService,
       @Inject(SERVICES.MEDIA_SERVICE)
       private readonly mediaClient: ClientProxy,
       private readonly outboxService: OutboxService,
@@ -35,43 +44,24 @@ export class ProfileService {
       private readonly userGraphSyncService: UserGraphSyncService,
       @Inject(SERVICES.SEARCH_SERVICE)
       private readonly searchClient: ClientProxy,
+      @Optional()
+      private readonly retryQueueService?: RetryQueueService,
    ) {}
 
-   async getUserById(id: string): Promise<UserEntity> {
-      let user = await this.userProfileRepository.findById(id);
-      if (!user) {
-         user = await this.userProfileRepository.findByAccountId(id);
-      }
-      if (!user) {
-         throw new NotFoundException(USER_ERROR_CODES.USER_NOT_FOUND, {
-            params: { id },
-         });
-      }
-      return user;
+   async getUserById(userId: string): Promise<UserEntity> {
+      return this.userResolverService.resolveUser(userId);
    }
 
    async getUserByAccountId(accountId: string): Promise<UserEntity> {
-      const user = await this.userProfileRepository.findByAccountId(accountId);
-      if (!user) {
-         throw new NotFoundException(USER_ERROR_CODES.USER_NOT_FOUND, {
-            params: { accountId },
-         });
-      }
-      return user;
+      return this.userResolverService.resolveByAccountId(accountId);
    }
 
    async getUserByUserId(userId: string): Promise<UserEntity> {
-      return this.getUserById(userId);
+      return this.userResolverService.resolveUser(userId);
    }
 
    async getUserByUsername(username: string): Promise<UserEntity> {
-      const user = await this.userProfileRepository.findByUsername(username);
-      if (!user) {
-         throw new NotFoundException(USER_ERROR_CODES.USER_NOT_FOUND, {
-            params: { username },
-         });
-      }
-      return user;
+      return this.userResolverService.resolveByUsername(username);
    }
 
    calculateAge(dob?: Date | string | null): number | null {
@@ -130,9 +120,22 @@ export class ProfileService {
          await this.userGraphSyncService.syncUserToGraph(user);
       } catch (err) {
          this.logger.warn(`Failed to sync user ${user.id} to graph: ${String(err)}`);
+         if (this.retryQueueService) {
+            await this.retryQueueService.add(USER_RETRY_QUEUES.SYNC_USER_TO_GRAPH, {
+               id: user.id,
+               userId: user.id,
+               username: user.username,
+               displayName: user.displayName,
+               avatar: user.avatar,
+               bio: user.bio,
+               isPrivate: user.isPrivate,
+               createdAt: user.createdAt,
+               updatedAt: user.updatedAt,
+            });
+         }
       }
 
-      await this.outboxService.createOutboxEvent(user.id, 'User', 'UserCreated', {
+      await this.outboxService.createOutboxEvent(user.id, USER_AGGREGATES.USER, USER_OUTBOX_EVENTS.USER_CREATED, {
          userId: user.id,
          accountId: user.accountId,
          username: user.username,
@@ -144,7 +147,7 @@ export class ProfileService {
    }
 
    async updateUserProfile(
-      id: string,
+      userId: string,
       data: {
          username?: string;
          displayName?: string;
@@ -157,53 +160,7 @@ export class ProfileService {
          gender?: Gender;
       },
    ): Promise<UserEntity> {
-      let user = await this.userProfileRepository.findById(id);
-      if (!user) {
-         user = await this.userProfileRepository.findByAccountId(id);
-      }
-
-      if (!user) {
-         this.logger.log(`User ${id} not found during profile update; auto-creating initial user and profile`);
-         if (data.username) {
-            const normalizedUsername = data.username.toLowerCase().trim();
-            const mightExist = await this.usernameBloomFilterService.mightContain(normalizedUsername);
-            if (mightExist) {
-               const existingUsername = await this.userProfileRepository.findByUsername(normalizedUsername);
-               if (existingUsername) {
-                  throw new ConflictException(USER_ERROR_CODES.USERNAME_ALREADY_TAKEN, {
-                     params: { username: data.username },
-                  });
-               }
-            }
-         }
-
-         user = await this.userProfileRepository.create({
-            accountId: id,
-            username: data.username,
-            displayName: data.displayName,
-            bio: data.bio,
-            avatar: data.avatar,
-            coverImage: data.coverImage,
-            website: data.website,
-            location: data.location,
-            dateOfBirth: data.dateOfBirth,
-            gender: data.gender,
-         });
-
-         if (user.username) {
-            await this.usernameBloomFilterService.addUsername(user.username);
-         }
-
-         try {
-            await this.userGraphSyncService.syncUserToGraph(user);
-         } catch (err) {
-            this.logger.warn(`Failed to sync newly created user ${user.id} to graph: ${String(err)}`);
-         }
-
-         this.emitSearchIndexEvent(USER_EVENTS.CREATED, user);
-
-         return user;
-      }
+      const user = await this.getUserById(userId);
 
       if (data.username && data.username.toLowerCase().trim() !== user.username?.toLowerCase().trim()) {
          const normalizedUsername = data.username.toLowerCase().trim();
@@ -228,9 +185,22 @@ export class ProfileService {
          await this.userGraphSyncService.syncUserToGraph(updatedUser);
       } catch (err) {
          this.logger.warn(`Failed to sync updated user ${user.id} to graph: ${String(err)}`);
+         if (this.retryQueueService) {
+            await this.retryQueueService.add(USER_RETRY_QUEUES.SYNC_USER_TO_GRAPH, {
+               id: updatedUser.id,
+               userId: updatedUser.id,
+               username: updatedUser.username,
+               displayName: updatedUser.displayName,
+               avatar: updatedUser.avatar,
+               bio: updatedUser.bio,
+               isPrivate: updatedUser.isPrivate,
+               createdAt: updatedUser.createdAt,
+               updatedAt: updatedUser.updatedAt,
+            });
+         }
       }
 
-      await this.outboxService.createOutboxEvent(user.id, 'User', 'UserUpdated', {
+      await this.outboxService.createOutboxEvent(user.id, USER_AGGREGATES.USER, USER_OUTBOX_EVENTS.USER_UPDATED, {
          userId: user.id,
          accountId: user.accountId,
          changes: data,
@@ -239,6 +209,38 @@ export class ProfileService {
       this.emitSearchIndexEvent(USER_EVENTS.UPDATED, updatedUser);
 
       return updatedUser;
+   }
+
+   async upsertUserProfile(
+      userIdOrAccountId: string,
+      data: {
+         username?: string;
+         displayName?: string;
+         bio?: string;
+         avatar?: string;
+         coverImage?: string;
+         website?: string;
+         location?: string;
+         dateOfBirth?: Date;
+         gender?: Gender;
+      },
+   ): Promise<UserEntity> {
+      try {
+         return await this.updateUserProfile(userIdOrAccountId, data);
+      } catch (err: unknown) {
+         const isNotFound =
+            err instanceof NotFoundException ||
+            (typeof err === 'object' && err !== null && (err as { statusCode?: number }).statusCode === 404);
+
+         if (isNotFound) {
+            this.logger.log(`User ${userIdOrAccountId} not found during upsert; creating initial user profile`);
+            return await this.createUser({
+               accountId: userIdOrAccountId,
+               ...data,
+            });
+         }
+         throw err;
+      }
    }
 
    async updateUsername(userId: string, username: string): Promise<UserEntity> {
@@ -280,7 +282,7 @@ export class ProfileService {
 
       this.emitSearchDeleteEvent(user.id);
 
-      await this.outboxService.createOutboxEvent(user.id, 'User', 'UserDeleted', {
+      await this.outboxService.createOutboxEvent(user.id, USER_AGGREGATES.USER, USER_OUTBOX_EVENTS.USER_DELETED, {
          userId: user.id,
          accountId: user.accountId,
       });
@@ -293,20 +295,25 @@ export class ProfileService {
 
       this.emitSearchIndexEvent(USER_EVENTS.CREATED, restoredUser);
 
-      await this.outboxService.createOutboxEvent(restoredUser.id, 'User', 'UserRestored', {
-         userId: restoredUser.id,
-         accountId: restoredUser.accountId,
-      });
+      await this.outboxService.createOutboxEvent(
+         restoredUser.id,
+         USER_AGGREGATES.USER,
+         USER_OUTBOX_EVENTS.USER_RESTORED,
+         {
+            userId: restoredUser.id,
+            accountId: restoredUser.accountId,
+         },
+      );
 
       return restoredUser;
    }
 
    async uploadAvatar(
-      id: string,
+      userId: string,
       base64Data: string,
       mimeType?: string,
    ): Promise<{ avatarUrl: string; publicId: string; user: UserEntity }> {
-      const user = await this.getUserById(id);
+      const user = await this.getUserById(userId);
 
       this.logger.log(`Uploading avatar via MEDIA_SERVICE for user ${user.id}...`);
       const formattedBase64 =

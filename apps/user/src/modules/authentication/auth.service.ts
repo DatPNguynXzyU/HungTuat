@@ -1,21 +1,17 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConflictException } from '@common';
 import { UserEntity } from '@user/core/database/entities';
-import {
-   UserProfileRepository,
-   USER_PROFILE_REPOSITORY,
-} from '@user/modules/profile/repositories/user-profile.repository';
 import { ProfileService } from '@user/modules/profile/profile.service';
-import { UsernameBloomFilterService } from './services/username-bloom-filter.service';
-import { EmailValidatorService } from './services/email-validator.service';
+import { UsernameBloomFilterService } from '@user/modules/authentication/services/username-bloom-filter.service';
+import { EmailValidatorService } from '@user/modules/authentication/services/email-validator.service';
+import { UserResolverService } from '@user/shared/services';
 
 @Injectable()
 export class AuthService {
    private readonly logger = new Logger(AuthService.name);
 
    constructor(
-      @Inject(USER_PROFILE_REPOSITORY)
-      private readonly userProfileRepository: UserProfileRepository,
+      private readonly userResolverService: UserResolverService,
       private readonly profileService: ProfileService,
       private readonly usernameBloomFilterService: UsernameBloomFilterService,
       private readonly emailValidatorService: EmailValidatorService,
@@ -31,7 +27,7 @@ export class AuthService {
       if (!data.accountId) {
          return null;
       }
-      const existing = await this.userProfileRepository.findByAccountId(data.accountId);
+      const existing = await this.userResolverService.findByAccountId(data.accountId);
       if (existing) {
          return existing;
       }
@@ -57,7 +53,7 @@ export class AuthService {
             displayName,
          });
       } catch (err: unknown) {
-         const createdUser = await this.userProfileRepository.findByAccountId(data.accountId);
+         const createdUser = await this.userResolverService.findByAccountId(data.accountId);
          if (createdUser) {
             return createdUser;
          }
@@ -71,7 +67,7 @@ export class AuthService {
                   displayName,
                });
             } catch {
-               const finalCheck = await this.userProfileRepository.findByAccountId(data.accountId);
+               const finalCheck = await this.userResolverService.findByAccountId(data.accountId);
                if (finalCheck) {
                   return finalCheck;
                }

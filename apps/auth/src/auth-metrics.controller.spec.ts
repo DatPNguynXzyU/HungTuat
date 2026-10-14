@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Response } from 'express';
-import { AuthMetricsController } from './auth-metrics.controller';
+import { AuthMetricsController } from '@auth/auth-metrics.controller';
 import { AUTH_METRICS_SERVICE, IAuthMetricsService } from '@auth/services/infrastructure';
 
 describe('AuthMetricsController', () => {

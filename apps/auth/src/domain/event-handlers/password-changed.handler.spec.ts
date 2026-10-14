@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { of, throwError } from 'rxjs';
 import { SERVICES } from '@common';
 import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES } from '@contracts/notification';
-import { PasswordChangedEventHandler } from './password-changed.handler';
-import { PasswordChangedEvent } from '@auth/domain/events';
+import { PasswordChangedEventHandler } from '@auth/domain/event-handlers/password-changed.handler';
+import { PasswordChangedEvent } from '@auth/domain/events/password-changed.event';
 
 describe('PasswordChangedEventHandler', () => {
    let handler: PasswordChangedEventHandler;

@@ -1,4 +1,4 @@
-import { VerificationToken } from './verification-token.vo';
+import { VerificationToken } from '@auth/domain/value-objects/verification-token.vo';
 
 describe('VerificationToken Value Object', () => {
    describe('create', () => {

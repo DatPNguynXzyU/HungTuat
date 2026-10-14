@@ -1,4 +1,4 @@
-import { JwtUtil, type JwtPayload } from './jwt.util';
+import { JwtUtil, type JwtPayload } from '@common/utils/jwt.util';
 import {
    DEFAULT_DEV_RSA_PRIVATE_KEY,
    DEFAULT_DEV_RSA_PUBLIC_KEY,

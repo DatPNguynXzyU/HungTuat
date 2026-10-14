@@ -11,7 +11,7 @@ import {
    AUTH_METRICS_TOKEN_OPERATIONS,
    AUTH_METRICS_TOKEN_TYPES,
 } from '@auth/constants';
-import { AuthMetricsService } from './auth-metrics.service';
+import { AuthMetricsService } from '@auth/services/infrastructure/auth-metrics.service';
 
 describe('AuthMetricsService', () => {
    let service: AuthMetricsService;

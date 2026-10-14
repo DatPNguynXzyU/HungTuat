@@ -1,7 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { RedisService } from '@common';
 import { AUTH_REDIS_TTL, AuthRedisKeys } from '@auth/constants';
-import { VERIFICATION_TOKEN_PREFIX, VerificationTokenService } from './verification-token.service';
+import {
+   VERIFICATION_TOKEN_PREFIX,
+   VerificationTokenService,
+} from '@auth/services/infrastructure/verification-token.service';
 
 describe('VerificationTokenService', () => {
    let service: VerificationTokenService;

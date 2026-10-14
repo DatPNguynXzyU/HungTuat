@@ -1,6 +1,6 @@
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
-import { VerifyRegisterOtpDto } from './verify-register-otp.dto';
+import { VerifyRegisterOtpDto } from '@contracts/auth/dto/auth/verify-register-otp.dto';
 
 describe('VerifyRegisterOtpDto', () => {
    it('should pass validation with valid email and 6-digit OTP', async () => {

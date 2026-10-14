@@ -18,8 +18,72 @@ export class NebulaService implements OnModuleInit, OnModuleDestroy {
 
    constructor(private readonly config: NebulaConfig) {}
 
-   onModuleInit(): void {
+   async onModuleInit(): Promise<void> {
+      await this.bootstrap();
       this.connect();
+   }
+
+   private async bootstrap(): Promise<void> {
+      const server = `${this.config.graphAddress}:${this.config.graphPort}`;
+      const adminClient = createClient({
+         servers: [server],
+         userName: 'root',
+         password: 'nebula',
+         space: '',
+         poolSize: 1,
+         executeTimeout: 10000,
+      });
+
+      adminClient.on('error', () => {
+         // Silently suppress bootstrap admin client connection retry logs
+      });
+
+      try {
+         // 1. Add storage host if not registered
+         try {
+            await adminClient.execute('ADD HOSTS "nebula-storaged":9779;');
+         } catch {
+            // Host might already be registered
+         }
+
+         // 2. Ensure target space exists
+         const spacesRes = (await adminClient.execute('SHOW SPACES;')) as NebulaRawResponse;
+         const rows = this.transformToRows(spacesRes.data);
+         const hasSpace = rows.some((row) => row.Name === this.config.space);
+
+         if (!hasSpace) {
+            this.logger.log(`Creating NebulaGraph space: ${this.config.space}`);
+            await adminClient.execute(
+               `CREATE SPACE IF NOT EXISTS ${this.config.space}(partition_num=10, replica_factor=1, vid_type=FIXED_STRING(64));`,
+            );
+            // NebulaGraph requires a short delay for heartbeat sync when a space is newly created
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+         }
+
+         // 3. Ensure configured user exists with DBA role if not root
+         if (this.config.username !== 'root') {
+            try {
+               await adminClient.execute(
+                  `CREATE USER IF NOT EXISTS ${this.config.username} WITH PASSWORD '${this.config.password}';`,
+               );
+            } catch {
+               // User might already exist
+            }
+            try {
+               await adminClient.execute(`GRANT ROLE DBA ON ${this.config.space} TO ${this.config.username};`);
+            } catch {
+               // Role might already be granted
+            }
+         }
+      } catch (error) {
+         this.logger.warn(`NebulaGraph bootstrap notice: ${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+         try {
+            await adminClient.close();
+         } catch {
+            // Ignore close error
+         }
+      }
    }
 
    async onModuleDestroy(): Promise<void> {

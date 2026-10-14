@@ -1,2 +1,2 @@
-export * from './user.entity';
-export * from './follow.entity';
+export * from '@user/core/database/entities/user.entity';
+export * from '@user/core/database/entities/follow.entity';

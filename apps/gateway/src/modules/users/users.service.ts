@@ -101,6 +101,28 @@ export class UsersService {
       );
    }
 
+   async upsertUser(id: string, updateUserDto: UpdateUserDto, user?: JwtPayload): Promise<unknown> {
+      const message: IServiceMessage<{ id: string } & UpdateUserDto> = {
+         data: { id, ...updateUserDto },
+         user: user
+            ? {
+                 userId: user.sub,
+                 email: user.email,
+                 roles: user.roles || [],
+                 permissions: [],
+                 sessionId: user.jti,
+              }
+            : undefined,
+      };
+
+      return firstValueFrom(
+         this.userClient.send<unknown, IServiceMessage<{ id: string } & UpdateUserDto>>(
+            { cmd: USER_PATTERNS.UPSERT_USER_PROFILE },
+            message,
+         ),
+      );
+   }
+
    async getMyProfile(user: JwtPayload): Promise<unknown> {
       return this.getUserById(user.sub, user);
    }

@@ -1,6 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { MEDIA_TYPES, type MediaType, MEDIA_PROVIDERS, type MediaProvider } from '../../constants/media.constant';
+import {
+   MEDIA_TYPES,
+   type MediaType,
+   MEDIA_PROVIDERS,
+   type MediaProvider,
+} from '@contracts/media/constants/media.constant';
 
 export class UploadFileDto {
    @ApiProperty({

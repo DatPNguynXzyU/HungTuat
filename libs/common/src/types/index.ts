@@ -1,1 +1,1 @@
-export * from './utility.types';
+export * from '@common/types/utility.types';

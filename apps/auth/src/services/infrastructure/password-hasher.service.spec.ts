@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthConfigService } from '@auth/config';
-import { PasswordHasherService } from './password-hasher.service';
+import { PasswordHasherService } from '@auth/services/infrastructure/password-hasher.service';
 
 describe('PasswordHasherService', () => {
    let service: PasswordHasherService;

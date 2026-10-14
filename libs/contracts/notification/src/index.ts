@@ -1,2 +1,2 @@
-export * from './constants/notification.constant';
-export * from './dto/notification';
+export * from '@contracts/notification/constants/notification.constant';
+export * from '@contracts/notification/dto/notification';

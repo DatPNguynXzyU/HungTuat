@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService, uuidv7 } from '@common';
 import { AUTH_REDIS_TTL, AuthRedisKeys } from '@auth/constants';
-import type { IVerificationTokenService } from './token.service.interface';
+import type { IVerificationTokenService } from '@auth/services/infrastructure/token.service.interface';
 
 export const VERIFICATION_TOKEN_PREFIX = 'vtok_';
 

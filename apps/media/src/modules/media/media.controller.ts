@@ -9,7 +9,7 @@ import {
    type DeleteMediaDto,
 } from '@contracts/media';
 import { RmqService, type IServiceMessage, UnauthorizedException } from '@common';
-import { MediaService } from './media.service';
+import { MediaService } from '@media/modules/media/media.service';
 
 @Controller()
 export class MediaController {

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { SessionRevokedEventHandler } from './session-revoked.handler';
-import { SESSION_REVOKE_REASONS, SessionRevokedEvent } from '@auth/domain/events';
+import { SessionRevokedEventHandler } from '@auth/domain/event-handlers/session-revoked.handler';
+import { SESSION_REVOKE_REASONS, SessionRevokedEvent } from '@auth/domain/events/session-revoked.event';
 
 describe('SessionRevokedEventHandler', () => {
    let handler: SessionRevokedEventHandler;

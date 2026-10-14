@@ -1,4 +1,4 @@
-import type { SetOptional, SetRequired } from './utility.types';
+import type { SetOptional, SetRequired } from '@common/types/utility.types';
 
 describe('Utility Types', () => {
    it('should properly make specified keys optional with SetOptional', () => {

@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { UserDateOfBirthResponseDto } from './user-date-of-birth-response.dto';
+import { UserDateOfBirthResponseDto } from '@contracts/user/dto/user/user-date-of-birth-response.dto';
 
 describe('UserDateOfBirthResponseDto', () => {
    it('should validate valid date of birth data', async () => {

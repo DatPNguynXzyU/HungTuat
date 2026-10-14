@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { UserEmailResponseDto } from './user-email-response.dto';
+import { UserEmailResponseDto } from '@contracts/auth/dto/auth/user-email-response.dto';
 
 describe('UserEmailResponseDto', () => {
    it('should validate valid email response data', async () => {

@@ -1,5 +1,5 @@
 import { validate } from 'class-validator';
-import { GenderDto, UpdateUserDto } from './update-user.dto';
+import { GenderDto, UpdateUserDto } from '@contracts/user/dto/user/update-user.dto';
 
 describe('UpdateUserDto', () => {
    it('should validate valid update fields successfully', async () => {

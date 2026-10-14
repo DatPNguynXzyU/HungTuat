@@ -3,7 +3,7 @@ import { Ctx, EventPattern, MessagePattern, Payload, RmqContext } from '@nestjs/
 import { RmqService } from '@common';
 import { NOTIFICATION_EVENTS } from '@contracts/notification';
 import { USER_PATTERNS } from '@contracts/user';
-import { AuthService } from './auth.service';
+import { AuthService } from '@user/modules/authentication/auth.service';
 
 @Controller()
 export class AuthController {

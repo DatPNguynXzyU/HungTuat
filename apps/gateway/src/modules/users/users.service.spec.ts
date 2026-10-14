@@ -125,6 +125,26 @@ describe('UsersService', () => {
       expect(result).toEqual({ id: 'auth-user-1', displayName: 'Self Name' });
    });
 
+   it('should send upsert_user_profile message via upsertUser', async () => {
+      mockUserClient.send.mockReturnValue(of({ id: 'u1', displayName: 'Upserted Name' }));
+
+      const result = await service.upsertUser('u1', { displayName: 'Upserted Name' }, mockUser);
+      expect(mockUserClient.send).toHaveBeenCalledWith(
+         { cmd: USER_PATTERNS.UPSERT_USER_PROFILE },
+         {
+            data: { id: 'u1', displayName: 'Upserted Name' },
+            user: {
+               userId: mockUser.sub,
+               email: mockUser.email,
+               roles: mockUser.roles,
+               permissions: [],
+               sessionId: mockUser.jti,
+            },
+         },
+      );
+      expect(result).toEqual({ id: 'u1', displayName: 'Upserted Name' });
+   });
+
    it('should send get_date_of_birth message with userId', async () => {
       const mockDob = { userId: 'u1', dateOfBirth: '1995-06-15T00:00:00.000Z', age: 31 };
       mockUserClient.send.mockReturnValue(of(mockDob));

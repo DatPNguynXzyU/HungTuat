@@ -4,7 +4,7 @@ import { BadRequestException, checkOwnershipOrAdmin, RmqService } from '@common'
 import { USER_ERROR_CODES, USER_PATTERNS } from '@contracts/user';
 import type { IServiceMessage } from '@common';
 import { FollowStatus } from '@user/core/database/entities';
-import { FollowService } from './follow.service';
+import { FollowService } from '@user/modules/follow/follow.service';
 
 @Controller()
 export class FollowController {

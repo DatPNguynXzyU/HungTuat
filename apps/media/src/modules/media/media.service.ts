@@ -10,12 +10,11 @@ import {
    type ConfirmUploadDto,
    type MediaResponseDto,
    type UploadUrlResponseDto,
-   type MediaProvider,
 } from '@contracts/media';
 import { NotFoundException, ForbiddenException, checkOwnershipOrAdmin, type IServiceMessage } from '@common';
 import type { Media } from '@media/prisma-client';
 import { StorageStrategyFactory } from '@media/storage';
-import { MEDIA_REPOSITORY, type IMediaRepository } from './repositories/media.repository.interface';
+import { MEDIA_REPOSITORY, type IMediaRepository } from '@media/modules/media/repositories/media.repository.interface';
 
 @Injectable()
 export class MediaService {

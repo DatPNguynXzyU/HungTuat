@@ -1,7 +1,7 @@
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
-import { CreateUserProfileDto } from './create-user-profile.dto';
-import { GenderDto } from './update-user.dto';
+import { CreateUserProfileDto } from '@contracts/user/dto/user/create-user-profile.dto';
+import { GenderDto } from '@contracts/user/dto/user/update-user.dto';
 
 describe('CreateUserProfileDto', () => {
    it('should pass validation with valid data', async () => {

@@ -1,4 +1,4 @@
-import type { MediaProvider, MediaStatus, MediaType } from '../constants/media.constant';
+import type { MediaProvider, MediaStatus, MediaType } from '@contracts/media/constants/media.constant';
 
 export interface IMedia {
    id: string;

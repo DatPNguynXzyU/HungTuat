@@ -7,7 +7,7 @@ import type { IDeviceInfo } from '@common';
 import { SESSION_REPOSITORY } from '@auth/repositories';
 import { AuditLogService, AUTH_METRICS_SERVICE, TOKEN_LIFECYCLE_SERVICE } from '@auth/services/infrastructure';
 import type { SessionEntity } from '@auth/entities/session.entity';
-import { SessionManagementService } from './session-management.service';
+import { SessionManagementService } from '@auth/services/domain/session-management.service';
 
 describe('SessionManagementService', () => {
    let service: SessionManagementService;

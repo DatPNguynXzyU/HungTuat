@@ -9,6 +9,7 @@ import { USER_REPOSITORY, UserRepository, USER_PROFILE_REPOSITORY, UserProfileRe
 import { FOLLOW_REPOSITORY, FollowRepository, UserGraphSyncService } from '@user/modules/follow';
 import { UsernameBloomFilterService } from '@user/modules/authentication';
 import { GraphSchemaService, GraphFollowRepository } from '@user/graph';
+import { UserResolverService } from '@user/shared/services';
 
 @Module({
    imports: [
@@ -42,6 +43,7 @@ import { GraphSchemaService, GraphFollowRepository } from '@user/graph';
    ],
    providers: [
       UsernameBloomFilterService,
+      UserResolverService,
       {
          provide: USER_PROFILE_REPOSITORY,
          useClass: UserProfileRepository,
@@ -66,6 +68,7 @@ import { GraphSchemaService, GraphFollowRepository } from '@user/graph';
       FollowModule,
       SearchModule,
       AuthenticationModule,
+      UserResolverService,
       USER_PROFILE_REPOSITORY,
       UserProfileRepository,
       USER_REPOSITORY,

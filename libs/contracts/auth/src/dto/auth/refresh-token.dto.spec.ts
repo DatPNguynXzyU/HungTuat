@@ -1,5 +1,5 @@
 import { validate } from 'class-validator';
-import { RefreshTokenDto } from './refresh-token.dto';
+import { RefreshTokenDto } from '@contracts/auth/dto/auth/refresh-token.dto';
 
 describe('RefreshTokenDto', () => {
    it('should validate with refreshToken', async () => {

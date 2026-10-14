@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { USER_SUGGESTION_REASONS, type UserSuggestionReason } from '@contracts/user/constants';
 
 export class UserSuggestionQueryDto {
    @ApiPropertyOptional({
@@ -53,9 +54,9 @@ export class UserSuggestionItemDto {
    isFollower!: boolean;
 
    @ApiProperty({
-      example: 'mutual_friends',
+      example: USER_SUGGESTION_REASONS.MUTUAL_FRIENDS,
       description: 'Reason for the suggestion (e.g. mutual_friends or popular)',
-      enum: ['mutual_friends', 'popular'],
+      enum: [USER_SUGGESTION_REASONS.MUTUAL_FRIENDS, USER_SUGGESTION_REASONS.POPULAR],
    })
-   reason!: 'mutual_friends' | 'popular';
+   reason!: UserSuggestionReason;
 }

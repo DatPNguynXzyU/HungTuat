@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RmqService } from '@common';
-import { FollowController } from './follow.controller';
-import { FollowService } from './follow.service';
+import { FollowController } from '@user/modules/follow/follow.controller';
+import { FollowService } from '@user/modules/follow/follow.service';
 
 describe('FollowController', () => {
    let controller: FollowController;

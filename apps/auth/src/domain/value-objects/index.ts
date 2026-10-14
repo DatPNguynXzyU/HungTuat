@@ -1,3 +1,3 @@
-export * from './email.vo';
-export * from './password.vo';
-export * from './verification-token.vo';
+export * from '@auth/domain/value-objects/email.vo';
+export * from '@auth/domain/value-objects/password.vo';
+export * from '@auth/domain/value-objects/verification-token.vo';

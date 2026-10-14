@@ -1,1 +1,1 @@
-export * from './result';
+export * from '@common/domain/value-objects/result';

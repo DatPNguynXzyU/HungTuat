@@ -1,4 +1,4 @@
-import { PasswordChangeSaga } from './password-change.saga';
+import { PasswordChangeSaga } from '@auth/sagas/password-change.saga';
 
 describe('PasswordChangeSaga', () => {
    let saga: PasswordChangeSaga;

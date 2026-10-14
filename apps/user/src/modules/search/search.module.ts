@@ -6,9 +6,10 @@ import {
    USER_PROFILE_REPOSITORY,
 } from '@user/modules/profile/repositories/user-profile.repository';
 import { FollowRepository, FOLLOW_REPOSITORY } from '@user/modules/follow/repositories/follow.repository';
-import { UserIndexListener } from './listeners/user-index.listener';
-import { UserSearchService } from './user-search.service';
-import { SearchController } from './search.controller';
+import { UserIndexListener } from '@user/modules/search/listeners/user-index.listener';
+import { UserSearchService } from '@user/modules/search/user-search.service';
+import { SearchController } from '@user/modules/search/search.controller';
+import { UserResolverService } from '@user/shared/services';
 
 @Module({
    imports: [
@@ -21,6 +22,7 @@ import { SearchController } from './search.controller';
    providers: [
       UserIndexListener,
       UserSearchService,
+      UserResolverService,
       UserProfileRepository,
       {
          provide: USER_PROFILE_REPOSITORY,

@@ -6,6 +6,7 @@
       "deleteOutDir": true,
       "webpack": true,
       "builder": "swc",
+      "webpackConfigPath": "webpack.config.cjs",
       "tsConfigPath": "apps/gateway/tsconfig.app.json"
    },
    "monorepo": true,

@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from './auth.service';
+import { AuthService } from '@user/modules/authentication/auth.service';
 import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories/user-profile.repository';
+import { UserResolverService } from '@user/shared/services';
 import { ProfileService } from '@user/modules/profile/profile.service';
-import { UsernameBloomFilterService } from './services/username-bloom-filter.service';
-import { EmailValidatorService } from './services/email-validator.service';
+import { UsernameBloomFilterService } from '@user/modules/authentication/services/username-bloom-filter.service';
+import { EmailValidatorService } from '@user/modules/authentication/services/email-validator.service';
 import { UserEntity, UserStatus } from '@user/core/database/entities';
 
 describe('AuthService', () => {
@@ -32,6 +33,7 @@ describe('AuthService', () => {
       const module: TestingModule = await Test.createTestingModule({
          providers: [
             AuthService,
+            UserResolverService,
             {
                provide: USER_PROFILE_REPOSITORY,
                useValue: mockUserProfileRepository,

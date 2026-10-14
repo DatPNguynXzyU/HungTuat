@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UUID_V7_REGEX } from '@common';
+import { AUTH_AGGREGATES, AUTH_OUTBOX_EVENTS } from '@contracts/auth';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import { OutboxRepository } from '@auth/outbox/repositories/outbox.repository';
 
@@ -108,8 +109,8 @@ describe('OutboxRepository', () => {
             passwordHash: 'hashed_password',
          },
          {
-            aggregateType: 'ACCOUNT',
-            eventType: 'USER_REGISTERED',
+            aggregateType: AUTH_AGGREGATES.ACCOUNT,
+            eventType: AUTH_OUTBOX_EVENTS.USER_REGISTERED,
             payload: { email: 'test@example.com' },
          },
       );

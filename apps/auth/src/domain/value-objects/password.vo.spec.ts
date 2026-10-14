@@ -1,5 +1,5 @@
 import type { IPasswordHasher } from '@auth/services/infrastructure';
-import { Password } from './password.vo';
+import { Password } from '@auth/domain/value-objects/password.vo';
 
 describe('Password Value Object', () => {
    describe('create', () => {
