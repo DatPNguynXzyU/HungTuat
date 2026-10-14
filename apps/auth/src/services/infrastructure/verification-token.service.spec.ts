@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import { REDIS_TTL, RedisService } from '@common';
-import { AuthRedisKeys } from '@auth/constants';
+import { RedisService } from '@common';
+import { AUTH_REDIS_TTL, AuthRedisKeys } from '@auth/constants';
 import { VERIFICATION_TOKEN_PREFIX, VerificationTokenService } from './verification-token.service';
 
 describe('VerificationTokenService', () => {
@@ -39,7 +39,7 @@ describe('VerificationTokenService', () => {
          expect(mockRedisService.set).toHaveBeenCalledWith(
             AuthRedisKeys.verificationToken(token),
             email,
-            REDIS_TTL.OTP_VERIFICATION_TOKEN,
+            AUTH_REDIS_TTL.OTP_VERIFICATION_TOKEN,
          );
       });
 

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { RedisModule, RmqModule, SERVICES, NebulaModule, CloudinaryModule } from '@common';
+import { RedisModule, RmqModule, SERVICES, NebulaModule } from '@common';
 import { UserConfigModule, UserLoggerModule, PrismaModule, OutboxModule } from '@user/core';
 import { ProfileModule } from '@user/modules/profile';
 import { FollowModule } from '@user/modules/follow';
@@ -21,7 +21,9 @@ import { GraphSchemaService, GraphFollowRepository } from '@user/graph';
 
       // External
       NebulaModule.forRoot(),
-      CloudinaryModule.forRoot(),
+      RmqModule.register({
+         name: SERVICES.MEDIA_SERVICE,
+      }),
       RmqModule.register({
          name: SERVICES.NOTIFICATION_SERVICE,
       }),

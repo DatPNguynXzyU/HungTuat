@@ -22,117 +22,48 @@
       "strictBindCallApply": true,
       "noFallthroughCasesInSwitch": true,
       "paths": {
-         "@/*": [
-            "apps/gateway/src/*"
-         ],
-         "@gateway/*": [
-            "apps/gateway/src/*"
-         ],
-         "@auth/*": [
-            "apps/auth/src/*"
-         ],
-         "@auth/prisma-client": [
-            "apps/auth/src/generated/prisma-client"
-         ],
-         "@auth/prisma-client/*": [
-            "apps/auth/src/generated/prisma-client/*"
-         ],
-         "@user/*": [
-            "apps/user/src/*"
-         ],
-         "@user/prisma-client": [
-            "apps/user/src/generated/prisma-client"
-         ],
-         "@user/prisma-client/*": [
-            "apps/user/src/generated/prisma-client/*"
-         ],
-         "@common": [
-            "libs/common/src"
-         ],
-         "@common/*": [
-            "libs/common/src/*"
-         ],
-         "@app/common": [
-            "libs/common/src"
-         ],
-         "@app/common/*": [
-            "libs/common/src/*"
-         ],
-         "@contracts/auth": [
-            "libs/contracts/auth/src"
-         ],
-         "@contracts/auth/*": [
-            "libs/contracts/auth/src/*"
-         ],
-         "@contracts/user": [
-            "libs/contracts/user/src"
-         ],
-         "@contracts/user/*": [
-            "libs/contracts/user/src/*"
-         ],
-         "@contracts/notification": [
-            "libs/contracts/notification/src"
-         ],
-         "@contracts/notification/*": [
-            "libs/contracts/notification/src/*"
-         ],
-         "@contracts/search": [
-            "libs/contracts/search/src"
-         ],
-         "@contracts/search/*": [
-            "libs/contracts/search/src/*"
-         ],
-         "@notification/*": [
-            "apps/notification/src/*"
-         ],
-         "@notification/prisma-client": [
-            "apps/notification/src/generated/prisma-client"
-         ],
-         "@notification/prisma-client/*": [
-            "apps/notification/src/generated/prisma-client/*"
-         ],
-         "@post/*": [
-            "apps/post/src/*"
-         ],
-         "@post/prisma-client": [
-            "apps/post/src/generated/prisma-client"
-         ],
-         "@post/prisma-client/*": [
-            "apps/post/src/generated/prisma-client/*"
-         ],
-         "@search/*": [
-            "apps/search/src/*"
-         ],
-         "@user/core/*": [
-            "apps/user/src/core/*"
-         ],
-         "@user/modules/*": [
-            "apps/user/src/modules/*"
-         ],
-         "@user/shared/*": [
-            "apps/user/src/shared/*"
-         ],
-         "@user/core": [
-            "apps/user/src/core/index.ts"
-         ],
-         "@user/modules": [
-            "apps/user/src/modules/index.ts"
-         ],
-         "@user/shared": [
-            "apps/user/src/shared/index.ts"
-         ],
-         "@auth/services/domain": [
-            "apps/auth/src/services/domain/index.ts"
-         ],
-         "@auth/services/domain/*": [
-            "apps/auth/src/services/domain/*"
-         ],
-         "@auth/services/infrastructure": [
-            "apps/auth/src/services/infrastructure/index.ts"
-         ],
-         "@auth/services/infrastructure/*": [
-            "apps/auth/src/services/infrastructure/*"
-         ]
+         "@/*": ["apps/gateway/src/*"],
+         "@gateway/*": ["apps/gateway/src/*"],
+         "@auth/*": ["apps/auth/src/*"],
+         "@auth/prisma-client": ["apps/auth/src/generated/prisma-client"],
+         "@auth/prisma-client/*": ["apps/auth/src/generated/prisma-client/*"],
+         "@user/*": ["apps/user/src/*"],
+         "@user/prisma-client": ["apps/user/src/generated/prisma-client"],
+         "@user/prisma-client/*": ["apps/user/src/generated/prisma-client/*"],
+         "@common": ["libs/common/src"],
+         "@common/*": ["libs/common/src/*"],
+         "@app/common": ["libs/common/src"],
+         "@app/common/*": ["libs/common/src/*"],
+         "@contracts/auth": ["libs/contracts/auth/src"],
+         "@contracts/auth/*": ["libs/contracts/auth/src/*"],
+         "@contracts/user": ["libs/contracts/user/src"],
+         "@contracts/user/*": ["libs/contracts/user/src/*"],
+         "@contracts/notification": ["libs/contracts/notification/src"],
+         "@contracts/notification/*": ["libs/contracts/notification/src/*"],
+         "@contracts/search": ["libs/contracts/search/src"],
+         "@contracts/search/*": ["libs/contracts/search/src/*"],
+         "@contracts/media": ["libs/contracts/media/src"],
+         "@contracts/media/*": ["libs/contracts/media/src/*"],
+         "@media/*": ["apps/media/src/*"],
+         "@media/prisma-client": ["apps/media/src/generated/prisma-client"],
+         "@media/prisma-client/*": ["apps/media/src/generated/prisma-client/*"],
+         "@notification/*": ["apps/notification/src/*"],
+         "@notification/prisma-client": ["apps/notification/src/generated/prisma-client"],
+         "@notification/prisma-client/*": ["apps/notification/src/generated/prisma-client/*"],
+         "@post/*": ["apps/post/src/*"],
+         "@post/prisma-client": ["apps/post/src/generated/prisma-client"],
+         "@post/prisma-client/*": ["apps/post/src/generated/prisma-client/*"],
+         "@search/*": ["apps/search/src/*"],
+         "@user/core/*": ["apps/user/src/core/*"],
+         "@user/modules/*": ["apps/user/src/modules/*"],
+         "@user/shared/*": ["apps/user/src/shared/*"],
+         "@user/core": ["apps/user/src/core/index.ts"],
+         "@user/modules": ["apps/user/src/modules/index.ts"],
+         "@user/shared": ["apps/user/src/shared/index.ts"],
+         "@auth/services/domain": ["apps/auth/src/services/domain/index.ts"],
+         "@auth/services/domain/*": ["apps/auth/src/services/domain/*"],
+         "@auth/services/infrastructure": ["apps/auth/src/services/infrastructure/index.ts"],
+         "@auth/services/infrastructure/*": ["apps/auth/src/services/infrastructure/*"]
       },
       "jsx": "react-jsx"
    }

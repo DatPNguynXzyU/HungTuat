@@ -1,14 +1,7 @@
 import type { IJwtService, ITokenLifecycleService } from '@auth/services/infrastructure';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-   DEFAULT_ROLES,
-   NotFoundException,
-   RbacCacheService,
-   REDIS_TTL,
-   RedisService,
-   UnauthorizedException,
-} from '@common';
+import { DEFAULT_ROLES, NotFoundException, RbacCacheService, RedisService, UnauthorizedException } from '@common';
 import type { IDeviceInfo } from '@common';
 import {
    AUDIT_ACTIONS,
@@ -39,6 +32,7 @@ import {
    AUTH_METRICS_REASONS,
    AUTH_METRICS_STATUS,
    AUTH_METRICS_TOKEN_OPERATIONS,
+   AUTH_REDIS_TTL,
    AuthMetricReason,
    AuthRedisKeys,
 } from '@auth/constants';
@@ -111,12 +105,12 @@ export class AuthCoreService {
    ): Promise<void> {
       const attempts = await this.redisService.incr(failedAttemptsKey);
       if (attempts === 1) {
-         await this.redisService.expire(failedAttemptsKey, REDIS_TTL.AUTH_FAILED_ATTEMPTS);
+         await this.redisService.expire(failedAttemptsKey, AUTH_REDIS_TTL.AUTH_FAILED_ATTEMPTS);
       }
 
       if (attempts >= AUTH_SECURITY.MAX_FAILED_LOGIN_ATTEMPTS) {
          await Promise.all([
-            this.redisService.set(lockoutKey, 'locked', REDIS_TTL.AUTH_LOCKOUT),
+            this.redisService.set(lockoutKey, 'locked', AUTH_REDIS_TTL.AUTH_LOCKOUT),
             this.redisService.del(failedAttemptsKey),
          ]);
          this.logger.warn(
@@ -137,7 +131,7 @@ export class AuthCoreService {
             city: deviceInfo?.city,
             country: deviceInfo?.country,
             reason: AUTH_ERROR_CODES.ACCOUNT_LOCKED_TEMPORARILY,
-            metadata: { consecutiveFailedAttempts: attempts, lockoutSeconds: REDIS_TTL.AUTH_LOCKOUT },
+            metadata: { consecutiveFailedAttempts: attempts, lockoutSeconds: AUTH_REDIS_TTL.AUTH_LOCKOUT },
          });
 
          this.eventEmitter.emit(
@@ -147,7 +141,7 @@ export class AuthCoreService {
                email,
                ip,
                AUTH_ERROR_CODES.ACCOUNT_LOCKED_TEMPORARILY,
-               new Date(Date.now() + REDIS_TTL.AUTH_LOCKOUT * 1000),
+               new Date(Date.now() + AUTH_REDIS_TTL.AUTH_LOCKOUT * 1000),
                attempts,
             ),
          );
@@ -156,8 +150,8 @@ export class AuthCoreService {
             params: {
                email,
                ip,
-               remainingSeconds: REDIS_TTL.AUTH_LOCKOUT,
-               remainingMinutes: Math.ceil(REDIS_TTL.AUTH_LOCKOUT / 60),
+               remainingSeconds: AUTH_REDIS_TTL.AUTH_LOCKOUT,
+               remainingMinutes: Math.ceil(AUTH_REDIS_TTL.AUTH_LOCKOUT / 60),
             },
          });
       }
@@ -180,7 +174,7 @@ export class AuthCoreService {
          if (isLocked) {
             const remainingSeconds = await this.redisService.ttl(lockoutKey);
             const remainingMinutes = Math.max(
-               Math.ceil((remainingSeconds > 0 ? remainingSeconds : REDIS_TTL.AUTH_LOCKOUT) / 60),
+               Math.ceil((remainingSeconds > 0 ? remainingSeconds : AUTH_REDIS_TTL.AUTH_LOCKOUT) / 60),
                1,
             );
 
@@ -209,7 +203,7 @@ export class AuthCoreService {
                params: {
                   email: normalizedEmail,
                   ip: clientIp,
-                  remainingSeconds: remainingSeconds > 0 ? remainingSeconds : REDIS_TTL.AUTH_LOCKOUT,
+                  remainingSeconds: remainingSeconds > 0 ? remainingSeconds : AUTH_REDIS_TTL.AUTH_LOCKOUT,
                   remainingMinutes,
                },
             });

@@ -28,22 +28,11 @@ export const sharedEnvSchema = z.object({
    RABBIT_MQ_ORDER_SERVICE_QUEUE: z.string().default('order_queue'),
    RABBIT_MQ_NOTIFICATION_SERVICE_QUEUE: z.string().default('notification_queue'),
    RABBIT_MQ_SEARCH_SERVICE_QUEUE: z.string().default('search_queue'),
+   RABBIT_MQ_MEDIA_SERVICE_QUEUE: z.string().default('media_queue'),
 
    REDIS_HOST: z.string().default('localhost'),
    REDIS_PORT: z.coerce.number().int().positive().default(6379),
    REDIS_PASSWORD: z.string().optional(),
-   NEBULA_GRAPHD_HOST: z.string().default('localhost'),
-   NEBULA_GRAPHD_PORT: z.coerce.number().int().positive().default(9669),
-   NEBULA_USERNAME: z.string().default('root'),
-   NEBULA_PASSWORD: z.string().default('nebula'),
-   NEBULA_SPACE: z.string().default('social_graph'),
-   ELASTICSEARCH_NODE: z.string().default('http://localhost:9200'),
-   ELASTICSEARCH_PORT: z.coerce.number().int().positive().default(9200),
-   ELASTICSEARCH_USERNAME: z.string().optional(),
-   ELASTICSEARCH_PASSWORD: z.string().optional(),
-   CLOUDINARY_CLOUD_NAME: z.string().optional(),
-   CLOUDINARY_API_KEY: z.string().optional(),
-   CLOUDINARY_API_SECRET: z.string().optional(),
 });
 
 export type SharedEnvConfig = z.infer<typeof sharedEnvSchema>;

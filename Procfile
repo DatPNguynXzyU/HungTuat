@@ -2,4 +2,6 @@ auth: pnpm run start:nowatch:auth
 user: pnpm run start:nowatch:user
 post: pnpm run start:nowatch:post
 notification: pnpm run start:nowatch:notification
+search: pnpm run start:nowatch:search
+media: pnpm run start:nowatch:media
 gateway: pnpm run start:nowatch:gateway

@@ -9,15 +9,7 @@ import { CommonConfigService } from '@common/config/common-config.service';
       ConfigModule.forRoot({
          isGlobal: true,
          validate: validateSharedEnv,
-         envFilePath: [
-            process.env.ENV_FILE || '',
-            'apps/gateway/.env.local',
-            'apps/gateway/.env',
-            'apps/auth/.env.local',
-            'apps/auth/.env',
-            '.env.local',
-            '.env',
-         ].filter(Boolean),
+         envFilePath: [process.env.ENV_FILE || '', '.env.local', '.env'].filter(Boolean),
       }),
    ],
    providers: [CommonConfigService],

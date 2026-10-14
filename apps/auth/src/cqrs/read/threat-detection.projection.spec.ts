@@ -1,9 +1,8 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { ThreatDetectionMetricsProjection } from '@auth/cqrs/read/threat-detection.projection';
 import { RedisService } from '@common/redis/redis.service';
-import { REDIS_TTL } from '@common';
 import { AUDIT_ACTIONS, AUTH_ERROR_CODES } from '@contracts/auth';
-import { AuthRedisKeys, THREAT_METRICS_FIELDS } from '@auth/constants/auth-redis-keys.constant';
+import { AUTH_REDIS_TTL, AuthRedisKeys, THREAT_METRICS_FIELDS } from '@auth/constants/auth-redis-keys.constant';
 import type { CreateAuditLogData } from '@auth/entities/audit-log.entity';
 
 describe('ThreatDetectionMetricsProjection', () => {
@@ -68,7 +67,7 @@ describe('ThreatDetectionMetricsProjection', () => {
          const expectedMetricsKey = AuthRedisKeys.threatMetrics(date);
          const expectedIpsKey = AuthRedisKeys.threatIps(date);
          const expectedReasonsKey = AuthRedisKeys.threatReasons(date);
-         const expectedTtl = REDIS_TTL.THREAT_METRICS;
+         const expectedTtl = AUTH_REDIS_TTL.THREAT_METRICS;
 
          expect(mockPipeline.hincrby).toHaveBeenCalledWith(
             expectedMetricsKey,

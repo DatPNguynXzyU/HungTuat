@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommonConfigService, ENV_KEYS } from '@common';
-import { UserEnvConfig } from '@user/core/config/user-env.schema';
+import { UserEnvConfig, USER_ENV_KEYS } from '@user/core/config/user-env.schema';
 
 @Injectable()
 export class UserConfigService extends CommonConfigService {
@@ -16,6 +16,16 @@ export class UserConfigService extends CommonConfigService {
    get database() {
       return {
          url: this.databaseUrl,
+      };
+   }
+
+   get nebula() {
+      return {
+         graphAddress: this.configService.get(USER_ENV_KEYS.NEBULA_GRAPHD_HOST, { infer: true }) || '127.0.0.1',
+         graphPort: Number(this.configService.get(USER_ENV_KEYS.NEBULA_GRAPHD_PORT, { infer: true }) || 9669),
+         username: this.configService.get(USER_ENV_KEYS.NEBULA_USERNAME, { infer: true }) || 'root',
+         password: this.configService.get(USER_ENV_KEYS.NEBULA_PASSWORD, { infer: true }) || 'nebula',
+         space: this.configService.get(USER_ENV_KEYS.NEBULA_SPACE, { infer: true }) || 'omni_users',
       };
    }
 }

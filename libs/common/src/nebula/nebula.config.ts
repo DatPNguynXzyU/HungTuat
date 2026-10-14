@@ -1,4 +1,14 @@
-import { CommonConfigService } from '@common/config/common-config.service';
+import { z } from 'zod';
+
+export const nebulaEnvSchema = z.object({
+   NEBULA_GRAPHD_HOST: z.string().default('127.0.0.1'),
+   NEBULA_GRAPHD_PORT: z.coerce.number().int().positive().default(9669),
+   NEBULA_USERNAME: z.string().default('root'),
+   NEBULA_PASSWORD: z.string().default('nebula'),
+   NEBULA_SPACE: z.string().default('omni_users'),
+});
+
+export type NebulaEnvConfig = z.infer<typeof nebulaEnvSchema>;
 
 export interface NebulaConfig {
    graphAddress: string;
@@ -8,13 +18,32 @@ export interface NebulaConfig {
    space: string;
 }
 
-export const getNebulaConfig = (configService?: CommonConfigService): NebulaConfig => {
-   const nebulaConfig = configService?.nebula;
+export interface NebulaConfigProvider {
+   nebula?: Partial<NebulaConfig>;
+}
+
+export const validateNebulaConfig = (rawEnv: Record<string, unknown> = process.env): NebulaConfig => {
+   const parsed = nebulaEnvSchema.parse(rawEnv);
    return {
-      graphAddress: nebulaConfig?.graphAddress || process.env.NEBULA_GRAPHD_HOST || '127.0.0.1',
-      graphPort: Number(nebulaConfig?.graphPort || process.env.NEBULA_GRAPHD_PORT || 9669),
-      username: nebulaConfig?.username || process.env.NEBULA_USERNAME || 'root',
-      password: nebulaConfig?.password || process.env.NEBULA_PASSWORD || 'nebula',
-      space: nebulaConfig?.space || process.env.NEBULA_SPACE || 'omni_users',
+      graphAddress: parsed.NEBULA_GRAPHD_HOST,
+      graphPort: parsed.NEBULA_GRAPHD_PORT,
+      username: parsed.NEBULA_USERNAME,
+      password: parsed.NEBULA_PASSWORD,
+      space: parsed.NEBULA_SPACE,
+   };
+};
+
+export const getNebulaConfig = (configService?: NebulaConfigProvider): NebulaConfig => {
+   const defaultNebula = validateNebulaConfig();
+   const nebulaConfig = configService?.nebula;
+   if (!nebulaConfig) {
+      return defaultNebula;
+   }
+   return {
+      graphAddress: nebulaConfig.graphAddress || defaultNebula.graphAddress,
+      graphPort: Number(nebulaConfig.graphPort || defaultNebula.graphPort),
+      username: nebulaConfig.username || defaultNebula.username,
+      password: nebulaConfig.password || defaultNebula.password,
+      space: nebulaConfig.space || defaultNebula.space,
    };
 };

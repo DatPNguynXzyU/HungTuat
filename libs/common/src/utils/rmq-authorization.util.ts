@@ -61,25 +61,29 @@ export function checkOwnership(message: IServiceMessage<unknown>, resourceOwnerI
    }
 }
 
+import { DEFAULT_ROLES } from '@common/constants/roles.constant';
+
 /**
  * Check if user is the owner OR has admin role
  * @param message - ServiceMessage containing user context
  * @param resourceOwnerId - ID of the resource owner
- * @param adminRole - Admin role name (default: 'admin')
+ * @param adminRoles - Admin role name or list of roles (default: [DEFAULT_ROLES.ADMIN, DEFAULT_ROLES.SUPER_ADMIN, 'admin'])
  * @throws UnauthorizedException if user context is missing
  * @throws ForbiddenException if user is not the owner and not admin
  */
 export function checkOwnershipOrAdmin(
    message: IServiceMessage<unknown>,
    resourceOwnerId: string,
-   adminRole = 'admin',
+   adminRoles: string | string[] = [DEFAULT_ROLES.ADMIN, DEFAULT_ROLES.SUPER_ADMIN, 'admin'],
 ): void {
    if (!message.user) {
       throw new UnauthorizedException(COMMON_ERROR_CODES.MISSING_USER_CONTEXT);
    }
 
    const isOwner = message.user.userId === resourceOwnerId;
-   const isAdmin = message.user.roles.includes(adminRole);
+   const rolesToCheck = Array.isArray(adminRoles) ? adminRoles : [adminRoles];
+   const userRoles = message.user.roles || [];
+   const isAdmin = rolesToCheck.some((role) => userRoles.includes(role));
 
    if (!isOwner && !isAdmin) {
       throw new ForbiddenException(COMMON_ERROR_CODES.NOT_OWNER_OR_ADMIN);

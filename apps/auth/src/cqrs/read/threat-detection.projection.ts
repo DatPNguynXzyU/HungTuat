@@ -1,9 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { REDIS_TTL } from '@common';
 import { AUDIT_ACTIONS } from '@contracts/auth';
 import { RedisService } from '@common/redis/redis.service';
-import { AuthRedisKeys, THREAT_METRICS_FIELDS } from '@auth/constants/auth-redis-keys.constant';
+import { AUTH_REDIS_TTL, AuthRedisKeys, THREAT_METRICS_FIELDS } from '@auth/constants/auth-redis-keys.constant';
 import { AUDIT_CQRS_EVENTS } from '@auth/cqrs/constants/audit-cqrs.constant';
 import type { CreateAuditLogData } from '@auth/entities/audit-log.entity';
 
@@ -38,7 +37,7 @@ export class ThreatDetectionMetricsProjection {
          const metricsKey = AuthRedisKeys.threatMetrics(today);
          const ipsKey = AuthRedisKeys.threatIps(today);
          const reasonsKey = AuthRedisKeys.threatReasons(today);
-         const ttl = REDIS_TTL.THREAT_METRICS;
+         const ttl = AUTH_REDIS_TTL.THREAT_METRICS;
 
          const client = this.redisService.getClient();
 

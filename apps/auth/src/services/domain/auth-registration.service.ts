@@ -5,7 +5,6 @@ import {
    BadRequestException,
    DEFAULT_ROLES,
    OtpUtil,
-   REDIS_TTL,
    RedisService,
    SERVICES,
    RbacCacheService,
@@ -46,6 +45,7 @@ import {
    AUTH_METRICS_OTP_TYPES,
    AUTH_METRICS_REASONS,
    AUTH_METRICS_STATUS,
+   AUTH_REDIS_TTL,
    type AuthMetricReason,
    AuthRedisKeys,
 } from '@auth/constants';
@@ -174,15 +174,15 @@ export class AuthRegistrationService {
          const attemptsKey = AuthRedisKeys.registerOtpAttempts(normalizedEmail);
 
          await Promise.all([
-            this.redisService.set(otpKey, otp, REDIS_TTL.OTP_REGISTER),
-            this.redisService.set(cooldownKey, '1', REDIS_TTL.OTP_REGISTER_COOLDOWN),
+            this.redisService.set(otpKey, otp, AUTH_REDIS_TTL.OTP_REGISTER),
+            this.redisService.set(cooldownKey, '1', AUTH_REDIS_TTL.OTP_REGISTER_COOLDOWN),
             this.redisService.del(attemptsKey),
          ]);
 
          this.notificationClient.emit(NOTIFICATION_PATTERNS.SEND_OTP_EMAIL, {
             to: normalizedEmail,
             otpCode: otp,
-            expiresInMinutes: Math.round(REDIS_TTL.OTP_REGISTER / 60),
+            expiresInMinutes: Math.round(AUTH_REDIS_TTL.OTP_REGISTER / 60),
          });
 
          await this.auditLogService.record({
@@ -212,8 +212,8 @@ export class AuthRegistrationService {
          return {
             success: true,
             message: AUTH_RESPONSE_MESSAGES.SEND_OTP_SUCCESS,
-            cooldownSeconds: REDIS_TTL.OTP_REGISTER_COOLDOWN,
-            expiresInMinutes: Math.round(REDIS_TTL.OTP_REGISTER / 60),
+            cooldownSeconds: AUTH_REDIS_TTL.OTP_REGISTER_COOLDOWN,
+            expiresInMinutes: Math.round(AUTH_REDIS_TTL.OTP_REGISTER / 60),
          };
       } catch (error) {
          this.metricsService.recordOtpOperation(
@@ -255,7 +255,7 @@ export class AuthRegistrationService {
 
          const attempts = await this.redisService.incr(attemptsKey);
          if (attempts === 1) {
-            await this.redisService.expire(attemptsKey, REDIS_TTL.OTP_REGISTER);
+            await this.redisService.expire(attemptsKey, AUTH_REDIS_TTL.OTP_REGISTER);
          }
 
          if (attempts > AUTH_SECURITY.MAX_OTP_ATTEMPTS) {
@@ -287,7 +287,7 @@ export class AuthRegistrationService {
 
          const verificationToken = await this.verificationTokenService.generate(
             normalizedEmail,
-            REDIS_TTL.OTP_VERIFICATION_TOKEN,
+            AUTH_REDIS_TTL.OTP_VERIFICATION_TOKEN,
          );
 
          await Promise.all([this.redisService.del(otpKey), this.redisService.del(attemptsKey)]);
@@ -313,7 +313,7 @@ export class AuthRegistrationService {
          return {
             success: true,
             verificationToken,
-            expiresInSeconds: REDIS_TTL.OTP_VERIFICATION_TOKEN,
+            expiresInSeconds: AUTH_REDIS_TTL.OTP_VERIFICATION_TOKEN,
          };
       } catch (error) {
          this.metricsService.recordOtpOperation(

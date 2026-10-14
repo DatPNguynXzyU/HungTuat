@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommonConfigService, ENV_KEYS } from '@common';
-import { AuthEnvConfig } from '@auth/config/auth-env.schema';
+import { AuthEnvConfig, AUTH_ENV_KEYS } from '@auth/config/auth-env.schema';
 
 @Injectable()
 export class AuthConfigService extends CommonConfigService {
@@ -43,9 +43,13 @@ export class AuthConfigService extends CommonConfigService {
 
    get argon2Secret(): string {
       return (
-         this.configService.get(ENV_KEYS.ARGON2_SECRET, { infer: true }) ||
-         this.configService.get(ENV_KEYS.ARGON2_SALT, { infer: true }) ||
+         this.configService.get(AUTH_ENV_KEYS.ARGON2_SECRET, { infer: true }) ||
+         this.configService.get(AUTH_ENV_KEYS.ARGON2_SALT, { infer: true }) ||
          'e0c4b72d523ecbe77e9ddde48f96042c0e4cc8fe596f35809446125fa0714002'
       );
+   }
+
+   get port(): number {
+      return this.configService.get(AUTH_ENV_KEYS.PORT, { infer: true });
    }
 }

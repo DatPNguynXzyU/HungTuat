@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { BloomFilterService, REDIS_TTL, RedisService } from '@common';
-import { AuthRedisKeys } from '@auth/constants';
+import { BloomFilterService, RedisService } from '@common';
+import { AUTH_REDIS_TTL, AuthRedisKeys } from '@auth/constants';
 import { ACCOUNT_REPOSITORY, type IAccountRepository } from '@auth/repositories';
 
 @Injectable()
@@ -50,7 +50,7 @@ export class EmailBloomFilterService implements OnModuleInit {
          await this.bloomFilterService.addBatch(AuthRedisKeys.bloomEmail(), normalizedEmails);
       }
 
-      await this.redisService.set(initKey, '1', REDIS_TTL.BLOOM_INITIALIZED);
+      await this.redisService.set(initKey, '1', AUTH_REDIS_TTL.BLOOM_INITIALIZED);
       this.logger.log(`Synchronized ${emails.length} emails into Bloom Filter`);
       return emails.length;
    }

@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import { PrismaClient } from '@user/prisma-client';
-import { UserConfigService } from '@user/core/config';
+import { UserConfigService, validateUserEnv } from '@user/core/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
@@ -9,7 +9,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
    private pool?: Pool;
 
    constructor(@Optional() configService?: UserConfigService) {
-      const url = configService?.database?.url || process.env.DATABASE_URL;
+      const url = configService?.database?.url || validateUserEnv(process.env).DATABASE_URL;
       let pool: Pool | undefined;
       let adapter: PrismaPg | undefined;
 

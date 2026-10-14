@@ -43,6 +43,10 @@ start-post:
 start-search:
 	pnpm run start:search
 
+.PHONY: start-media
+start-media:
+	pnpm run start:media
+
 .PHONY: build
 build:
 	pnpm -r run build

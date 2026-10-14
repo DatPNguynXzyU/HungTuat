@@ -14,6 +14,5 @@ export * from './redis';
 export * from './rmq';
 export * from './utils';
 export * from './nebula';
-export * from './cloudinary';
 export * from './types';
 export * from './domain';

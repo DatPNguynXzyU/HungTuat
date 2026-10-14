@@ -1,7 +1,7 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
-import { REDIS_KEY_PREFIX, REDIS_TTL } from '@common/constants/redis.constant';
+import { RbacRedisKeys, RBAC_REDIS_TTL } from '@common/constants/redis.constant';
 import { RedisService } from '@common/redis/redis.service';
 import { RBAC_INTERNAL_PATTERNS, SERVICES } from '@common/rmq/rmq.constants';
 
@@ -23,17 +23,17 @@ export class RbacCacheService {
    ) {}
 
    async getRole(roleCode: string): Promise<CachedRoleData | null> {
-      const key = `${REDIS_KEY_PREFIX.ROLE}${roleCode}`;
+      const key = RbacRedisKeys.role(roleCode);
       return this.redisService.getJson<CachedRoleData>(key);
    }
 
    async setRole(
       roleCode: string,
       roleData: CachedRoleData,
-      ttlSeconds: number = REDIS_TTL.DEFAULT_ROLE,
+      ttlSeconds: number = RBAC_REDIS_TTL.DEFAULT_ROLE,
    ): Promise<void> {
-      const roleKey = `${REDIS_KEY_PREFIX.ROLE}${roleCode}`;
-      const permissionsKey = `${REDIS_KEY_PREFIX.ROLE_PERMISSIONS}${roleCode}`;
+      const roleKey = RbacRedisKeys.role(roleCode);
+      const permissionsKey = RbacRedisKeys.rolePermissions(roleCode);
 
       await Promise.all([
          this.redisService.setJson(roleKey, roleData, ttlSeconds),
@@ -42,7 +42,7 @@ export class RbacCacheService {
    }
 
    async getRolePermissions(roleCode: string): Promise<string[] | null> {
-      const permissionsKey = `${REDIS_KEY_PREFIX.ROLE_PERMISSIONS}${roleCode}`;
+      const permissionsKey = RbacRedisKeys.rolePermissions(roleCode);
       const cachedPermissions = await this.redisService.getJson<string[]>(permissionsKey);
       if (cachedPermissions) {
          return cachedPermissions;
@@ -76,15 +76,15 @@ export class RbacCacheService {
    async setRolePermissions(
       roleCode: string,
       permissions: string[],
-      ttlSeconds: number = REDIS_TTL.ROLE_PERMISSIONS,
+      ttlSeconds: number = RBAC_REDIS_TTL.ROLE_PERMISSIONS,
    ): Promise<void> {
-      const permissionsKey = `${REDIS_KEY_PREFIX.ROLE_PERMISSIONS}${roleCode}`;
+      const permissionsKey = RbacRedisKeys.rolePermissions(roleCode);
       await this.redisService.setJson(permissionsKey, permissions, ttlSeconds);
    }
 
    async invalidateRole(roleCode: string): Promise<void> {
-      const roleKey = `${REDIS_KEY_PREFIX.ROLE}${roleCode}`;
-      const permissionsKey = `${REDIS_KEY_PREFIX.ROLE_PERMISSIONS}${roleCode}`;
+      const roleKey = RbacRedisKeys.role(roleCode);
+      const permissionsKey = RbacRedisKeys.rolePermissions(roleCode);
 
       await Promise.all([this.redisService.del(roleKey), this.redisService.del(permissionsKey)]);
    }

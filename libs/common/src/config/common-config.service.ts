@@ -146,30 +146,4 @@ export class CommonConfigService {
          },
       };
    }
-
-   get nebula() {
-      return {
-         graphAddress: this.configService.get(ENV_KEYS.NEBULA_GRAPHD_HOST, { infer: true }),
-         graphPort: this.configService.get(ENV_KEYS.NEBULA_GRAPHD_PORT, { infer: true }),
-         username: this.configService.get(ENV_KEYS.NEBULA_USERNAME, { infer: true }),
-         password: this.configService.get(ENV_KEYS.NEBULA_PASSWORD, { infer: true }),
-         space: this.configService.get(ENV_KEYS.NEBULA_SPACE, { infer: true }),
-      };
-   }
-
-   get elasticsearch() {
-      return {
-         node: this.configService.get(ENV_KEYS.ELASTICSEARCH_NODE, { infer: true }) || 'http://localhost:9200',
-         username: this.configService.get(ENV_KEYS.ELASTICSEARCH_USERNAME, { infer: true }),
-         password: this.configService.get(ENV_KEYS.ELASTICSEARCH_PASSWORD, { infer: true }),
-      };
-   }
-
-   get cloudinary() {
-      return {
-         cloudName: this.configService.get(ENV_KEYS.CLOUDINARY_CLOUD_NAME, { infer: true }) || '',
-         apiKey: this.configService.get(ENV_KEYS.CLOUDINARY_API_KEY, { infer: true }) || '',
-         apiSecret: this.configService.get(ENV_KEYS.CLOUDINARY_API_SECRET, { infer: true }) || '',
-      };
-   }
 }

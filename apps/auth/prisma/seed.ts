@@ -2,9 +2,11 @@ import { PrismaClient } from '@auth/prisma-client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import Redis from 'ioredis';
-import { DEFAULT_ROLES, PERMISSIONS, REDIS_KEY_PREFIX, REDIS_TTL } from '@common/constants';
+import { DEFAULT_ROLES, PERMISSIONS, RbacRedisKeys, RBAC_REDIS_TTL } from '@common/constants';
+import { validateAuthEnv } from '@auth/config/auth-env.schema';
 
-const connectionString = process.env.DATABASE_URL;
+const env = validateAuthEnv(process.env);
+const connectionString = env.DATABASE_URL;
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
@@ -233,9 +235,9 @@ async function seedRedis(
       permissions: string[];
    }>,
 ): Promise<void> {
-   const redisHost = process.env.REDIS_HOST || 'localhost';
-   const redisPort = Number(process.env.REDIS_PORT) || 6379;
-   const redisPassword = process.env.REDIS_PASSWORD || undefined;
+   const redisHost = env.REDIS_HOST;
+   const redisPort = env.REDIS_PORT;
+   const redisPassword = env.REDIS_PASSWORD || undefined;
 
    let redis: Redis | null = null;
    try {
@@ -249,10 +251,10 @@ async function seedRedis(
       await redis.connect();
 
       for (const role of rolesWithPermissions) {
-         const roleKey = `${REDIS_KEY_PREFIX.ROLE}${role.code}`;
-         const permissionsKey = `${REDIS_KEY_PREFIX.ROLE_PERMISSIONS}${role.code}`;
-         await redis.set(roleKey, JSON.stringify(role), 'EX', REDIS_TTL.DEFAULT_ROLE);
-         await redis.set(permissionsKey, JSON.stringify(role.permissions), 'EX', REDIS_TTL.ROLE_PERMISSIONS);
+         const roleKey = RbacRedisKeys.role(role.code);
+         const permissionsKey = RbacRedisKeys.rolePermissions(role.code);
+         await redis.set(roleKey, JSON.stringify(role), 'EX', RBAC_REDIS_TTL.DEFAULT_ROLE);
+         await redis.set(permissionsKey, JSON.stringify(role.permissions), 'EX', RBAC_REDIS_TTL.ROLE_PERMISSIONS);
       }
       console.log('✔ Redis cache pre-warmed successfully for all roles and permissions');
    } catch (err: unknown) {

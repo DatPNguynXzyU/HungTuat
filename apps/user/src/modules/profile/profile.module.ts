@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { CloudinaryModule, RmqModule, SERVICES } from '@common';
+import { RmqModule, SERVICES } from '@common';
 import { PrismaModule } from '@user/core/database/prisma';
 import { OutboxModule } from '@user/core/outbox';
 import {
@@ -16,7 +16,9 @@ import { GraphSchemaService, GraphFollowRepository } from '@user/graph';
    imports: [
       PrismaModule,
       OutboxModule,
-      CloudinaryModule.forRoot(),
+      RmqModule.register({
+         name: SERVICES.MEDIA_SERVICE,
+      }),
       RmqModule.register({
          name: SERVICES.SEARCH_SERVICE,
       }),

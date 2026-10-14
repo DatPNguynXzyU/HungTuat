@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { AllRpcExceptionsFilter, RmqService, SERVICES } from '@common';
 import { AuthModule } from '@auth/auth.module';
+import { AuthConfigService } from '@auth/config';
 
 async function bootstrap() {
    const app = await NestFactory.create(AuthModule, {
@@ -9,6 +10,7 @@ async function bootstrap() {
    });
    const logger = app.get(Logger);
    const rmqService = app.get(RmqService);
+   const configService = app.get(AuthConfigService);
 
    app.useLogger(logger);
 
@@ -18,7 +20,7 @@ async function bootstrap() {
 
    await app.startAllMicroservices();
 
-   const port = process.env.PORT || process.env.AUTH_PORT || 3001;
+   const port = configService.port;
    await app.listen(port);
 
    logger.log(`Auth Microservice is listening on RabbitMQ queue: ${SERVICES.AUTH_SERVICE}`);

@@ -23,14 +23,14 @@ export class GatewayConfigService extends CommonConfigService {
    }
 
    get corsOrigins(): string[] {
-      const raw = this.configService.get(ENV_KEYS.CORS_ORIGINS, { infer: true });
-      if (!raw) {
+      const raw: unknown = this.configService.get(ENV_KEYS.CORS_ORIGINS);
+      if (!raw || typeof raw !== 'string') {
          return [];
       }
       return raw
          .split(',')
-         .map((origin) => origin.trim())
-         .filter(Boolean);
+         .map((origin: string) => origin.trim())
+         .filter((origin: string) => Boolean(origin));
    }
 
    get cookieMaxAge(): number {

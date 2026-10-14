@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { BloomFilterService, REDIS_KEY_PREFIX, REDIS_TTL, RedisService } from '@common';
+import { BloomFilterService, RedisService } from '@common';
+import { UserRedisKeys, USER_REDIS_TTL } from '@user/constants/user-redis.constant';
 import {
    UserProfileRepository,
    USER_PROFILE_REPOSITORY,
@@ -29,7 +30,7 @@ export class UsernameBloomFilterService implements OnModuleInit {
     * Initialize the username bloom filter from database if not already initialized in Redis.
     */
    async initFilter(): Promise<void> {
-      const initKey = `${REDIS_KEY_PREFIX.BLOOM_INITIALIZED}username`;
+      const initKey = UserRedisKeys.bloomInitialized('username');
       const isInitialized = await this.redisService.get(initKey);
 
       if (isInitialized) {
@@ -44,15 +45,15 @@ export class UsernameBloomFilterService implements OnModuleInit {
     * Synchronize all existing usernames from database into the Bloom Filter.
     */
    async syncFromDatabase(): Promise<number> {
-      const initKey = `${REDIS_KEY_PREFIX.BLOOM_INITIALIZED}username`;
+      const initKey = UserRedisKeys.bloomInitialized('username');
       const usernames = await this.userRepository.findAllUsernames();
 
       if (usernames.length > 0) {
          const normalizedUsernames = usernames.map((username) => username.toLowerCase().trim());
-         await this.bloomFilterService.addBatch(REDIS_KEY_PREFIX.BLOOM_USERNAME, normalizedUsernames);
+         await this.bloomFilterService.addBatch(UserRedisKeys.bloomUsername(), normalizedUsernames);
       }
 
-      await this.redisService.set(initKey, '1', REDIS_TTL.BLOOM_INITIALIZED);
+      await this.redisService.set(initKey, '1', USER_REDIS_TTL.BLOOM_INITIALIZED);
       this.logger.log(`Synchronized ${usernames.length} usernames into Bloom Filter`);
       return usernames.length;
    }
@@ -64,7 +65,7 @@ export class UsernameBloomFilterService implements OnModuleInit {
     */
    async mightContain(username: string): Promise<boolean> {
       const normalized = username.toLowerCase().trim();
-      return this.bloomFilterService.contains(REDIS_KEY_PREFIX.BLOOM_USERNAME, normalized);
+      return this.bloomFilterService.contains(UserRedisKeys.bloomUsername(), normalized);
    }
 
    /**
@@ -72,7 +73,7 @@ export class UsernameBloomFilterService implements OnModuleInit {
     */
    async addUsername(username: string): Promise<void> {
       const normalized = username.toLowerCase().trim();
-      await this.bloomFilterService.add(REDIS_KEY_PREFIX.BLOOM_USERNAME, normalized);
+      await this.bloomFilterService.add(UserRedisKeys.bloomUsername(), normalized);
    }
 
    /**
@@ -86,6 +87,7 @@ export class UsernameBloomFilterService implements OnModuleInit {
          return true;
       }
 
+      // False positive check: Query DB to confirm
       const existingUser = await this.userRepository.findByUsername(normalized);
       return !existingUser;
    }

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BloomFilterService, REDIS_KEY_PREFIX, RedisService } from '@common';
+import { BloomFilterService, RedisService } from '@common';
+import { UserRedisKeys } from '@user/constants/user-redis.constant';
 import { USER_PROFILE_REPOSITORY } from '@user/modules/profile';
 import { UsernameBloomFilterService } from '@user/modules/authentication';
 
@@ -63,7 +64,7 @@ describe('UsernameBloomFilterService', () => {
       await service.onModuleInit();
 
       expect(userRepository.findAllUsernames).toHaveBeenCalled();
-      expect(bloomFilterService.addBatch).toHaveBeenCalledWith(REDIS_KEY_PREFIX.BLOOM_USERNAME, ['admin', 'john_doe']);
+      expect(bloomFilterService.addBatch).toHaveBeenCalledWith(UserRedisKeys.bloomUsername(), ['admin', 'john_doe']);
       expect(redisService.set).toHaveBeenCalled();
    });
 
@@ -79,7 +80,7 @@ describe('UsernameBloomFilterService', () => {
    it('should add username with normalized lowercase trim', async () => {
       await service.addUsername('  John_Doe  ');
 
-      expect(bloomFilterService.add).toHaveBeenCalledWith(REDIS_KEY_PREFIX.BLOOM_USERNAME, 'john_doe');
+      expect(bloomFilterService.add).toHaveBeenCalledWith(UserRedisKeys.bloomUsername(), 'john_doe');
    });
 
    it('should check if username might exist via bloom filter', async () => {
@@ -87,36 +88,39 @@ describe('UsernameBloomFilterService', () => {
 
       const exists = await service.mightContain('john_doe');
 
-      expect(bloomFilterService.contains).toHaveBeenCalledWith(REDIS_KEY_PREFIX.BLOOM_USERNAME, 'john_doe');
+      expect(bloomFilterService.contains).toHaveBeenCalledWith(UserRedisKeys.bloomUsername(), 'john_doe');
       expect(exists).toBe(true);
    });
 
    it('should return true for isUsernameAvailable when bloom filter returns false without querying DB', async () => {
       (bloomFilterService.contains as jest.Mock).mockResolvedValue(false);
 
-      const available = await service.isUsernameAvailable('brand_new_username');
+      const isAvailable = await service.isUsernameAvailable('unique_user_123');
 
-      expect(available).toBe(true);
+      expect(bloomFilterService.contains).toHaveBeenCalledWith(UserRedisKeys.bloomUsername(), 'unique_user_123');
       expect(userRepository.findByUsername).not.toHaveBeenCalled();
+      expect(isAvailable).toBe(true);
    });
 
-   it('should query DB when bloom filter returns true and return false if user exists', async () => {
-      (bloomFilterService.contains as jest.Mock).mockResolvedValue(true);
-      userRepository.findByUsername.mockResolvedValue({ id: 'user-1', username: 'taken_username' });
-
-      const available = await service.isUsernameAvailable('taken_username');
-
-      expect(available).toBe(false);
-      expect(userRepository.findByUsername).toHaveBeenCalledWith('taken_username');
-   });
-
-   it('should query DB when bloom filter returns true and return true if DB confirms it is a false positive', async () => {
+   it('should query DB when bloom filter returns true (false positive check)', async () => {
       (bloomFilterService.contains as jest.Mock).mockResolvedValue(true);
       userRepository.findByUsername.mockResolvedValue(null);
 
-      const available = await service.isUsernameAvailable('false_positive');
+      const isAvailable = await service.isUsernameAvailable('maybe_taken');
 
-      expect(available).toBe(true);
-      expect(userRepository.findByUsername).toHaveBeenCalledWith('false_positive');
+      expect(bloomFilterService.contains).toHaveBeenCalledWith(UserRedisKeys.bloomUsername(), 'maybe_taken');
+      expect(userRepository.findByUsername).toHaveBeenCalledWith('maybe_taken');
+      expect(isAvailable).toBe(true);
+   });
+
+   it('should return false for isUsernameAvailable when bloom filter returns true and DB confirms user exists', async () => {
+      (bloomFilterService.contains as jest.Mock).mockResolvedValue(true);
+      userRepository.findByUsername.mockResolvedValue({ id: 'user-1', username: 'taken_user' });
+
+      const isAvailable = await service.isUsernameAvailable('taken_user');
+
+      expect(bloomFilterService.contains).toHaveBeenCalledWith(UserRedisKeys.bloomUsername(), 'taken_user');
+      expect(userRepository.findByUsername).toHaveBeenCalledWith('taken_user');
+      expect(isAvailable).toBe(false);
    });
 });

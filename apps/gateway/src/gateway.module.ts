@@ -8,6 +8,7 @@ import { AuditLogsModule } from '@/modules/audit-logs/audit-logs.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { HealthModule } from '@/modules/health/health.module';
 import { UsersModule } from '@/modules/users/users.module';
+import { MediaModule } from '@/modules/media/media.module';
 
 @Module({
    imports: [
@@ -42,6 +43,7 @@ import { UsersModule } from '@/modules/users/users.module';
       AuthModule,
       UsersModule,
       AuditLogsModule,
+      MediaModule,
    ],
    controllers: [],
    providers: [

@@ -1,0 +1,47 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma-client"
+}
+
+enum MediaProvider {
+  CLOUDINARY
+  CLOUDFLARE_R2
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
+enum MediaStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+model Media {
+  id        String        @id @default(uuid()) @map("id")
+  userId    String        @map("user_id")
+  provider  MediaProvider @default(CLOUDINARY)
+  type      MediaType     @default(IMAGE)
+  url       String
+  key       String        @map("key")
+  mimeType  String        @map("mime_type")
+  size      Int           @default(0)
+  status    MediaStatus   @default(PENDING)
+  metadata  Json?         @map("metadata")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([provider])
+  @@index([status])
+  @@index([type])
+  @@map("media")
+}

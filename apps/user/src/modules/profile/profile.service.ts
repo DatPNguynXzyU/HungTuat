@@ -1,7 +1,15 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { CloudinaryService, ConflictException, NotFoundException, SERVICES } from '@common';
-import { USER_ERROR_CODES, USER_EVENTS, UserDateOfBirthResponseDto } from '@contracts/user';
+import { firstValueFrom } from 'rxjs';
+import { ConflictException, NotFoundException, SERVICES } from '@common';
+import {
+   MEDIA_PATTERNS,
+   MEDIA_TYPES,
+   MEDIA_FOLDERS,
+   formatAvatarFileName,
+   type MediaResponseDto,
+   type UploadUrlResponseDto,
+} from '@contracts/media';
 import { OutboxService } from '@user/core/outbox';
 import { UserEntity, Gender } from '@user/core/database/entities';
 import {
@@ -11,6 +19,7 @@ import {
 } from '@user/modules/profile/repositories/user-profile.repository';
 import { UsernameBloomFilterService } from '@user/modules/authentication';
 import { UserGraphSyncService } from '@user/modules/follow';
+import { USER_ERROR_CODES, USER_EVENTS, UserDateOfBirthResponseDto } from '@contracts/user';
 
 @Injectable()
 export class ProfileService {
@@ -19,7 +28,8 @@ export class ProfileService {
    constructor(
       @Inject(USER_PROFILE_REPOSITORY)
       private readonly userProfileRepository: UserProfileRepository,
-      private readonly cloudinaryService: CloudinaryService,
+      @Inject(SERVICES.MEDIA_SERVICE)
+      private readonly mediaClient: ClientProxy,
       private readonly outboxService: OutboxService,
       private readonly usernameBloomFilterService: UsernameBloomFilterService,
       private readonly userGraphSyncService: UserGraphSyncService,
@@ -298,37 +308,53 @@ export class ProfileService {
    ): Promise<{ avatarUrl: string; publicId: string; user: UserEntity }> {
       const user = await this.getUserById(id);
 
-      this.logger.log(`Uploading avatar to Cloudinary for user ${user.id}...`);
+      this.logger.log(`Uploading avatar via MEDIA_SERVICE for user ${user.id}...`);
       const formattedBase64 =
          mimeType && !base64Data.startsWith('data:') ? `data:${mimeType};base64,${base64Data}` : base64Data;
 
-      const uploadResult = await this.cloudinaryService.uploadBase64(formattedBase64, {
-         folder: 'omni/users/avatars',
-         public_id: `avatar_${user.id}_${Date.now()}`,
-         transformation: [
-            { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-            { quality: 'auto', fetch_format: 'auto' },
-         ],
-         tags: ['avatar', user.id, user.accountId],
-      });
+      const uploadResult = await firstValueFrom(
+         this.mediaClient.send<MediaResponseDto>(
+            { cmd: MEDIA_PATTERNS.UPLOAD_FILE },
+            {
+               data: {
+                  fileBase64: formattedBase64,
+                  fileName: formatAvatarFileName(user.id),
+                  mimeType: mimeType || 'image/jpeg',
+                  type: MEDIA_TYPES.IMAGE,
+                  folder: MEDIA_FOLDERS.AVATARS,
+               },
+               user: { userId: user.id },
+            },
+         ),
+      );
 
       const updatedUser = await this.updateUserProfile(user.id, {
-         avatar: uploadResult.secureUrl,
+         avatar: uploadResult.url,
       });
 
       return {
-         avatarUrl: uploadResult.secureUrl,
-         publicId: uploadResult.publicId,
+         avatarUrl: uploadResult.url,
+         publicId: uploadResult.key,
          user: updatedUser,
       };
    }
 
    async getAvatarUploadSignature(userId: string) {
       const user = await this.getUserById(userId);
-      return this.cloudinaryService.generateUploadSignature({
-         folder: 'omni/users/avatars',
-         tags: `avatar,${user.id},${user.accountId}`,
-      });
+      return firstValueFrom(
+         this.mediaClient.send<UploadUrlResponseDto>(
+            { cmd: MEDIA_PATTERNS.GET_UPLOAD_URL },
+            {
+               data: {
+                  fileName: formatAvatarFileName(user.id),
+                  mimeType: 'image/jpeg',
+                  type: MEDIA_TYPES.IMAGE,
+                  folder: MEDIA_FOLDERS.AVATARS,
+               },
+               user: { userId: user.id },
+            },
+         ),
+      );
    }
 
    private emitSearchIndexEvent(event: string, user: UserEntity): void {

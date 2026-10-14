@@ -2,7 +2,7 @@ import type { ITokenLifecycleService } from '@auth/services/infrastructure';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ClientProxy } from '@nestjs/microservices';
-import { BadRequestException, OtpUtil, REDIS_TTL, RedisService, SERVICES, UnauthorizedException } from '@common';
+import { BadRequestException, OtpUtil, RedisService, SERVICES, UnauthorizedException } from '@common';
 import type { IDeviceInfo } from '@common';
 import {
    AUDIT_ACTIONS,
@@ -22,6 +22,7 @@ import {
    AUTH_METRICS_OTP_OPERATIONS,
    AUTH_METRICS_OTP_TYPES,
    AUTH_METRICS_STATUS,
+   AUTH_REDIS_TTL,
    AuthRedisKeys,
 } from '@auth/constants';
 import {
@@ -126,7 +127,7 @@ export class PasswordManagementService {
       if (isCooldown) {
          const ttl = await this.redisService.ttl(cooldownKey);
          throw new BadRequestException(AUTH_ERROR_CODES.OTP_COOLDOWN_ACTIVE, {
-            params: { cooldownSeconds: ttl > 0 ? ttl : REDIS_TTL.OTP_CHANGE_PASSWORD_COOLDOWN },
+            params: { cooldownSeconds: ttl > 0 ? ttl : AUTH_REDIS_TTL.OTP_CHANGE_PASSWORD_COOLDOWN },
          });
       }
 
@@ -146,16 +147,16 @@ export class PasswordManagementService {
                newPasswordHash,
                logoutAll: Boolean(dto.logoutAll),
             },
-            REDIS_TTL.OTP_CHANGE_PASSWORD_EXPIRES,
+            AUTH_REDIS_TTL.OTP_CHANGE_PASSWORD_EXPIRES,
          ),
-         this.redisService.set(cooldownKey, '1', REDIS_TTL.OTP_CHANGE_PASSWORD_COOLDOWN),
+         this.redisService.set(cooldownKey, '1', AUTH_REDIS_TTL.OTP_CHANGE_PASSWORD_COOLDOWN),
          this.redisService.del(attemptsKey),
       ]);
 
       this.notificationClient.emit(NOTIFICATION_PATTERNS.SEND_CHANGE_PASSWORD_OTP_EMAIL, {
          to: normalizedEmail,
          otpCode: otp,
-         expiresInMinutes: Math.round(REDIS_TTL.OTP_CHANGE_PASSWORD_EXPIRES / 60),
+         expiresInMinutes: Math.round(AUTH_REDIS_TTL.OTP_CHANGE_PASSWORD_EXPIRES / 60),
       });
 
       await this.auditLogService.record({
@@ -186,8 +187,8 @@ export class PasswordManagementService {
       return {
          success: true,
          message: AUTH_RESPONSE_MESSAGES.SEND_CHANGE_PASSWORD_OTP_SUCCESS,
-         cooldownSeconds: REDIS_TTL.OTP_CHANGE_PASSWORD_COOLDOWN,
-         expiresInMinutes: Math.round(REDIS_TTL.OTP_CHANGE_PASSWORD_EXPIRES / 60),
+         cooldownSeconds: AUTH_REDIS_TTL.OTP_CHANGE_PASSWORD_COOLDOWN,
+         expiresInMinutes: Math.round(AUTH_REDIS_TTL.OTP_CHANGE_PASSWORD_EXPIRES / 60),
       };
    }
 
@@ -239,7 +240,7 @@ export class PasswordManagementService {
          );
          const attempts = await this.redisService.incr(attemptsKey);
          if (attempts === 1) {
-            await this.redisService.expire(attemptsKey, REDIS_TTL.OTP_CHANGE_PASSWORD_EXPIRES);
+            await this.redisService.expire(attemptsKey, AUTH_REDIS_TTL.OTP_CHANGE_PASSWORD_EXPIRES);
          }
 
          if (attempts >= AUTH_SECURITY.MAX_OTP_ATTEMPTS) {

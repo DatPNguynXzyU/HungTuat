@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { CommonConfigService } from '@common/config/common-config.service';
 import { AUTH_COOKIES, AUTH_ERROR_REASONS } from '@common/constants/jwt.constant';
-import { REDIS_KEY_PREFIX } from '@common/constants/redis.constant';
+import { AuthRevocationRedisKeys } from '@common/constants/redis.constant';
 import { IS_PUBLIC_KEY } from '@common/decorators/public.decorator';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
 import { UnauthorizedException } from '@common/exceptions/http.exceptions';
@@ -64,7 +64,7 @@ export class JwtAuthGuard implements CanActivate {
 
          if (this.redisService) {
             if (payload.jti) {
-               const revokedKey = `${REDIS_KEY_PREFIX.REVOKED_TOKEN}${payload.jti}`;
+               const revokedKey = AuthRevocationRedisKeys.revokedToken(payload.jti);
                const isBlacklisted = await this.redisService.get(revokedKey);
                if (isBlacklisted) {
                   throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
@@ -74,7 +74,7 @@ export class JwtAuthGuard implements CanActivate {
             }
 
             if (payload.sub) {
-               const userRevokedAtKey = `${REDIS_KEY_PREFIX.USER_REVOKED_AT}${payload.sub}`;
+               const userRevokedAtKey = AuthRevocationRedisKeys.accountRevokedAt(payload.sub);
                const revokedAt = await this.redisService.get(userRevokedAtKey);
                if (revokedAt && payload.iat) {
                   const revokedAtTimestamp = Number(revokedAt);

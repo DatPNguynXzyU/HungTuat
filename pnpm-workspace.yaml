@@ -1,4 +1,4 @@
 packages:
    - 'apps/*'
-   - 'libs/common/*'
+   - 'libs/common'
    - 'libs/contracts/*'

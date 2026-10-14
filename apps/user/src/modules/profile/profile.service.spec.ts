@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CloudinaryService, SERVICES } from '@common';
+import { of } from 'rxjs';
+import { SERVICES } from '@common';
 import { ProfileService } from '@user/modules/profile/profile.service';
 import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories/user-profile.repository';
 import { OutboxService } from '@user/core/outbox';
@@ -21,9 +22,8 @@ describe('ProfileService', () => {
       restore: jest.fn(),
    };
 
-   const mockCloudinaryService = {
-      uploadBase64: jest.fn(),
-      generateUploadSignature: jest.fn(),
+   const mockMediaClient = {
+      send: jest.fn().mockReturnValue(of({ url: 'https://cdn.example.com/avatar.jpg', key: 'key1' })),
    };
 
    const mockOutboxService = {
@@ -54,8 +54,8 @@ describe('ProfileService', () => {
                useValue: mockUserProfileRepository,
             },
             {
-               provide: CloudinaryService,
-               useValue: mockCloudinaryService,
+               provide: SERVICES.MEDIA_SERVICE,
+               useValue: mockMediaClient,
             },
             {
                provide: OutboxService,

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { REDIS_TTL, RedisService, uuidv7 } from '@common';
-import { AuthRedisKeys } from '@auth/constants';
+import { RedisService, uuidv7 } from '@common';
+import { AUTH_REDIS_TTL, AuthRedisKeys } from '@auth/constants';
 import type { IVerificationTokenService } from './token.service.interface';
 
 export const VERIFICATION_TOKEN_PREFIX = 'vtok_';
@@ -15,7 +15,7 @@ export class VerificationTokenService implements IVerificationTokenService {
     * @param ttl - Time-to-live in seconds (defaults to OTP_VERIFICATION_TOKEN TTL)
     * @returns Verification token string with prefix
     */
-   async generate(email: string, ttl: number = REDIS_TTL.OTP_VERIFICATION_TOKEN): Promise<string> {
+   async generate(email: string, ttl: number = AUTH_REDIS_TTL.OTP_VERIFICATION_TOKEN): Promise<string> {
       const verificationToken = `${VERIFICATION_TOKEN_PREFIX}${uuidv7().replace(/-/g, '')}`;
       const tokenKey = AuthRedisKeys.verificationToken(verificationToken);
 

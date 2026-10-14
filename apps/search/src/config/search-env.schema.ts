@@ -1,9 +1,21 @@
 import { z } from 'zod';
 import { sharedEnvSchema } from '@common';
 
+export const SEARCH_ENV_KEYS = {
+   SERVICE_NAME: 'SERVICE_NAME',
+   ELASTICSEARCH_NODE: 'ELASTICSEARCH_NODE',
+   ELASTICSEARCH_PORT: 'ELASTICSEARCH_PORT',
+   ELASTICSEARCH_USERNAME: 'ELASTICSEARCH_USERNAME',
+   ELASTICSEARCH_PASSWORD: 'ELASTICSEARCH_PASSWORD',
+   SEARCH_HTTP_PORT: 'SEARCH_HTTP_PORT',
+} as const;
+
+export type SearchEnvKey = (typeof SEARCH_ENV_KEYS)[keyof typeof SEARCH_ENV_KEYS];
+
 export const searchEnvSchema = sharedEnvSchema.extend({
    SERVICE_NAME: z.string().default('search-service'),
    ELASTICSEARCH_NODE: z.string().default('http://localhost:9200'),
+   ELASTICSEARCH_PORT: z.coerce.number().int().positive().default(9200),
    ELASTICSEARCH_USERNAME: z.string().optional(),
    ELASTICSEARCH_PASSWORD: z.string().optional(),
    SEARCH_HTTP_PORT: z.coerce.number().int().positive().default(3003),
