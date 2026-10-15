@@ -1,7 +1,7 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { BadRequestException, COMMON_ERROR_CODES, RetryQueueService } from '@common';
 import { FOLLOW_SAGA_TYPES, type FollowSagaType } from '@user/constants';
-import { GRAPH_FOLLOW_REPOSITORY, type IFollowGraphRepository } from '@user/modules/follow/repositories';
+import { GRAPH_FOLLOW_REPOSITORY, type IFollowGraphRepository } from '@user/repositories';
 import { UNIT_OF_WORK, type IUnitOfWork } from '@user/unit-of-work';
 import { FollowUserSaga, UnfollowUserSaga, AcceptFollowRequestSaga, RejectFollowRequestSaga } from '@user/sagas/follow';
 import type { IFollowSagaFactory } from '@user/factories/follow-saga.factory.interface';

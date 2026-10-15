@@ -11,7 +11,7 @@ import {
    type MediaResponseDto,
    type UploadUrlResponseDto,
 } from '@contracts/media';
-import { UserEntity, UserStatus } from '@user/core/database/entities';
+import { UserEntity, UserStatus } from '@user/entities';
 import { USER_DOMAIN_EVENTS } from '@user/domain';
 
 describe('ProfileAvatarService (Domain)', () => {

@@ -1,15 +1,71 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { COMMAND_BUS, CommandBus, type ICommandHandler } from '@common';
-import { ProfileModule } from '@user/modules/profile/profile.module';
-import { FollowModule } from '@user/modules/follow/follow.module';
-import { SearchModule } from '@user/modules/search/search.module';
-import { AuthenticationModule } from '@user/modules/authentication/auth.module';
+import { AppLogger, COMMAND_BUS, CommandBus, NebulaModule, RedisModule, type ICommandHandler } from '@common';
+import { PrismaModule } from '@user/prisma';
+import { OutboxModule } from '@user/outbox';
+import { UnitOfWorkModule } from '@user/unit-of-work';
+import { UserAdaptersModule } from '@user/adapters';
+import { UserDomainModule } from '@user/domain';
+import {
+   UserFactoriesModule,
+   FOLLOW_SAGA_FACTORY,
+   FollowSagaFactory,
+   PROFILE_VALIDATION_PIPELINE_FACTORY,
+   ProfileValidationPipelineFactory,
+} from '@user/factories';
 import { USER_COMMAND_HANDLERS } from '@user/commands';
+import {
+   UserCoreService,
+   ProfileService,
+   FollowService,
+   AuthService,
+   UserSearchService,
+   ProfileLifecycleService,
+   ProfileQueryService,
+   ProfileAvatarService,
+} from '@user/services/domain';
+import {
+   ProfileValidationPipeline,
+   ProfileIdentityHandler,
+   UsernameFormatHandler,
+   ProfileDetailsFormatHandler,
+   UsernameAvailabilityHandler,
+} from '@user/chains/profile-validation';
+import { FollowUserSaga, UnfollowUserSaga, AcceptFollowRequestSaga, RejectFollowRequestSaga } from '@user/sagas/follow';
+import {
+   UsernameBloomFilterService,
+   UserResolverService,
+   ProfileSyncService,
+   UserGraphSyncService,
+   UserMetricsService,
+   USER_METRICS_SERVICE,
+   type IUserMetricsService,
+   USER_GRAPH_SYNC_SERVICE,
+} from '@user/services/infrastructure';
+import { MetricsUserGraphSyncDecorator } from '@user/decorators';
+import { GraphSchemaService } from '@user/graph';
+import {
+   UserProfileRepository,
+   USER_PROFILE_REPOSITORY,
+   USER_REPOSITORY,
+   FollowRepository,
+   FOLLOW_REPOSITORY,
+   FollowGraphRepository,
+   GRAPH_FOLLOW_REPOSITORY,
+} from '@user/repositories';
 
 @Global()
 @Module({
-   imports: [ProfileModule, FollowModule, SearchModule, AuthenticationModule],
+   imports: [
+      PrismaModule,
+      OutboxModule,
+      UnitOfWorkModule,
+      UserAdaptersModule,
+      UserDomainModule,
+      UserFactoriesModule,
+      RedisModule,
+      NebulaModule.forRoot(),
+   ],
    providers: [
       CommandBus,
       {
@@ -17,8 +73,97 @@ import { USER_COMMAND_HANDLERS } from '@user/commands';
          useExisting: CommandBus,
       },
       ...USER_COMMAND_HANDLERS,
+
+      // Domain Services
+      UserCoreService,
+      ProfileService,
+      FollowService,
+      AuthService,
+      UserSearchService,
+      ProfileLifecycleService,
+      ProfileQueryService,
+      ProfileAvatarService,
+
+      // Chain of Responsibility Handlers & Pipeline
+      ProfileValidationPipeline,
+      ProfileIdentityHandler,
+      UsernameFormatHandler,
+      ProfileDetailsFormatHandler,
+      UsernameAvailabilityHandler,
+
+      // Sagas
+      FollowUserSaga,
+      UnfollowUserSaga,
+      AcceptFollowRequestSaga,
+      RejectFollowRequestSaga,
+
+      // Factory Providers
+      {
+         provide: FOLLOW_SAGA_FACTORY,
+         useClass: FollowSagaFactory,
+      },
+      {
+         provide: PROFILE_VALIDATION_PIPELINE_FACTORY,
+         useClass: ProfileValidationPipelineFactory,
+      },
+
+      // Infrastructure Services
+      UsernameBloomFilterService,
+      UserResolverService,
+      ProfileSyncService,
+      UserGraphSyncService,
+      GraphSchemaService,
+      UserMetricsService,
+      {
+         provide: USER_METRICS_SERVICE,
+         useExisting: UserMetricsService,
+      },
+      MetricsUserGraphSyncDecorator,
+      {
+         provide: USER_GRAPH_SYNC_SERVICE,
+         useFactory: (inner: UserGraphSyncService, metrics: IUserMetricsService, logger: AppLogger) =>
+            new MetricsUserGraphSyncDecorator(inner, metrics, logger),
+         inject: [UserGraphSyncService, USER_METRICS_SERVICE, AppLogger],
+      },
+
+      // Repositories
+      UserProfileRepository,
+      {
+         provide: USER_PROFILE_REPOSITORY,
+         useClass: UserProfileRepository,
+      },
+      {
+         provide: USER_REPOSITORY,
+         useExisting: USER_PROFILE_REPOSITORY,
+      },
+      FollowRepository,
+      {
+         provide: FOLLOW_REPOSITORY,
+         useClass: FollowRepository,
+      },
+      FollowGraphRepository,
+      {
+         provide: GRAPH_FOLLOW_REPOSITORY,
+         useClass: FollowGraphRepository,
+      },
    ],
-   exports: [CommandBus, COMMAND_BUS, ...USER_COMMAND_HANDLERS],
+   exports: [
+      CommandBus,
+      COMMAND_BUS,
+      ...USER_COMMAND_HANDLERS,
+      UserCoreService,
+      ProfileService,
+      FollowService,
+      AuthService,
+      UserSearchService,
+      ProfileLifecycleService,
+      ProfileQueryService,
+      ProfileAvatarService,
+      USER_PROFILE_REPOSITORY,
+      USER_REPOSITORY,
+      FOLLOW_REPOSITORY,
+      GRAPH_FOLLOW_REPOSITORY,
+   ],
 })
 export class UserCommandsModule implements OnModuleInit {
    constructor(

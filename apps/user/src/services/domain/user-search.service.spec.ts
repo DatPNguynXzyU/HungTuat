@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserSearchService } from '@user/services/domain/user-search.service';
-import { FOLLOW_REPOSITORY } from '@user/modules/follow/repositories/follow.repository';
+import { FOLLOW_REPOSITORY } from '@user/repositories/follow.repository';
 import { UserResolverService } from '@user/services/infrastructure/user-resolver.service';
 import { SEARCH_ADAPTER, type ISearchAdapter } from '@user/adapters/search/search.adapter.interface';
 

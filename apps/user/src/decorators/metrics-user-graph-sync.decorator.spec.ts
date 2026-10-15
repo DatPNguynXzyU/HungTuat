@@ -1,5 +1,5 @@
 import { AppLogger } from '@common';
-import { UserEntity } from '@user/core/database/entities';
+import { UserEntity } from '@user/entities';
 import { USER_METRICS_GRAPH_OPERATIONS, USER_METRICS_STATUS } from '@user/constants';
 import type { IUserGraphSyncService } from '@user/services/infrastructure/user-graph-sync.interface';
 import type { IUserMetricsService } from '@user/services/infrastructure/user-metrics.interface';

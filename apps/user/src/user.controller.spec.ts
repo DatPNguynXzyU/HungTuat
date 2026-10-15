@@ -3,7 +3,7 @@ import { RmqContext } from '@nestjs/microservices';
 import { CommandBus, RmqService } from '@common';
 import { UserController } from '@user/user.controller';
 import { UserCoreService } from '@user/services/domain/user-core.service';
-import { FollowStatus, UserEntity, UserStatus } from '@user/core/database/entities';
+import { FollowStatus, UserEntity, UserStatus } from '@user/entities';
 
 describe('UserController', () => {
    let controller: UserController;

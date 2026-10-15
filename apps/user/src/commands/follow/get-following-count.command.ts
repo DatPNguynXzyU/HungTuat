@@ -1,5 +1,5 @@
 import { Command } from '@common';
-import type { FollowStatus } from '@user/core/database/entities';
+import type { FollowStatus } from '@user/entities';
 
 export class GetFollowingCountCommand extends Command<{ count: number }> {
    constructor(

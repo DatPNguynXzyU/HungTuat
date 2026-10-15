@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { BloomFilterService, RedisService } from '@common';
 import { UserRedisKeys, USER_REDIS_TTL } from '@user/constants/user-redis.constant';
-import { USER_PROFILE_REPOSITORY, type IUserProfileRepository } from '@user/modules/profile/repositories';
+import { USER_PROFILE_REPOSITORY, type IUserProfileRepository } from '@user/repositories';
 import type { IUsernameBloomFilterService } from '@user/services/infrastructure/username-bloom-filter.interface';
 
 @Injectable()

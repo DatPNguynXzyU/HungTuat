@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Specification } from '@common';
 import { USER_ERROR_CODES } from '@contracts/user';
-import { UserStatus } from '@user/core/database/entities';
+import { UserStatus } from '@user/entities';
 
 export interface IUserStatusCandidate {
    status?: UserStatus | null;

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { UserSearchResultItemDto, UserSearchResponseDto } from '@contracts/user';
-import { FOLLOW_REPOSITORY, type IFollowRepository } from '@user/modules/follow/repositories';
+import { FOLLOW_REPOSITORY, type IFollowRepository } from '@user/repositories';
 import { UserResolverService } from '@user/services/infrastructure/user-resolver.service';
 import { SEARCH_ADAPTER, type ISearchAdapter } from '@user/adapters/search';
 import { UserSearchResultItemBuilder } from '@user/builders';

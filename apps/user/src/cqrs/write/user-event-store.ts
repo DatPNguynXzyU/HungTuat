@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { uuidv7, AuditSanitizerUtil } from '@common';
-import { PrismaService } from '@user/core/database/prisma/prisma.service';
+import { PrismaService } from '@user/prisma/prisma.service';
 import { Prisma, type UserEventStream } from '@user/prisma-client';
 import { USER_CQRS_EVENTS } from '@user/cqrs/constants/user-cqrs.constant';
 import type { AppendUserEventDto, UserEventMetadata, UserStoredEvent } from '@user/cqrs/write/user-event.interface';

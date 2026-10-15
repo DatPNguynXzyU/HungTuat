@@ -1,6 +1,6 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { AppLogger } from '@common';
-import type { UserEntity } from '@user/core/database/entities';
+import type { UserEntity } from '@user/entities';
 import { USER_METRICS_GRAPH_OPERATIONS, USER_METRICS_LOG_MESSAGES, USER_METRICS_STATUS } from '@user/constants';
 import type { IUserGraphSyncService } from '@user/services/infrastructure/user-graph-sync.interface';
 import { USER_METRICS_SERVICE, type IUserMetricsService } from '@user/services/infrastructure/user-metrics.interface';

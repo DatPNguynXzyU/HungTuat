@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BloomFilterService, RedisService } from '@common';
 import { UserRedisKeys } from '@user/constants/user-redis.constant';
-import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories/user-profile.repository';
+import { USER_PROFILE_REPOSITORY } from '@user/repositories/user-profile.repository';
 import { UsernameBloomFilterService } from '@user/services/infrastructure/username-bloom-filter.service';
 
 describe('UsernameBloomFilterService (Infrastructure)', () => {

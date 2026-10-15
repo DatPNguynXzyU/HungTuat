@@ -1,5 +1,5 @@
 import { Command, type IServiceMessage } from '@common';
-import type { UserEntity } from '@user/core/database/entities';
+import type { UserEntity } from '@user/entities';
 
 export interface UploadAvatarResult {
    avatarUrl: string;

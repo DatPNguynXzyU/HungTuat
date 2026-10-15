@@ -6,6 +6,8 @@ import type {
    RejectFollowRequestSaga,
 } from '@user/sagas/follow';
 
+export const FOLLOW_SAGA_FACTORY = 'FOLLOW_SAGA_FACTORY';
+
 export interface IFollowSagaFactory {
    createFollowUserSaga(): FollowUserSaga;
    createUnfollowUserSaga(): UnfollowUserSaga;

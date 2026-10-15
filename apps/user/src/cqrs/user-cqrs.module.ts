@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { RedisModule } from '@common';
-import { PrismaModule } from '@user/core';
+import { PrismaModule } from '@user/prisma';
 import {
    USER_ACTIVITY_PROJECTION,
    USER_EVENT_STORE,

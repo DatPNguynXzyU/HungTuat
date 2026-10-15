@@ -3,9 +3,9 @@ import { ConflictException, NotFoundException } from '@common';
 import { ProfileLifecycleService } from '@user/services/domain/profile-lifecycle.service';
 import { ProfileQueryService } from '@user/services/domain/profile-query.service';
 import { ProfileSyncService } from '@user/services/infrastructure/profile-sync.service';
-import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories/user-profile.repository';
+import { USER_PROFILE_REPOSITORY } from '@user/repositories/user-profile.repository';
 import { UsernameBloomFilterService } from '@user/services/infrastructure/username-bloom-filter.service';
-import { UserEntity, UserStatus } from '@user/core/database/entities';
+import { UserEntity, UserStatus } from '@user/entities';
 
 describe('ProfileLifecycleService (Domain)', () => {
    let service: ProfileLifecycleService;

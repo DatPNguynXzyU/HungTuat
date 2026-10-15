@@ -6,7 +6,7 @@ import {
    UserSettingsEntity,
    UserStatus,
    type UserEntityInput,
-} from '@user/core/database/entities';
+} from '@user/entities';
 import { USER_BUILDER_ERRORS } from '@user/constants';
 import type {
    User as PrismaUser,

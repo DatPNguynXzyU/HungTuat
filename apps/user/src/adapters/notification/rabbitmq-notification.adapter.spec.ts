@@ -3,7 +3,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { of, throwError } from 'rxjs';
 import { SERVICES } from '@common';
 import { NOTIFICATION_PATTERNS } from '@contracts/notification';
-import { FollowStatus } from '@user/core/database/entities';
+import { FollowStatus } from '@user/entities';
 import { RabbitMqNotificationAdapter } from '@user/adapters/notification/rabbitmq-notification.adapter';
 import type {
    FollowAcceptedNotificationData,

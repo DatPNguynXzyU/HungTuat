@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppLogger, RetryQueueService } from '@common';
-import { UserEntity } from '@user/core/database/entities';
-import { GRAPH_FOLLOW_REPOSITORY, type IFollowGraphRepository } from '@user/modules/follow/repositories';
+import { UserEntity } from '@user/entities';
+import { GRAPH_FOLLOW_REPOSITORY, type IFollowGraphRepository } from '@user/repositories';
 import { UserGraphSyncService } from '@user/services/infrastructure/user-graph-sync.service';
 
 describe('UserGraphSyncService (Infrastructure)', () => {

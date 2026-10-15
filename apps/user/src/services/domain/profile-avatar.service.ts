@@ -1,7 +1,7 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { UploadUrlResponseDto } from '@contracts/media';
-import { UserEntity } from '@user/core/database/entities';
+import { UserEntity } from '@user/entities';
 import { USER_DOMAIN_EVENTS } from '@user/domain';
 import { USER_DOMAIN_EVENT_FACTORY } from '@user/constants';
 import { UserDomainEventFactory, type IUserDomainEventFactory } from '@user/factories';

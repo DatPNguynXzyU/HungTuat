@@ -1,8 +1,8 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RetryQueueService } from '@common';
-import { OutboxService } from '@user/core/outbox';
-import { UserEntity } from '@user/core/database/entities';
+import { OutboxService } from '@user/outbox';
+import { UserEntity } from '@user/entities';
 import { UsernameBloomFilterService } from '@user/services/infrastructure/username-bloom-filter.service';
 import { UserGraphSyncService } from '@user/services/infrastructure/user-graph-sync.service';
 import { SEARCH_ADAPTER, type ISearchAdapter } from '@user/adapters/search';
@@ -10,7 +10,7 @@ import { USER_AGGREGATES, USER_EVENTS, USER_OUTBOX_EVENTS, USER_RETRY_QUEUES } f
 import { USER_DOMAIN_EVENTS } from '@user/domain';
 import { USER_DOMAIN_EVENT_FACTORY } from '@user/constants';
 import { UserDomainEventFactory, type IUserDomainEventFactory } from '@user/factories';
-import type { UpdateUserData } from '@user/modules/profile/repositories/user-profile.repository';
+import type { UpdateUserData } from '@user/repositories/user-profile.repository';
 
 /**
  * ProfileSyncService coordinates cross-cutting synchronization concerns:

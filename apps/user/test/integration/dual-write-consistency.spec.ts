@@ -1,15 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppLogger, RetryQueueService } from '@common';
 import { USER_OUTBOX_EVENTS, USER_RETRY_QUEUES } from '@contracts/user';
-import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories/user-profile.repository';
-import { FollowEntity, FollowStatus, UserEntity } from '@user/core/database/entities';
-import { OutboxService } from '@user/core/outbox';
+import { USER_PROFILE_REPOSITORY } from '@user/repositories/user-profile.repository';
+import { FollowEntity, FollowStatus, UserEntity } from '@user/entities';
+import { OutboxService } from '@user/outbox';
 import { FollowService } from '@user/services/domain/follow.service';
-import { FOLLOW_REPOSITORY } from '@user/modules/follow/repositories/follow.repository';
-import {
-   FollowGraphRepository,
-   GRAPH_FOLLOW_REPOSITORY,
-} from '@user/modules/follow/repositories/follow-graph.repository';
+import { FOLLOW_REPOSITORY } from '@user/repositories/follow.repository';
+import { FollowGraphRepository, GRAPH_FOLLOW_REPOSITORY } from '@user/repositories/follow-graph.repository';
 import { UserGraphSyncService } from '@user/services/infrastructure/user-graph-sync.service';
 import { UserResolverService } from '@user/services/infrastructure/user-resolver.service';
 import { UNIT_OF_WORK } from '@user/unit-of-work';

@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@common';
 import { ProfileQueryService } from '@user/services/domain/profile-query.service';
-import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories/user-profile.repository';
+import { USER_PROFILE_REPOSITORY } from '@user/repositories/user-profile.repository';
 import { UserResolverService } from '@user/services/infrastructure/user-resolver.service';
-import { UserEntity, UserStatus } from '@user/core/database/entities';
+import { UserEntity, UserStatus } from '@user/entities';
 
 describe('ProfileQueryService (Domain)', () => {
    let service: ProfileQueryService;

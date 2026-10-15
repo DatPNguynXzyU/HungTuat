@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Specification } from '@common';
 import { USER_ERROR_CODES } from '@contracts/user';
-import { FollowStatus } from '@user/core/database/entities';
+import { FollowStatus } from '@user/entities';
 
 export interface IFollowStatusCandidate {
    status?: FollowStatus | null;

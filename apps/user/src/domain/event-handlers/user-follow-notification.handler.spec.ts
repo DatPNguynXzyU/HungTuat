@@ -1,4 +1,4 @@
-import { FollowStatus } from '@user/core/database/entities';
+import { FollowStatus } from '@user/entities';
 import { UserFollowNotificationHandler } from '@user/domain/event-handlers/user-follow-notification.handler';
 import { UserFollowedEvent, FollowRequestAcceptedEvent } from '@user/domain/events';
 import type { INotificationAdapter } from '@user/adapters/notification';

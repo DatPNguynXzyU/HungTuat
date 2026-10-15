@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '@user/core/database/prisma';
+import { PrismaModule } from '@user/prisma';
 import { UNIT_OF_WORK } from '@user/unit-of-work/unit-of-work.interface';
 import { PrismaUnitOfWork } from '@user/unit-of-work/prisma-unit-of-work';
 

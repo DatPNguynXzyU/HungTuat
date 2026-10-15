@@ -8,7 +8,7 @@ import {
 } from '@user/chains/profile-validation';
 import { ProfileQueryService } from '@user/services/domain/profile-query.service';
 import { UsernameBloomFilterService } from '@user/services/infrastructure/username-bloom-filter.service';
-import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories';
+import { USER_PROFILE_REPOSITORY } from '@user/repositories';
 import { ProfileValidationPipelineFactory } from '@user/factories/profile-validation-pipeline.factory';
 
 describe('ProfileValidationPipelineFactory', () => {

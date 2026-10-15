@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConflictException } from '@common';
-import { UserEntity } from '@user/core/database/entities';
+import { UserEntity } from '@user/entities';
 import { ProfileService } from '@user/services/domain/profile.service';
 import { UsernameBloomFilterService } from '@user/services/infrastructure/username-bloom-filter.service';
 import { UserResolverService } from '@user/services/infrastructure/user-resolver.service';

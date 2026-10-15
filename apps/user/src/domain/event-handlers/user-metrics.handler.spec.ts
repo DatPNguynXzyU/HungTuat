@@ -1,4 +1,4 @@
-import { FollowStatus } from '@user/core/database/entities';
+import { FollowStatus } from '@user/entities';
 import { USER_METRICS_DOMAIN_OPERATIONS, USER_METRICS_STATUS } from '@user/constants';
 import { UserMetricsHandler } from '@user/domain/event-handlers/user-metrics.handler';
 import {

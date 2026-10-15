@@ -8,7 +8,7 @@ describe('Search Command Handlers', () => {
    const mockSearchResult: UserSearchResponseDto = {
       items: [
          {
-            id: 'u-1',
+            userId: 'u-1',
             username: 'test_user',
             displayName: 'Test User',
             isVerified: false,

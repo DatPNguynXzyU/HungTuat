@@ -1,7 +1,7 @@
 import type { Prisma } from '@user/prisma-client';
-import type { IUserProfileRepository } from '@user/modules/profile/repositories/user-profile.repository.interface';
-import type { IFollowRepository } from '@user/modules/follow/repositories/follow.repository.interface';
-import type { IOutboxRepository } from '@user/core/outbox/repositories/outbox.repository.interface';
+import type { IUserProfileRepository } from '@user/repositories/user-profile.repository.interface';
+import type { IFollowRepository } from '@user/repositories/follow.repository.interface';
+import type { IOutboxRepository } from '@user/outbox/repositories/outbox.repository.interface';
 
 export const UNIT_OF_WORK = Symbol('UNIT_OF_WORK');
 

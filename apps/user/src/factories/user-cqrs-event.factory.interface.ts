@@ -12,6 +12,8 @@ import type {
    AvatarUploadedEvent,
 } from '@user/domain/events';
 
+export const USER_CQRS_EVENT_FACTORY = 'USER_CQRS_EVENT_FACTORY';
+
 export interface IUserCqrsEventFactory {
    createUserStreamId(userId: string): string;
    createFollowStreamId(followerId: string, followingId: string): string;

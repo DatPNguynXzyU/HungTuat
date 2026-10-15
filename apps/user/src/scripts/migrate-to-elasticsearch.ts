@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppLogger } from '@common';
 import { USER_EVENTS } from '@contracts/user';
 import { UserModule } from '@user/user.module';
-import { PrismaService } from '@user/core';
+import { PrismaService } from '@user/prisma';
 import { SEARCH_ADAPTER, type ISearchAdapter } from '@user/adapters/search';
 
 async function bootstrap() {

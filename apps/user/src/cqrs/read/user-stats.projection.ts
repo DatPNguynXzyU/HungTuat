@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@user/core/database/prisma/prisma.service';
+import { PrismaService } from '@user/prisma/prisma.service';
 import { USER_STATS_PROJECTION } from '@user/cqrs/constants/user-cqrs.constant';
 import type { UserStoredEvent } from '@user/cqrs/write/user-event.interface';
 import { USER_DOMAIN_EVENTS } from '@user/domain/events';
-import { FollowStatus } from '@user/core/database/entities';
+import { FollowStatus } from '@user/entities';
 import { AbstractUserProjection } from '@user/cqrs/read/abstract-user.projection';
 
 export interface UserStatsResult {

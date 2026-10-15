@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Prisma } from '@user/prisma-client';
-import { PrismaService } from '@user/core/database/prisma/prisma.service';
+import { PrismaService } from '@user/prisma/prisma.service';
 import { PrismaUnitOfWork } from '@user/unit-of-work/prisma-unit-of-work';
 
 describe('PrismaUnitOfWork', () => {

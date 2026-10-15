@@ -1,5 +1,5 @@
-import { FollowEntity, FollowStatus } from '@user/core/database/entities';
-import type { IFollowGraphRepository } from '@user/modules/follow/repositories';
+import { FollowEntity, FollowStatus } from '@user/entities';
+import type { IFollowGraphRepository } from '@user/repositories';
 import type { IUnitOfWork } from '@user/unit-of-work';
 import type { RetryQueueService } from '@common';
 import {
@@ -7,12 +7,7 @@ import {
    type BaseFollowContext,
    type FollowOperationOptions,
 } from '@user/sagas/follow/abstract-follow.saga';
-import {
-   FOLLOW_SAGA_NAMES,
-   FOLLOW_SAGA_STEPS,
-   type FollowSagaName,
-   type FollowSagaStep,
-} from '@user/modules/follow/constants';
+import { FOLLOW_SAGA_NAMES, FOLLOW_SAGA_STEPS, type FollowSagaName, type FollowSagaStep } from '@user/constants';
 
 interface TestParams {
    followerId: string;

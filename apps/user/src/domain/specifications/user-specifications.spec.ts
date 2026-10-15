@@ -1,5 +1,5 @@
 import { USER_ERROR_CODES } from '@contracts/user';
-import { UserStatus, FollowStatus } from '@user/core/database/entities';
+import { UserStatus, FollowStatus } from '@user/entities';
 import {
    CannotFollowSelfSpecification,
    FollowRequestPendingSpecification,

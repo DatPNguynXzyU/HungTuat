@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppLogger } from '@common';
 import { UserModule } from '@user/user.module';
-import { PrismaService } from '@user/core';
+import { PrismaService } from '@user/prisma';
 import { NebulaService } from '@common';
 
 async function bootstrap() {

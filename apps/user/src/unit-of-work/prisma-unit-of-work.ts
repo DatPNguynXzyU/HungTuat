@@ -1,10 +1,10 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@user/prisma-client';
-import { PrismaService } from '@user/core/database/prisma/prisma.service';
-import { UserProfileRepository } from '@user/modules/profile/repositories/user-profile.repository';
-import { FollowRepository } from '@user/modules/follow/repositories/follow.repository';
-import { OutboxRepository } from '@user/core/outbox/repositories/outbox.repository';
+import { PrismaService } from '@user/prisma/prisma.service';
+import { UserProfileRepository } from '@user/repositories/user-profile.repository';
+import { FollowRepository } from '@user/repositories/follow.repository';
+import { OutboxRepository } from '@user/outbox/repositories/outbox.repository';
 import type {
    IUnitOfWork,
    IUnitOfWorkRepositories,

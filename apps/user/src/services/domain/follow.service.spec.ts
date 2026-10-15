@@ -1,10 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException, ConflictException, NotFoundException } from '@common';
-import { FollowEntity, FollowStatus, UserEntity } from '@user/core/database/entities';
+import { FollowEntity, FollowStatus, UserEntity } from '@user/entities';
 import { USER_ERROR_CODES } from '@contracts/user';
-import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories';
-import { FOLLOW_REPOSITORY, GRAPH_FOLLOW_REPOSITORY } from '@user/modules/follow/repositories';
+import { USER_PROFILE_REPOSITORY } from '@user/repositories';
+import { FOLLOW_REPOSITORY, GRAPH_FOLLOW_REPOSITORY } from '@user/repositories';
 import { UserResolverService } from '@user/services/infrastructure/user-resolver.service';
 import { UNIT_OF_WORK } from '@user/unit-of-work';
 import { FOLLOW_SAGA_FACTORY, USER_DOMAIN_EVENT_FACTORY, USER_SPECIFICATION_FACTORY } from '@user/constants';

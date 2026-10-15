@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundException } from '@common';
-import { UserEntity } from '@user/core/database/entities';
+import { UserEntity } from '@user/entities';
 import { USER_ERROR_CODES, UserDateOfBirthResponseDto } from '@contracts/user';
 import { UserResolverService } from '@user/services/infrastructure/user-resolver.service';
-import { USER_PROFILE_REPOSITORY, type IUserProfileRepository } from '@user/modules/profile/repositories';
+import { USER_PROFILE_REPOSITORY, type IUserProfileRepository } from '@user/repositories';
 import { DateOfBirth } from '@user/domain';
 
 /**

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@common';
-import { UserEntity, UserStatus } from '@user/core/database/entities';
-import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories/user-profile.repository';
+import { UserEntity, UserStatus } from '@user/entities';
+import { USER_PROFILE_REPOSITORY } from '@user/repositories/user-profile.repository';
 import { UserResolverService } from '@user/services/infrastructure/user-resolver.service';
 
 describe('UserResolverService (Infrastructure)', () => {

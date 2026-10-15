@@ -1,10 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { UserProfileProjection } from '@user/cqrs/read/user-profile.projection';
 import { RedisService } from '@common';
-import { PrismaService } from '@user/core/database/prisma/prisma.service';
+import { PrismaService } from '@user/prisma/prisma.service';
 import { USER_DOMAIN_EVENTS } from '@user/domain/events';
 import { UserRedisKeys, USER_REDIS_TTL } from '@user/constants';
-import { UserStatus } from '@user/core/database/entities';
+import { UserStatus } from '@user/entities';
 
 describe('UserProfileProjection', () => {
    let projection: UserProfileProjection;

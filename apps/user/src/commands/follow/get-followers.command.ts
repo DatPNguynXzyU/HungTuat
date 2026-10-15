@@ -1,5 +1,5 @@
 import { Command } from '@common';
-import type { FollowEntity, FollowStatus } from '@user/core/database/entities';
+import type { FollowEntity, FollowStatus } from '@user/entities';
 
 export class GetFollowersCommand extends Command<FollowEntity[]> {
    constructor(

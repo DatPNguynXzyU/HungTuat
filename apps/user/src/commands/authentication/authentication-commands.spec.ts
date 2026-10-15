@@ -1,4 +1,4 @@
-import { UserEntity, UserStatus } from '@user/core/database/entities';
+import { UserEntity, UserStatus } from '@user/entities';
 import type { AuthService } from '@user/services/domain/auth.service';
 import {
    CheckUsernameCommand,
@@ -11,7 +11,6 @@ describe('Authentication Command Handlers', () => {
    let authService: jest.Mocked<Partial<AuthService>>;
 
    const mockUser = new UserEntity({
-      id: 'u-1',
       userId: 'u-1',
       accountId: 'acc-1',
       username: 'john_doe',

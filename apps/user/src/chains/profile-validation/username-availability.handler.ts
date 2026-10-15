@@ -5,7 +5,7 @@ import { PROFILE_OPERATIONS } from '@user/constants';
 import {
    USER_PROFILE_REPOSITORY,
    type IUserProfileRepository,
-} from '@user/modules/profile/repositories/user-profile.repository.interface';
+} from '@user/repositories/user-profile.repository.interface';
 import { UsernameBloomFilterService } from '@user/services/infrastructure/username-bloom-filter.service';
 import { AbstractProfileValidationHandler } from '@user/chains/profile-validation/abstract-profile-validation.handler';
 import type { ProfileValidationContext } from '@user/chains/profile-validation/profile-validation.context';

@@ -1,7 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@common';
 import { FOLLOW_SAGA_TYPES } from '@user/constants';
-import { GRAPH_FOLLOW_REPOSITORY } from '@user/modules/follow/repositories';
+import { GRAPH_FOLLOW_REPOSITORY } from '@user/repositories';
 import { UNIT_OF_WORK } from '@user/unit-of-work';
 import { FollowUserSaga, UnfollowUserSaga, AcceptFollowRequestSaga, RejectFollowRequestSaga } from '@user/sagas/follow';
 import { FollowSagaFactory } from '@user/factories/follow-saga.factory';

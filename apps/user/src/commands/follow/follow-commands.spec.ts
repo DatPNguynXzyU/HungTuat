@@ -1,5 +1,5 @@
 import { BadRequestException } from '@common';
-import { FollowEntity, FollowStatus } from '@user/core/database/entities';
+import { FollowEntity, FollowStatus } from '@user/entities';
 import type { FollowService } from '@user/services/domain/follow.service';
 import {
    AcceptFollowRequestCommand,

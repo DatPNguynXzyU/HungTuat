@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, COMMON_ERROR_CODES } from '@common';
 import { USER_ERROR_CODES, USER_ERROR_REASONS } from '@contracts/user';
 import { PROFILE_OPERATIONS } from '@user/constants';
-import { UserEntity, UserStatus } from '@user/core/database/entities';
+import { UserEntity, UserStatus } from '@user/entities';
 import { UserActiveSpecification } from '@user/domain/specifications';
 import {
    ProfileValidationPipeline,

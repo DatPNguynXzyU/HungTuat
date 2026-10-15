@@ -6,4 +6,4 @@ export {
    type IGraphFollowRepository,
    type GraphUserData,
    type GraphFollowRelation,
-} from '@user/modules/follow/repositories/follow-graph.repository';
+} from '@user/repositories';

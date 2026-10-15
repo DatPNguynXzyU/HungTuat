@@ -1,6 +1,6 @@
 import { BadRequestException } from '@common';
 import { UserEntityBuilder } from '@user/builders/user-entity.builder';
-import { UserStatus } from '@user/core/database/entities';
+import { UserStatus } from '@user/entities';
 
 describe('UserEntityBuilder', () => {
    it('should construct a valid UserEntity with chained properties', () => {

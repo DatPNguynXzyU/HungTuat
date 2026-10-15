@@ -1,5 +1,5 @@
 import { Command, type IServiceMessage } from '@common';
-import type { Gender, UserEntity } from '@user/core/database/entities';
+import type { Gender, UserEntity } from '@user/entities';
 
 export interface CreateProfileDto {
    username?: string;

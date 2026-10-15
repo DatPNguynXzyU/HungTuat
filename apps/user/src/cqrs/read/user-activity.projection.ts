@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { isUuidV7 } from '@common';
-import { PrismaService } from '@user/core/database/prisma/prisma.service';
+import { PrismaService } from '@user/prisma/prisma.service';
 import { USER_ACTIVITY_PROJECTION } from '@user/cqrs/constants/user-cqrs.constant';
 import type { UserStoredEvent } from '@user/cqrs/write/user-event.interface';
 import { USER_DOMAIN_EVENTS } from '@user/domain/events';

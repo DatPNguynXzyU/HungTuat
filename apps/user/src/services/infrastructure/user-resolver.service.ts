@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundException } from '@common';
 import { USER_ERROR_CODES } from '@contracts/user';
-import { UserEntity } from '@user/core/database/entities';
-import { USER_PROFILE_REPOSITORY, type IUserProfileRepository } from '@user/modules/profile/repositories';
+import { UserEntity } from '@user/entities';
+import { USER_PROFILE_REPOSITORY, type IUserProfileRepository } from '@user/repositories';
 
 /**
  * Service responsible for resolving and finding User entities by various identifiers.

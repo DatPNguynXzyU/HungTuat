@@ -1,4 +1,4 @@
-import { FollowStatus } from '@user/core/database/entities';
+import { FollowStatus } from '@user/entities';
 import {
    UserCreatedEvent,
    UserUpdatedEvent,

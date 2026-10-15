@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { type UserEntity, type Gender } from '@user/core/database/entities';
-import type { CreateUserData } from '@user/modules/profile/repositories/user-profile.repository';
+import { type UserEntity, type Gender } from '@user/entities';
+import type { CreateUserData } from '@user/repositories/user-profile.repository';
 import type { UserDateOfBirthResponseDto } from '@contracts/user';
 import type { UploadUrlResponseDto } from '@contracts/media';
 import { ProfileQueryService } from '@user/services/domain/profile-query.service';

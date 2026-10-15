@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { FollowStatus } from '@user/core/database/entities';
+import type { FollowStatus } from '@user/entities';
 import {
    UserCreatedEvent,
    UserUpdatedEvent,

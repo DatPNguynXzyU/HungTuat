@@ -1,14 +1,9 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { RetryQueueService } from '@common';
 import { USER_AGGREGATES, USER_OUTBOX_EVENTS, USER_RETRY_QUEUES } from '@contracts/user';
-import { FollowEntity, FollowStatus, UserEntity } from '@user/core/database/entities';
-import {
-   FOLLOW_SAGA_NAMES,
-   FOLLOW_SAGA_STEPS,
-   type FollowSagaName,
-   type FollowSagaStep,
-} from '@user/modules/follow/constants';
-import { GRAPH_FOLLOW_REPOSITORY, type IFollowGraphRepository } from '@user/modules/follow/repositories';
+import { FollowEntity, FollowStatus, UserEntity } from '@user/entities';
+import { FOLLOW_SAGA_NAMES, FOLLOW_SAGA_STEPS, type FollowSagaName, type FollowSagaStep } from '@user/constants';
+import { GRAPH_FOLLOW_REPOSITORY, type IFollowGraphRepository } from '@user/repositories';
 import { UNIT_OF_WORK, type IUnitOfWork } from '@user/unit-of-work';
 import {
    AbstractFollowSaga,

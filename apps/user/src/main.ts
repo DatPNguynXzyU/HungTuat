@@ -1,21 +1,30 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { AllRpcExceptionsFilter, RmqService, SERVICES } from '@common';
-import { AppModule } from '@user/app.module';
+import { UserModule } from '@user/user.module';
+import { UserConfigService } from '@user/config';
 
 async function bootstrap() {
-   const appContext = await NestFactory.createApplicationContext(AppModule, {
+   const app = await NestFactory.create(UserModule, {
       bufferLogs: true,
    });
-   const logger = appContext.get(Logger);
-   const rmqService = appContext.get(RmqService);
-
-   const app = await NestFactory.createMicroservice(AppModule, rmqService.getOptions(SERVICES.USER_SERVICE));
+   const logger = app.get(Logger);
+   const rmqService = app.get(RmqService);
+   const configService = app.get(UserConfigService);
 
    app.useLogger(logger);
+
+   // Connect RabbitMQ microservice
+   app.connectMicroservice(rmqService.getOptions(SERVICES.USER_SERVICE));
    app.useGlobalFilters(new AllRpcExceptionsFilter());
-   await app.listen();
-   logger.log('User Microservice is listening on RabbitMQ queue: USER_SERVICE');
+
+   await app.startAllMicroservices();
+
+   const port = configService.port;
+   await app.listen(port);
+
+   logger.log(`User Microservice is listening on RabbitMQ queue: ${SERVICES.USER_SERVICE}`);
+   logger.log(`User HTTP server is listening on port ${port} (metrics: http://localhost:${port}/metrics)`);
 }
 
 void bootstrap();

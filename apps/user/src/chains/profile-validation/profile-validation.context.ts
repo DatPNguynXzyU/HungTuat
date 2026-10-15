@@ -1,4 +1,4 @@
-import type { Gender, UserEntity } from '@user/core/database/entities';
+import type { Gender, UserEntity } from '@user/entities';
 import type { ProfileOperation } from '@user/constants';
 
 export interface ProfileValidationContext {

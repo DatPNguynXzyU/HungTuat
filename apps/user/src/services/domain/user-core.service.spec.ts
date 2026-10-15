@@ -4,7 +4,7 @@ import { ProfileService } from '@user/services/domain/profile.service';
 import { FollowService } from '@user/services/domain/follow.service';
 import { UserSearchService } from '@user/services/domain/user-search.service';
 import { AuthService } from '@user/services/domain/auth.service';
-import { FollowStatus, UserEntity, UserStatus } from '@user/core/database/entities';
+import { FollowStatus, UserEntity, UserStatus } from '@user/entities';
 
 describe('UserCoreService (Facade)', () => {
    let service: UserCoreService;

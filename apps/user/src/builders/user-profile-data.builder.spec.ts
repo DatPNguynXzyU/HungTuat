@@ -1,6 +1,6 @@
 import { BadRequestException } from '@common';
 import { UserProfileDataBuilder } from '@user/builders/user-profile-data.builder';
-import { Gender, UserStatus } from '@user/core/database/entities';
+import { Gender, UserStatus } from '@user/entities';
 
 describe('UserProfileDataBuilder', () => {
    it('should build a valid CreateUserData payload with chained methods', () => {

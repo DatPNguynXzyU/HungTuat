@@ -4,7 +4,7 @@ import { AuthService } from '@user/services/domain/auth.service';
 import { ProfileService } from '@user/services/domain/profile.service';
 import { UsernameBloomFilterService } from '@user/services/infrastructure/username-bloom-filter.service';
 import { UserResolverService } from '@user/services/infrastructure/user-resolver.service';
-import { UserEntity } from '@user/core/database/entities';
+import { UserEntity } from '@user/entities';
 
 describe('AuthService (Domain)', () => {
    let service: AuthService;

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@common';
-import type { UserEntity } from '@user/core/database/entities';
+import type { UserEntity } from '@user/entities';
 import { AuthService } from '@user/services/domain/auth.service';
 import { HandleUserRegisteredCommand } from '@user/commands/authentication/handle-user-registered.command';
 

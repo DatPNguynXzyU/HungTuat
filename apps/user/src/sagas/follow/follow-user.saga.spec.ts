@@ -1,6 +1,6 @@
 import { USER_AGGREGATES, USER_OUTBOX_EVENTS, USER_RETRY_QUEUES } from '@contracts/user';
-import { FollowEntity, FollowStatus, UserEntity } from '@user/core/database/entities';
-import type { IFollowGraphRepository } from '@user/modules/follow/repositories';
+import { FollowEntity, FollowStatus, UserEntity } from '@user/entities';
+import type { IFollowGraphRepository } from '@user/repositories';
 import type { IUnitOfWork } from '@user/unit-of-work';
 import type { RetryQueueService } from '@common';
 import { FollowUserSaga } from '@user/sagas/follow/follow-user.saga';

@@ -1,5 +1,5 @@
 import { AppLogger } from '@common';
-import { FollowStatus } from '@user/core/database/entities';
+import { FollowStatus } from '@user/entities';
 import { USER_METRICS_NOTIFICATION_OPERATIONS, USER_METRICS_STATUS } from '@user/constants';
 import type { INotificationAdapter } from '@user/adapters/notification/notification.adapter.interface';
 import type { IUserMetricsService } from '@user/services/infrastructure/user-metrics.interface';

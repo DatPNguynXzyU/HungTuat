@@ -1,5 +1,5 @@
 import { Command } from '@common';
-import type { FollowEntity } from '@user/core/database/entities';
+import type { FollowEntity } from '@user/entities';
 
 export class RejectFollowRequestCommand extends Command<FollowEntity> {
    constructor(public readonly followId: string) {

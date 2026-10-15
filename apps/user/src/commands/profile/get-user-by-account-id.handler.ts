@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@common';
-import type { UserEntity } from '@user/core/database/entities';
+import type { UserEntity } from '@user/entities';
 import { ProfileService } from '@user/services/domain/profile.service';
 import { GetUserByAccountIdCommand } from '@user/commands/profile/get-user-by-account-id.command';
 

@@ -14,7 +14,7 @@ import {
    FollowRequestRejectedEvent,
    AvatarUploadedEvent,
 } from '@user/domain/events';
-import { FollowStatus } from '@user/core/database/entities';
+import { FollowStatus } from '@user/entities';
 
 describe('UserEventSourcingListener', () => {
    let listener: UserEventSourcingListener;

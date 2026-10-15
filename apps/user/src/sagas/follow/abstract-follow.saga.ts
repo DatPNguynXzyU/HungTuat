@@ -1,7 +1,12 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { RetryQueueService, Saga } from '@common';
-import { FOLLOW_SAGA_LOG_MESSAGES, type FollowSagaName, type FollowSagaStep } from '@user/modules/follow/constants';
-import { GRAPH_FOLLOW_REPOSITORY, type IFollowGraphRepository } from '@user/modules/follow/repositories';
+import {
+   FOLLOW_GRAPH_STATUS_KEYS,
+   FOLLOW_SAGA_LOG_MESSAGES,
+   type FollowSagaName,
+   type FollowSagaStep,
+} from '@user/constants';
+import { GRAPH_FOLLOW_REPOSITORY, type IFollowGraphRepository } from '@user/repositories';
 import { UNIT_OF_WORK, type IUnitOfWork } from '@user/unit-of-work';
 
 export interface FollowOperationOptions {
@@ -10,9 +15,9 @@ export interface FollowOperationOptions {
 
 export interface BaseFollowContext {
    options?: FollowOperationOptions;
-   graphSynced?: boolean;
-   graphDeleted?: boolean;
-   graphUpdated?: boolean;
+   [FOLLOW_GRAPH_STATUS_KEYS.GRAPH_SYNCED]?: boolean;
+   [FOLLOW_GRAPH_STATUS_KEYS.GRAPH_DELETED]?: boolean;
+   [FOLLOW_GRAPH_STATUS_KEYS.GRAPH_UPDATED]?: boolean;
 }
 
 /**
@@ -113,19 +118,23 @@ export abstract class AbstractFollowSaga<
     * Checks whether the graph operation was marked as completed.
     */
    protected isGraphSynced(ctx: TContext): boolean {
-      return Boolean(ctx.graphSynced ?? ctx.graphDeleted ?? ctx.graphUpdated);
+      return Boolean(
+         ctx[FOLLOW_GRAPH_STATUS_KEYS.GRAPH_SYNCED] ??
+         ctx[FOLLOW_GRAPH_STATUS_KEYS.GRAPH_DELETED] ??
+         ctx[FOLLOW_GRAPH_STATUS_KEYS.GRAPH_UPDATED],
+      );
    }
 
    /**
     * Marks the graph operation status on context.
     */
    protected markGraphSynced(ctx: TContext, synced = true): void {
-      ctx.graphSynced = synced;
-      if ('graphDeleted' in ctx) {
-         ctx.graphDeleted = synced;
+      ctx[FOLLOW_GRAPH_STATUS_KEYS.GRAPH_SYNCED] = synced;
+      if (FOLLOW_GRAPH_STATUS_KEYS.GRAPH_DELETED in ctx) {
+         ctx[FOLLOW_GRAPH_STATUS_KEYS.GRAPH_DELETED] = synced;
       }
-      if ('graphUpdated' in ctx) {
-         ctx.graphUpdated = synced;
+      if (FOLLOW_GRAPH_STATUS_KEYS.GRAPH_UPDATED in ctx) {
+         ctx[FOLLOW_GRAPH_STATUS_KEYS.GRAPH_UPDATED] = synced;
       }
    }
 

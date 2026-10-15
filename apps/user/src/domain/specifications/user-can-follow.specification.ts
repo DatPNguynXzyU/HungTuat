@@ -1,7 +1,7 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { Specification, Result } from '@common';
 import { USER_ERROR_CODES } from '@contracts/user';
-import { UserStatus } from '@user/core/database/entities';
+import { UserStatus } from '@user/entities';
 import { CannotFollowSelfSpecification } from '@user/domain/specifications/cannot-follow-self.specification';
 import { UserActiveSpecification } from '@user/domain/specifications/user-active.specification';
 import { USER_SPECIFICATION_FACTORY } from '@user/constants';

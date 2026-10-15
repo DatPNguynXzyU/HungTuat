@@ -1,5 +1,5 @@
 import { BadRequestException, type IBuilder } from '@common';
-import { FollowEntity, FollowStatus } from '@user/core/database/entities';
+import { FollowEntity, FollowStatus } from '@user/entities';
 import { USER_BUILDER_ERRORS } from '@user/constants';
 import type { Follow as PrismaFollow } from '@user/prisma-client';
 

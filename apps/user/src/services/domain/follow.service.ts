@@ -2,16 +2,16 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException, ConflictException, NotFoundException, RetryQueueService } from '@common';
 import { USER_ERROR_CODES, USER_SUGGESTION_REASONS, UserSuggestionItemDto } from '@contracts/user';
-import { FollowEntity, FollowStatus, UserEntity, UserStatus } from '@user/core/database/entities';
+import { FollowEntity, FollowStatus, UserEntity, UserStatus } from '@user/entities';
 import { FollowEntityBuilder } from '@user/builders';
-import type { IUserProfileRepository } from '@user/modules/profile/repositories/user-profile.repository.interface';
-import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories/user-profile.repository.interface';
+import type { IUserProfileRepository } from '@user/repositories/user-profile.repository.interface';
+import { USER_PROFILE_REPOSITORY } from '@user/repositories/user-profile.repository.interface';
 import {
    FOLLOW_REPOSITORY,
    GRAPH_FOLLOW_REPOSITORY,
    type IFollowRepository,
    type IFollowGraphRepository,
-} from '@user/modules/follow/repositories';
+} from '@user/repositories';
 import { UserResolverService } from '@user/services/infrastructure/user-resolver.service';
 import { UNIT_OF_WORK, type IUnitOfWork } from '@user/unit-of-work';
 import { CannotFollowSelfSpecification, FollowRequestPendingSpecification, USER_DOMAIN_EVENTS } from '@user/domain';

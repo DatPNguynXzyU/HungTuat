@@ -1,8 +1,8 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { UserStatsProjection } from '@user/cqrs/read/user-stats.projection';
-import { PrismaService } from '@user/core/database/prisma/prisma.service';
+import { PrismaService } from '@user/prisma/prisma.service';
 import { USER_DOMAIN_EVENTS } from '@user/domain/events';
-import { FollowStatus } from '@user/core/database/entities';
+import { FollowStatus } from '@user/entities';
 
 describe('UserStatsProjection', () => {
    let projection: UserStatsProjection;

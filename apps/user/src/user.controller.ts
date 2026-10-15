@@ -4,7 +4,7 @@ import { CommandBus, RmqService } from '@common';
 import { NOTIFICATION_EVENTS } from '@contracts/notification';
 import { USER_PATTERNS } from '@contracts/user';
 import type { IServiceMessage } from '@common';
-import { FollowStatus, Gender } from '@user/core/database/entities';
+import { FollowStatus, Gender } from '@user/entities';
 import { UserCoreService } from '@user/services/domain';
 import {
    CreateProfileCommand,

@@ -1,7 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserEventStore } from '@user/cqrs/write/user-event-store';
-import { PrismaService } from '@user/core/database/prisma/prisma.service';
+import { PrismaService } from '@user/prisma/prisma.service';
 import { USER_CQRS_EVENTS } from '@user/cqrs/constants/user-cqrs.constant';
 import { USER_DOMAIN_EVENTS } from '@user/domain/events';
 

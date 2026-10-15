@@ -10,7 +10,7 @@ import {
 } from '@user/chains/profile-validation';
 import { ProfileQueryService } from '@user/services/domain/profile-query.service';
 import { UsernameBloomFilterService } from '@user/services/infrastructure/username-bloom-filter.service';
-import { USER_PROFILE_REPOSITORY, type IUserProfileRepository } from '@user/modules/profile/repositories';
+import { USER_PROFILE_REPOSITORY, type IUserProfileRepository } from '@user/repositories';
 import type { IProfileValidationPipelineFactory } from '@user/factories/profile-validation-pipeline.factory.interface';
 
 /**

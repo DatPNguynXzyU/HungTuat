@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ProfileSyncService } from '@user/services/infrastructure/profile-sync.service';
-import { OutboxService } from '@user/core/outbox';
+import { OutboxService } from '@user/outbox';
 import { UsernameBloomFilterService } from '@user/services/infrastructure/username-bloom-filter.service';
 import { UserGraphSyncService } from '@user/services/infrastructure/user-graph-sync.service';
 import { SEARCH_ADAPTER, type ISearchAdapter } from '@user/adapters/search/search.adapter.interface';
-import { UserEntity, UserStatus } from '@user/core/database/entities';
+import { UserEntity, UserStatus } from '@user/entities';
 import { USER_AGGREGATES, USER_EVENTS, USER_OUTBOX_EVENTS } from '@contracts/user';
 import { USER_DOMAIN_EVENTS } from '@user/domain';
 

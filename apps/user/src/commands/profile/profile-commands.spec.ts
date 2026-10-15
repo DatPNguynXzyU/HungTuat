@@ -1,5 +1,5 @@
 import { BadRequestException } from '@common';
-import { UserEntity, UserStatus } from '@user/core/database/entities';
+import { UserEntity, UserStatus } from '@user/entities';
 import type { ProfileService } from '@user/services/domain/profile.service';
 import {
    CreateProfileCommand,

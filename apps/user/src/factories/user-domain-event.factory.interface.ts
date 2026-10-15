@@ -1,4 +1,4 @@
-import type { FollowStatus } from '@user/core/database/entities';
+import type { FollowStatus } from '@user/entities';
 import type {
    UserCreatedEvent,
    UserUpdatedEvent,
@@ -11,6 +11,8 @@ import type {
    FollowRequestRejectedEvent,
    AvatarUploadedEvent,
 } from '@user/domain/events';
+
+export const USER_DOMAIN_EVENT_FACTORY = 'USER_DOMAIN_EVENT_FACTORY';
 
 export interface IUserDomainEventFactory {
    createUserCreated(

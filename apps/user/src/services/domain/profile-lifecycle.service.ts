@@ -1,12 +1,12 @@
 import { HttpStatus, Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { NotFoundException } from '@common';
-import { UserEntity } from '@user/core/database/entities';
+import { UserEntity } from '@user/entities';
 import {
    USER_PROFILE_REPOSITORY,
    type IUserProfileRepository,
    type CreateUserData,
    type UpdateUserData,
-} from '@user/modules/profile/repositories';
+} from '@user/repositories';
 import { UsernameBloomFilterService } from '@user/services/infrastructure/username-bloom-filter.service';
 import { PROFILE_OPERATIONS } from '@user/constants';
 import { ProfileQueryService } from '@user/services/domain/profile-query.service';

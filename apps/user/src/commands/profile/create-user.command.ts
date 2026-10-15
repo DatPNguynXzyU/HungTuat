@@ -1,5 +1,5 @@
 import { Command } from '@common';
-import type { Gender, UserEntity } from '@user/core/database/entities';
+import type { Gender, UserEntity } from '@user/entities';
 
 export interface CreateUserDataPayload {
    accountId: string;

@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { UserActivityProjection } from '@user/cqrs/read/user-activity.projection';
-import { PrismaService } from '@user/core/database/prisma/prisma.service';
+import { PrismaService } from '@user/prisma/prisma.service';
 import { USER_DOMAIN_EVENTS } from '@user/domain/events';
 import { uuidv7 } from '@common';
 

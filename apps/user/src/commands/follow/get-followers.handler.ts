@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@common';
-import type { FollowEntity } from '@user/core/database/entities';
+import type { FollowEntity } from '@user/entities';
 import { FollowService } from '@user/services/domain/follow.service';
 import { GetFollowersCommand } from '@user/commands/follow/get-followers.command';
 

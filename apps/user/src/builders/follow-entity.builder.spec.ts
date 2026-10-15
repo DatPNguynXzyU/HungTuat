@@ -1,6 +1,6 @@
 import { BadRequestException } from '@common';
 import { FollowEntityBuilder } from '@user/builders/follow-entity.builder';
-import { FollowStatus } from '@user/core/database/entities';
+import { FollowStatus } from '@user/entities';
 
 describe('FollowEntityBuilder', () => {
    it('should build a FollowEntity instance with explicit properties', () => {

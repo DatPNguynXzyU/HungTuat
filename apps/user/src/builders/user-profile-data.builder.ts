@@ -1,9 +1,6 @@
 import { BadRequestException, type IBuilder, type IServiceMessage } from '@common';
-import { Gender, UserStatus } from '@user/core/database/entities';
-import type {
-   CreateUserData,
-   UpdateUserData,
-} from '@user/modules/profile/repositories/user-profile.repository.interface';
+import { Gender, UserStatus } from '@user/entities';
+import type { CreateUserData, UpdateUserData } from '@user/repositories/user-profile.repository.interface';
 import { USER_BUILDER_ERRORS } from '@user/constants';
 
 export interface UserProfileDtoSource {

@@ -6,6 +6,8 @@ import type { UsernameFormatHandler } from '@user/chains/profile-validation/user
 import type { ProfileDetailsFormatHandler } from '@user/chains/profile-validation/profile-details-format.handler';
 import type { UsernameAvailabilityHandler } from '@user/chains/profile-validation/username-availability.handler';
 
+export const PROFILE_VALIDATION_PIPELINE_FACTORY = 'PROFILE_VALIDATION_PIPELINE_FACTORY';
+
 export interface IProfileValidationPipelineFactory {
    createPipeline(customHandlers?: IChainHandler<ProfileValidationContext, void>[]): ProfileValidationPipeline;
    createIdentityHandler(): ProfileIdentityHandler;

@@ -1,9 +1,9 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { AppLogger, RetryQueueService } from '@common';
 import { USER_RETRY_QUEUES } from '@contracts/user';
-import { FollowStatus, UserEntity } from '@user/core/database/entities';
+import { FollowStatus, UserEntity } from '@user/entities';
 import { UserEntityBuilder } from '@user/builders';
-import { GRAPH_FOLLOW_REPOSITORY, type IFollowGraphRepository } from '@user/modules/follow/repositories';
+import { GRAPH_FOLLOW_REPOSITORY, type IFollowGraphRepository } from '@user/repositories';
 import type { IUserGraphSyncService } from '@user/services/infrastructure/user-graph-sync.interface';
 
 @Injectable()
