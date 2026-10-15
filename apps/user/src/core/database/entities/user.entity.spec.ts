@@ -3,7 +3,7 @@ import { UserEntity, UserProfileEntity, UserStatus } from '@user/core/database/e
 describe('UserEntity & UserProfileEntity', () => {
    it('should not contain dateOfBirth and gender on UserProfileEntity', () => {
       const profile = new UserProfileEntity({
-         id: 'p1',
+         profileId: 'p1',
          userId: 'u1',
          displayName: 'John Doe',
          dateOfBirth: new Date('1990-01-01'),
@@ -12,7 +12,7 @@ describe('UserEntity & UserProfileEntity', () => {
          updatedAt: new Date(),
       });
 
-      expect(profile.id).toBe('p1');
+      expect(profile.profileId).toBe('p1');
       expect(profile.displayName).toBe('John Doe');
       expect((profile as unknown as Record<string, unknown>).dateOfBirth).toBeUndefined();
       expect((profile as unknown as Record<string, unknown>).gender).toBeUndefined();
@@ -20,13 +20,13 @@ describe('UserEntity & UserProfileEntity', () => {
 
    it('should not contain dateOfBirth and gender on UserEntity instance', () => {
       const user = new UserEntity({
-         id: 'u1',
+         userId: 'u1',
          accountId: 'a1',
          status: UserStatus.ACTIVE,
          createdAt: new Date(),
          updatedAt: new Date(),
          profile: {
-            id: 'p1',
+            profileId: 'p1',
             userId: 'u1',
             displayName: 'John Doe',
             dateOfBirth: new Date('1990-01-01'),
@@ -36,7 +36,7 @@ describe('UserEntity & UserProfileEntity', () => {
          },
       });
 
-      expect(user.id).toBe('u1');
+      expect(user.userId).toBe('u1');
       expect((user as unknown as Record<string, unknown>).dateOfBirth).toBeUndefined();
       expect((user as unknown as Record<string, unknown>).gender).toBeUndefined();
       expect((user.profile as unknown as Record<string, unknown>)?.dateOfBirth).toBeUndefined();

@@ -65,7 +65,7 @@ describe('Bulk Indexing Integration', () => {
          await bulkQueue.addOperation({
             operation: 'index',
             index: 'users',
-            id: `user-${i}`,
+            documentId: `user-${i}`,
             data: { username: `user${i}` },
          });
       }

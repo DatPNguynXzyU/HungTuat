@@ -10,7 +10,7 @@ export class BulkIndexQueue {
 
    async addOperation(op: BulkOperation): Promise<void> {
       await this.queue.add(BULK_INDEX_JOB, op, {
-         jobId: `${op.operation}-${op.index}-${op.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+         jobId: `${op.operation}-${op.index}-${op.documentId}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       });
    }
 
@@ -19,7 +19,7 @@ export class BulkIndexQueue {
          name: BULK_INDEX_JOB,
          data: op,
          opts: {
-            jobId: `${op.operation}-${op.index}-${op.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            jobId: `${op.operation}-${op.index}-${op.documentId}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
          },
       }));
       await this.queue.addBulk(jobs);

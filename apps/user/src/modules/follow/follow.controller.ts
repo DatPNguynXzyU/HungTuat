@@ -1,15 +1,30 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { BadRequestException, checkOwnershipOrAdmin, RmqService } from '@common';
-import { USER_ERROR_CODES, USER_PATTERNS } from '@contracts/user';
+import { CommandBus, RmqService } from '@common';
+import { USER_PATTERNS } from '@contracts/user';
 import type { IServiceMessage } from '@common';
 import { FollowStatus } from '@user/core/database/entities';
-import { FollowService } from '@user/modules/follow/follow.service';
+import {
+   AcceptFollowRequestCommand,
+   FollowUserCommand,
+   GetFollowersCommand,
+   GetFollowersCountCommand,
+   GetFollowingCommand,
+   GetFollowingCountCommand,
+   GetFollowSuggestionsCommand,
+   GetMutualFollowersCommand,
+   RejectFollowRequestCommand,
+   UnfollowUserCommand,
+} from '@user/commands/follow';
 
+/**
+ * FollowController acts as a transport adapter dispatching commands
+ * to the CommandBus layer, decoupling the transport layer from concrete services.
+ */
 @Controller()
 export class FollowController {
    constructor(
-      private readonly followService: FollowService,
+      private readonly commandBus: CommandBus,
       private readonly rmqService: RmqService,
    ) {}
 
@@ -19,9 +34,7 @@ export class FollowController {
       @Ctx() context?: RmqContext,
    ) {
       try {
-         checkOwnershipOrAdmin(message, message.data.followerId);
-
-         const result = await this.followService.followUser(message.data.followerId, message.data.followingId);
+         const result = await this.commandBus.execute(new FollowUserCommand(message));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -40,13 +53,11 @@ export class FollowController {
       @Ctx() context?: RmqContext,
    ) {
       try {
-         checkOwnershipOrAdmin(message, message.data.followerId);
-
-         await this.followService.unfollowUser(message.data.followerId, message.data.followingId);
+         const result = await this.commandBus.execute(new UnfollowUserCommand(message));
          if (context) {
             this.rmqService.ack(context);
          }
-         return { success: true };
+         return result;
       } catch (error) {
          if (context) {
             this.rmqService.ack(context);
@@ -58,7 +69,7 @@ export class FollowController {
    @MessagePattern({ cmd: USER_PATTERNS.ACCEPT_FOLLOW_REQUEST })
    async acceptFollowRequest(@Payload() data: { followId: string }, @Ctx() context?: RmqContext) {
       try {
-         const result = await this.followService.acceptFollowRequest(data.followId);
+         const result = await this.commandBus.execute(new AcceptFollowRequestCommand(data.followId));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -74,7 +85,7 @@ export class FollowController {
    @MessagePattern({ cmd: USER_PATTERNS.REJECT_FOLLOW_REQUEST })
    async rejectFollowRequest(@Payload() data: { followId: string }, @Ctx() context?: RmqContext) {
       try {
-         const result = await this.followService.rejectFollowRequest(data.followId);
+         const result = await this.commandBus.execute(new RejectFollowRequestCommand(data.followId));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -93,11 +104,13 @@ export class FollowController {
       @Ctx() context?: RmqContext,
    ) {
       try {
-         const result = await this.followService.getFollowers(
-            data.userId,
-            data.status ? (data.status as FollowStatus) : undefined,
-            data.skip,
-            data.take,
+         const result = await this.commandBus.execute(
+            new GetFollowersCommand(
+               data.userId,
+               data.status ? (data.status as FollowStatus) : undefined,
+               data.skip,
+               data.take,
+            ),
          );
          if (context) {
             this.rmqService.ack(context);
@@ -117,11 +130,13 @@ export class FollowController {
       @Ctx() context?: RmqContext,
    ) {
       try {
-         const result = await this.followService.getFollowing(
-            data.userId,
-            data.status ? (data.status as FollowStatus) : undefined,
-            data.skip,
-            data.take,
+         const result = await this.commandBus.execute(
+            new GetFollowingCommand(
+               data.userId,
+               data.status ? (data.status as FollowStatus) : undefined,
+               data.skip,
+               data.take,
+            ),
          );
          if (context) {
             this.rmqService.ack(context);
@@ -138,14 +153,13 @@ export class FollowController {
    @MessagePattern({ cmd: USER_PATTERNS.GET_FOLLOWERS_COUNT })
    async getFollowersCount(@Payload() data: { userId: string; status?: string }, @Ctx() context?: RmqContext) {
       try {
-         const result = await this.followService.getFollowersCount(
-            data.userId,
-            data.status ? (data.status as FollowStatus) : undefined,
+         const result = await this.commandBus.execute(
+            new GetFollowersCountCommand(data.userId, data.status ? (data.status as FollowStatus) : undefined),
          );
          if (context) {
             this.rmqService.ack(context);
          }
-         return { count: result };
+         return result;
       } catch (error) {
          if (context) {
             this.rmqService.ack(context);
@@ -157,14 +171,13 @@ export class FollowController {
    @MessagePattern({ cmd: USER_PATTERNS.GET_FOLLOWING_COUNT })
    async getFollowingCount(@Payload() data: { userId: string; status?: string }, @Ctx() context?: RmqContext) {
       try {
-         const result = await this.followService.getFollowingCount(
-            data.userId,
-            data.status ? (data.status as FollowStatus) : undefined,
+         const result = await this.commandBus.execute(
+            new GetFollowingCountCommand(data.userId, data.status ? (data.status as FollowStatus) : undefined),
          );
          if (context) {
             this.rmqService.ack(context);
          }
-         return { count: result };
+         return result;
       } catch (error) {
          if (context) {
             this.rmqService.ack(context);
@@ -176,7 +189,7 @@ export class FollowController {
    @MessagePattern({ cmd: USER_PATTERNS.GET_MUTUAL_FOLLOWERS })
    async getMutualFollowers(@Payload() data: { userId1: string; userId2: string }, @Ctx() context?: RmqContext) {
       try {
-         const result = await this.followService.getMutualFollowers(data.userId1, data.userId2);
+         const result = await this.commandBus.execute(new GetMutualFollowersCommand(data.userId1, data.userId2));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -192,10 +205,7 @@ export class FollowController {
    @MessagePattern({ cmd: USER_PATTERNS.GET_FOLLOW_SUGGESTIONS })
    async getFollowSuggestions(@Payload() data: { userId: string; limit?: number }, @Ctx() context?: RmqContext) {
       try {
-         if (!data?.userId) {
-            throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
-         }
-         const result = await this.followService.getFollowSuggestions(data.userId, data.limit);
+         const result = await this.commandBus.execute(new GetFollowSuggestionsCommand(data?.userId, data?.limit));
          if (context) {
             this.rmqService.ack(context);
          }

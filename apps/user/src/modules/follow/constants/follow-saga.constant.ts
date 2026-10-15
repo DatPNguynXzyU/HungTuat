@@ -19,3 +19,10 @@ export const FOLLOW_SAGA_STEPS = {
 } as const;
 
 export type FollowSagaStep = (typeof FOLLOW_SAGA_STEPS)[keyof typeof FOLLOW_SAGA_STEPS];
+
+export const FOLLOW_SAGA_LOG_MESSAGES = {
+   GRAPH_SYNC_FAILED: 'Graph sync failed for follow operation',
+   GRAPH_COMPENSATION_FAILED: 'Failed to compensate Graph follow operation',
+} as const;
+
+export type FollowSagaLogMessage = (typeof FOLLOW_SAGA_LOG_MESSAGES)[keyof typeof FOLLOW_SAGA_LOG_MESSAGES];

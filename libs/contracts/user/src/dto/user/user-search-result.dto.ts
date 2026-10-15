@@ -63,8 +63,8 @@ export class CursorPaginationMetaDto implements ICursorPaginationMeta {
 }
 
 export class UserSearchResultItemDto {
-   @ApiProperty({ example: '018f3a2b-4c5d-7e8f-9a0b-1c2d3e4f5a6b' })
-   id!: string;
+   @ApiProperty({ example: '018f3a2b-4c5d-7e8f-9a0b-1c2d3e4f5a6b', description: 'Unique identifier of the user' })
+   userId!: string;
 
    @ApiPropertyOptional({ example: 'alex_doe', nullable: true })
    username?: string | null;

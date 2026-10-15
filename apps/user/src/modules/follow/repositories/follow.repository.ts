@@ -1,36 +1,57 @@
-import { Injectable } from '@nestjs/common';
-import { uuidv7 } from '@common';
-import { PrismaService } from '@user/core/database/prisma';
+import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, uuidv7 } from '@common';
+import { PrismaService, type PrismaClientOrTransaction } from '@user/core/database/prisma';
 import { FollowEntity, FollowStatus } from '@user/core/database/entities';
-import { Prisma } from '@user/prisma-client';
+import { FollowEntityBuilder } from '@user/builders';
+import { USER_ERROR_CODES } from '@contracts/user';
+import type { Follow, Prisma } from '@user/prisma-client';
+import type {
+   CreateFollowData,
+   FollowRelationsResult,
+   IFollowRepository,
+} from '@user/modules/follow/repositories/follow.repository.interface';
 
-export const FOLLOW_REPOSITORY = 'FOLLOW_REPOSITORY';
+export * from '@user/modules/follow/repositories/follow.repository.interface';
 
 @Injectable()
-export class FollowRepository {
-   constructor(private readonly prisma: PrismaService) {}
+export class FollowRepository implements IFollowRepository {
+   constructor(@Inject(PrismaService) private readonly prisma: PrismaClientOrTransaction) {}
 
-   async create(data: Prisma.FollowCreateInput, tx?: Prisma.TransactionClient): Promise<FollowEntity> {
+   private toEntity(follow: Follow): FollowEntity {
+      return FollowEntityBuilder.create().fromPrismaFollow(follow).build();
+   }
+
+   async create(data: CreateFollowData, tx?: Prisma.TransactionClient): Promise<FollowEntity> {
       const client = tx ?? this.prisma;
-      const followId =
-         (data as { followId?: string; id?: string }).followId || (data as { id?: string }).id || uuidv7();
+      const followId = data.followId ?? uuidv7();
+      const followerId = data.followerId ?? data.follower?.connect?.userId;
+      const followingId = data.followingId ?? data.following?.connect?.userId;
+
+      if (!followerId || !followingId) {
+         throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED, {
+            params: { field: !followerId ? 'followerId' : 'followingId' },
+         });
+      }
+
       const follow = await client.follow.create({
          data: {
-            ...data,
             followId,
+            follower: { connect: { userId: followerId } },
+            following: { connect: { userId: followingId } },
+            status: data.status ?? FollowStatus.PENDING,
          },
       });
-      return new FollowEntity(follow);
+      return this.toEntity(follow);
    }
 
    async findById(followId: string): Promise<FollowEntity | null> {
-      const follow = await this.prisma.follow.findUnique({
-         where: { followId },
+      const follow = await this.prisma.follow.findFirst({
+         where: {
+            followId,
+            deletedAt: null,
+         },
       });
-      if (!follow || follow.deletedAt) {
-         return null;
-      }
-      return new FollowEntity(follow);
+      return follow ? this.toEntity(follow) : null;
    }
 
    async findByFollowerAndFollowing(followerId: string, followingId: string): Promise<FollowEntity | null> {
@@ -41,7 +62,7 @@ export class FollowRepository {
             deletedAt: null,
          },
       });
-      return follow ? new FollowEntity(follow) : null;
+      return follow ? this.toEntity(follow) : null;
    }
 
    async findAllActive(): Promise<FollowEntity[]> {
@@ -50,13 +71,14 @@ export class FollowRepository {
             deletedAt: null,
          },
       });
-      return follows.map((follow) => new FollowEntity(follow));
+      return follows.map((follow) => this.toEntity(follow));
    }
 
    async findFollowRelations(
       currentUserId: string,
       targetUserIds: string[],
-   ): Promise<{ followingSet: Set<string>; followerSet: Set<string> }> {
+      status: FollowStatus = FollowStatus.ACCEPTED,
+   ): Promise<FollowRelationsResult> {
       const followingSet = new Set<string>();
       const followerSet = new Set<string>();
 
@@ -67,7 +89,7 @@ export class FollowRepository {
       const follows = await this.prisma.follow.findMany({
          where: {
             deletedAt: null,
-            status: FollowStatus.ACCEPTED,
+            status,
             OR: [
                {
                   followerId: currentUserId,
@@ -108,7 +130,7 @@ export class FollowRepository {
          take,
          orderBy: { createdAt: 'desc' },
       });
-      return follows.map((follow) => new FollowEntity(follow));
+      return follows.map((follow) => this.toEntity(follow));
    }
 
    async findFollowing(userId: string, status?: FollowStatus, skip = 0, take = 20): Promise<FollowEntity[]> {
@@ -122,7 +144,7 @@ export class FollowRepository {
          take,
          orderBy: { createdAt: 'desc' },
       });
-      return follows.map((follow) => new FollowEntity(follow));
+      return follows.map((follow) => this.toEntity(follow));
    }
 
    async countFollowers(userId: string, status?: FollowStatus): Promise<number> {
@@ -151,7 +173,7 @@ export class FollowRepository {
          where: { followId },
          data: { status },
       });
-      return new FollowEntity(follow);
+      return this.toEntity(follow);
    }
 
    async softDelete(followId: string, tx?: Prisma.TransactionClient): Promise<FollowEntity> {
@@ -160,7 +182,7 @@ export class FollowRepository {
          where: { followId },
          data: { deletedAt: new Date() },
       });
-      return new FollowEntity(follow);
+      return this.toEntity(follow);
    }
 
    async softDeleteByFollowerAndFollowing(
@@ -181,7 +203,7 @@ export class FollowRepository {
          where: { followId },
          data: { deletedAt: null },
       });
-      return new FollowEntity(follow);
+      return this.toEntity(follow);
    }
 
    async delete(followId: string, tx?: Prisma.TransactionClient): Promise<FollowEntity> {
@@ -189,7 +211,7 @@ export class FollowRepository {
       const follow = await client.follow.delete({
          where: { followId },
       });
-      return new FollowEntity(follow);
+      return this.toEntity(follow);
    }
 
    async deleteByFollowerAndFollowing(

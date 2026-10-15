@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { NebulaModule, RetryQueueModule, RmqModule } from '@common';
 import { PrismaModule } from '@user/core/database/prisma';
 import { OutboxModule } from '@user/core/outbox';
+import { UserDomainModule } from '@user/domain';
+import { UnitOfWorkModule } from '@user/unit-of-work';
 import {
    UserProfileRepository,
    USER_PROFILE_REPOSITORY,
@@ -11,16 +13,37 @@ import {
    FollowGraphRepository,
    GRAPH_FOLLOW_REPOSITORY,
 } from '@user/modules/follow/repositories/follow-graph.repository';
-import { FollowSyncService } from '@user/modules/follow/services/follow-sync.service';
-import { FollowService } from '@user/modules/follow/follow.service';
+import { FollowService } from '@user/services/domain/follow.service';
+import { UserGraphSyncService } from '@user/services/infrastructure/user-graph-sync.service';
+import { UserResolverService } from '@user/services/infrastructure/user-resolver.service';
 import { FollowController } from '@user/modules/follow/follow.controller';
-import { UserResolverService } from '@user/shared/services';
+import { FollowUserSaga, UnfollowUserSaga, AcceptFollowRequestSaga, RejectFollowRequestSaga } from '@user/sagas/follow';
+import { FOLLOW_SAGA_FACTORY } from '@user/constants';
+import { FollowSagaFactory, UserFactoriesModule } from '@user/factories';
 
 @Module({
-   imports: [PrismaModule, OutboxModule, RetryQueueModule, NebulaModule.forRoot(), RmqModule],
+   imports: [
+      UserDomainModule,
+      UserFactoriesModule,
+      PrismaModule,
+      OutboxModule,
+      RetryQueueModule,
+      UnitOfWorkModule,
+      NebulaModule.forRoot(),
+      RmqModule,
+   ],
    controllers: [FollowController],
    providers: [
       FollowService,
+      FollowSagaFactory,
+      {
+         provide: FOLLOW_SAGA_FACTORY,
+         useClass: FollowSagaFactory,
+      },
+      FollowUserSaga,
+      UnfollowUserSaga,
+      AcceptFollowRequestSaga,
+      RejectFollowRequestSaga,
       UserResolverService,
       FollowRepository,
       {
@@ -32,7 +55,7 @@ import { UserResolverService } from '@user/shared/services';
          provide: GRAPH_FOLLOW_REPOSITORY,
          useClass: FollowGraphRepository,
       },
-      FollowSyncService,
+      UserGraphSyncService,
       UserProfileRepository,
       {
          provide: USER_PROFILE_REPOSITORY,
@@ -41,12 +64,19 @@ import { UserResolverService } from '@user/shared/services';
    ],
    exports: [
       FollowService,
+      FollowUserSaga,
+      UnfollowUserSaga,
+      AcceptFollowRequestSaga,
+      RejectFollowRequestSaga,
       UserResolverService,
       FollowRepository,
       FOLLOW_REPOSITORY,
       FollowGraphRepository,
       GRAPH_FOLLOW_REPOSITORY,
-      FollowSyncService,
+      UserFactoriesModule,
+      FollowSagaFactory,
+      FOLLOW_SAGA_FACTORY,
+      UserGraphSyncService,
    ],
 })
 export class FollowModule {}

@@ -1,9 +1,9 @@
 import { NestFactory } from '@nestjs/core';
-import { ClientProxy } from '@nestjs/microservices';
-import { AppLogger, SERVICES } from '@common';
+import { AppLogger } from '@common';
 import { USER_EVENTS } from '@contracts/user';
 import { UserModule } from '@user/user.module';
 import { PrismaService } from '@user/core';
+import { SEARCH_ADAPTER, type ISearchAdapter } from '@user/adapters/search';
 
 async function bootstrap() {
    const app = await NestFactory.createApplicationContext(UserModule);
@@ -11,7 +11,7 @@ async function bootstrap() {
    logger.setContext('ElasticsearchUserMigration');
 
    const prismaService = app.get(PrismaService);
-   const searchClient = app.get<ClientProxy>(SERVICES.SEARCH_SERVICE);
+   const searchAdapter = app.get<ISearchAdapter>(SEARCH_ADAPTER);
 
    try {
       logger.log('Starting migration to Elasticsearch via RabbitMQ...');
@@ -24,7 +24,7 @@ async function bootstrap() {
 
       for (const user of users) {
          try {
-            searchClient.emit(USER_EVENTS.SYNC, {
+            searchAdapter.emitIndexEvent(USER_EVENTS.SYNC, {
                id: user.userId,
                username: user.username || undefined,
                createdAt: user.createdAt,

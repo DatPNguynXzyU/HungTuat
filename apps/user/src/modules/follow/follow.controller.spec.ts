@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RmqService } from '@common';
+import { CommandBus, RmqService, type ICommandHandler } from '@common';
 import { FollowController } from '@user/modules/follow/follow.controller';
-import { FollowService } from '@user/modules/follow/follow.service';
+import { FollowService } from '@user/services/domain/follow.service';
+import { USER_FOLLOW_COMMAND_HANDLERS } from '@user/commands/follow';
 
 describe('FollowController', () => {
    let controller: FollowController;
@@ -29,6 +30,8 @@ describe('FollowController', () => {
       const module: TestingModule = await Test.createTestingModule({
          controllers: [FollowController],
          providers: [
+            CommandBus,
+            ...USER_FOLLOW_COMMAND_HANDLERS,
             {
                provide: FollowService,
                useValue: mockFollowService,
@@ -39,6 +42,14 @@ describe('FollowController', () => {
             },
          ],
       }).compile();
+
+      const commandBus = module.get<CommandBus>(CommandBus);
+      for (const handlerClass of USER_FOLLOW_COMMAND_HANDLERS) {
+         const handler = module.get<ICommandHandler<never, never>>(handlerClass);
+         if (handler) {
+            commandBus.registerHandler(handler);
+         }
+      }
 
       controller = module.get<FollowController>(FollowController);
    });

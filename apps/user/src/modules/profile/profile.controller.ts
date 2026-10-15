@@ -1,15 +1,34 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { BadRequestException, checkOwnershipOrAdmin, RmqService } from '@common';
-import { USER_ERROR_CODES, USER_PATTERNS } from '@contracts/user';
+import { CommandBus, RmqService } from '@common';
+import { USER_PATTERNS } from '@contracts/user';
 import type { IServiceMessage } from '@common';
-import { Gender } from '@user/core/database/entities';
-import { ProfileService } from '@user/modules/profile/profile.service';
+import type { Gender } from '@user/core/database/entities';
+import {
+   CreateProfileCommand,
+   CreateUserCommand,
+   DeleteUserCommand,
+   GetAvatarUploadSignatureCommand,
+   GetDateOfBirthCommand,
+   GetUserByAccountIdCommand,
+   GetUserByIdCommand,
+   GetUserByUserIdCommand,
+   GetUserByUsernameCommand,
+   RestoreUserCommand,
+   UpdateUsernameCommand,
+   UpdateUserProfileCommand,
+   UploadAvatarCommand,
+   UpsertUserProfileCommand,
+} from '@user/commands/profile';
 
+/**
+ * ProfileController acts as a transport adapter dispatching commands
+ * to the CommandBus layer, decoupling the transport layer from concrete services.
+ */
 @Controller()
 export class ProfileController {
    constructor(
-      private readonly profileService: ProfileService,
+      private readonly commandBus: CommandBus,
       private readonly rmqService: RmqService,
    ) {}
 
@@ -20,7 +39,7 @@ export class ProfileController {
       message: IServiceMessage<{
          username?: string;
          displayName?: string;
-         gender?: string;
+         gender?: Gender;
          dateOfBirth?: string | Date;
          bio?: string;
          avatar?: string;
@@ -33,19 +52,7 @@ export class ProfileController {
       @Ctx() context?: RmqContext,
    ) {
       try {
-         const accountId = message.data?.accountId || message.user?.userId || message.data?.userId;
-         if (!accountId) {
-            throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
-         }
-
-         const { gender, dateOfBirth, ...profileData } = message.data;
-
-         const result = await this.profileService.createUser({
-            accountId,
-            ...profileData,
-            ...(gender && { gender: gender as Gender }),
-            ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
-         });
+         const result = await this.commandBus.execute(new CreateProfileCommand(message));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -65,7 +72,7 @@ export class ProfileController {
          accountId: string;
          username?: string;
          displayName?: string;
-         gender?: string;
+         gender?: Gender;
          dateOfBirth?: string | Date;
          bio?: string;
          avatar?: string;
@@ -76,13 +83,7 @@ export class ProfileController {
       @Ctx() context?: RmqContext,
    ) {
       try {
-         const { accountId, gender, dateOfBirth, ...profileData } = data;
-         const result = await this.profileService.createUser({
-            accountId,
-            ...profileData,
-            ...(gender && { gender: gender as Gender }),
-            ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
-         });
+         const result = await this.commandBus.execute(new CreateUserCommand(data));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -96,38 +97,13 @@ export class ProfileController {
    }
 
    @MessagePattern({ cmd: USER_PATTERNS.GET_USER_BY_ID })
-   async getUserById(@Payload() message: IServiceMessage<{ id: string }>, @Ctx() context?: RmqContext) {
+   async getUserById(@Payload() message: IServiceMessage<{ userId: string }>, @Ctx() context?: RmqContext) {
       try {
-         try {
-            const result = await this.profileService.getUserById(message.data.id);
-            if (context) {
-               this.rmqService.ack(context);
-            }
-            return result;
-         } catch (err) {
-            if (message.user && message.user.userId === message.data.id) {
-               try {
-                  const autoCreated = await this.profileService.createUser({
-                     accountId: message.user.userId,
-                  });
-                  if (autoCreated) {
-                     if (context) {
-                        this.rmqService.ack(context);
-                     }
-                     return autoCreated;
-                  }
-               } catch {
-                  const fallbackUser = await this.profileService.getUserById(message.data.id);
-                  if (fallbackUser) {
-                     if (context) {
-                        this.rmqService.ack(context);
-                     }
-                     return fallbackUser;
-                  }
-               }
-            }
-            throw err;
+         const result = await this.commandBus.execute(new GetUserByIdCommand(message));
+         if (context) {
+            this.rmqService.ack(context);
          }
+         return result;
       } catch (error) {
          if (context) {
             this.rmqService.ack(context);
@@ -139,7 +115,7 @@ export class ProfileController {
    @MessagePattern({ cmd: USER_PATTERNS.GET_USER_BY_USER_ID })
    async getUserByUserId(@Payload() data: { userId: string }, @Ctx() context?: RmqContext) {
       try {
-         const result = await this.profileService.getUserByUserId(data.userId);
+         const result = await this.commandBus.execute(new GetUserByUserIdCommand(data.userId));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -155,7 +131,7 @@ export class ProfileController {
    @MessagePattern({ cmd: USER_PATTERNS.GET_USER_BY_ACCOUNT_ID })
    async getUserByAccountId(@Payload() data: { accountId: string }, @Ctx() context?: RmqContext) {
       try {
-         const result = await this.profileService.getUserByAccountId(data.accountId);
+         const result = await this.commandBus.execute(new GetUserByAccountIdCommand(data.accountId));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -171,7 +147,7 @@ export class ProfileController {
    @MessagePattern({ cmd: USER_PATTERNS.GET_USER_BY_USERNAME })
    async getUserByUsername(@Payload() data: { username: string }, @Ctx() context?: RmqContext) {
       try {
-         const result = await this.profileService.getUserByUsername(data.username);
+         const result = await this.commandBus.execute(new GetUserByUsernameCommand(data.username));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -187,10 +163,7 @@ export class ProfileController {
    @MessagePattern({ cmd: USER_PATTERNS.GET_DATE_OF_BIRTH })
    async getDateOfBirth(@Payload() data: { userId: string }, @Ctx() context?: RmqContext) {
       try {
-         if (!data?.userId) {
-            throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
-         }
-         const result = await this.profileService.getDateOfBirth(data.userId);
+         const result = await this.commandBus.execute(new GetDateOfBirthCommand(data?.userId));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -208,10 +181,10 @@ export class ProfileController {
    async updateUserProfile(
       @Payload()
       message: IServiceMessage<{
-         id: string;
+         userId: string;
          username?: string;
          displayName?: string;
-         gender?: string;
+         gender?: Gender;
          dateOfBirth?: string | Date;
          bio?: string;
          avatar?: string;
@@ -222,16 +195,7 @@ export class ProfileController {
       @Ctx() context?: RmqContext,
    ) {
       try {
-         const { id, gender, dateOfBirth, ...updateData } = message.data;
-
-         const existingUser = await this.profileService.getUserById(id);
-         checkOwnershipOrAdmin(message, existingUser.accountId);
-
-         const result = await this.profileService.updateUserProfile(id, {
-            ...updateData,
-            ...(gender && { gender: gender as Gender }),
-            ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
-         });
+         const result = await this.commandBus.execute(new UpdateUserProfileCommand(message));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -248,10 +212,10 @@ export class ProfileController {
    async upsertUserProfile(
       @Payload()
       message: IServiceMessage<{
-         id: string;
+         userId: string;
          username?: string;
          displayName?: string;
-         gender?: string;
+         gender?: Gender;
          dateOfBirth?: string | Date;
          bio?: string;
          avatar?: string;
@@ -262,25 +226,7 @@ export class ProfileController {
       @Ctx() context?: RmqContext,
    ) {
       try {
-         const { id, gender, dateOfBirth, ...updateData } = message.data;
-
-         let targetOwnerId = id;
-         try {
-            const existingUser = await this.profileService.getUserById(id);
-            if (existingUser) {
-               targetOwnerId = existingUser.accountId;
-            }
-         } catch {
-            // User does not exist in DB yet, fallback to comparing id with message.user.userId
-         }
-
-         checkOwnershipOrAdmin(message, targetOwnerId);
-
-         const result = await this.profileService.upsertUserProfile(id, {
-            ...updateData,
-            ...(gender && { gender: gender as Gender }),
-            ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
-         });
+         const result = await this.commandBus.execute(new UpsertUserProfileCommand(message));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -295,16 +241,11 @@ export class ProfileController {
 
    @MessagePattern({ cmd: USER_PATTERNS.UPDATE_USERNAME })
    async updateUsername(
-      @Payload() message: IServiceMessage<{ id: string; username: string }>,
+      @Payload() message: IServiceMessage<{ userId: string; username: string }>,
       @Ctx() context?: RmqContext,
    ) {
       try {
-         const user = await this.profileService.getUserById(message.data.id);
-         if (user) {
-            checkOwnershipOrAdmin(message, user.accountId);
-         }
-
-         const result = await this.profileService.updateUsername(user.id, message.data.username);
+         const result = await this.commandBus.execute(new UpdateUsernameCommand(message));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -318,14 +259,9 @@ export class ProfileController {
    }
 
    @MessagePattern({ cmd: USER_PATTERNS.DELETE_USER })
-   async deleteUser(@Payload() message: IServiceMessage<{ id: string }>, @Ctx() context?: RmqContext) {
+   async deleteUser(@Payload() message: IServiceMessage<{ userId: string }>, @Ctx() context?: RmqContext) {
       try {
-         const user = await this.profileService.getUserById(message.data.id);
-         if (user) {
-            checkOwnershipOrAdmin(message, user.accountId);
-         }
-
-         const result = await this.profileService.deleteUser(user.id);
+         const result = await this.commandBus.execute(new DeleteUserCommand(message));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -339,9 +275,9 @@ export class ProfileController {
    }
 
    @MessagePattern({ cmd: USER_PATTERNS.RESTORE_USER })
-   async restoreUser(@Payload() data: { id: string }, @Ctx() context?: RmqContext) {
+   async restoreUser(@Payload() data: { userId: string }, @Ctx() context?: RmqContext) {
       try {
-         const result = await this.profileService.restoreUser(data.id);
+         const result = await this.commandBus.execute(new RestoreUserCommand(data.userId));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -356,21 +292,11 @@ export class ProfileController {
 
    @MessagePattern({ cmd: USER_PATTERNS.UPLOAD_AVATAR })
    async uploadAvatar(
-      @Payload() message: IServiceMessage<{ id?: string; fileBase64: string; mimeType?: string }>,
+      @Payload() message: IServiceMessage<{ userId?: string; fileBase64: string; mimeType?: string }>,
       @Ctx() context?: RmqContext,
    ) {
       try {
-         const targetUserId = message.data.id || message.user?.userId;
-         if (!targetUserId) {
-            throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
-         }
-         checkOwnershipOrAdmin(message, targetUserId);
-
-         const result = await this.profileService.uploadAvatar(
-            targetUserId,
-            message.data.fileBase64,
-            message.data.mimeType,
-         );
+         const result = await this.commandBus.execute(new UploadAvatarCommand(message));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -384,15 +310,12 @@ export class ProfileController {
    }
 
    @MessagePattern({ cmd: USER_PATTERNS.GET_AVATAR_UPLOAD_SIGNATURE })
-   async getAvatarUploadSignature(@Payload() message: IServiceMessage<{ id?: string }>, @Ctx() context?: RmqContext) {
+   async getAvatarUploadSignature(
+      @Payload() message: IServiceMessage<{ userId?: string }>,
+      @Ctx() context?: RmqContext,
+   ) {
       try {
-         const targetUserId = message.data.id || message.user?.userId;
-         if (!targetUserId) {
-            throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED);
-         }
-         checkOwnershipOrAdmin(message, targetUserId);
-
-         const result = await this.profileService.getAvatarUploadSignature(targetUserId);
+         const result = await this.commandBus.execute(new GetAvatarUploadSignatureCommand(message));
          if (context) {
             this.rmqService.ack(context);
          }

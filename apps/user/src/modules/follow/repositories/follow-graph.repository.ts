@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { NebulaService, AppLogger } from '@common';
 import { FollowStatus } from '@user/core/database/entities';
+import type {
+   IFollowGraphRepository,
+   GraphUserData,
+   GraphFollowRelation,
+} from '@user/modules/follow/repositories/follow-graph.repository.interface';
 
-export const GRAPH_FOLLOW_REPOSITORY = 'GRAPH_FOLLOW_REPOSITORY';
+export * from '@user/modules/follow/repositories/follow-graph.repository.interface';
 
 @Injectable()
-export class FollowGraphRepository {
+export class FollowGraphRepository implements IFollowGraphRepository {
    constructor(
       private readonly nebulaService: NebulaService,
       private readonly logger: AppLogger,
@@ -13,19 +18,8 @@ export class FollowGraphRepository {
       this.logger.setContext(FollowGraphRepository.name);
    }
 
-   async createOrUpdateUser(user: {
-      id: string;
-      userId?: string;
-      username?: string | null;
-      email?: string | null;
-      displayName?: string | null;
-      avatar?: string | null;
-      bio?: string | null;
-      isPrivate?: boolean;
-      createdAt?: Date;
-      updatedAt?: Date;
-   }): Promise<void> {
-      const escapedUserId = user.userId ? user.userId.replace(/"/g, '\\"') : user.id;
+   async createOrUpdateUser(user: GraphUserData): Promise<void> {
+      const escapedUserId = user.userId.replace(/"/g, '\\"');
       const escapedUsername = user.username ? user.username.replace(/"/g, '\\"') : '';
       const escapedDisplayName = user.displayName ? user.displayName.replace(/"/g, '\\"') : '';
       const escapedAvatar = user.avatar ? user.avatar.replace(/"/g, '\\"') : '';
@@ -35,15 +29,15 @@ export class FollowGraphRepository {
 
       const query = `
          INSERT VERTEX User(user_id, username, display_name, avatar, is_private, created_at, updated_at)
-         VALUES "${user.id}":("${escapedUserId}", "${escapedUsername}", "${escapedDisplayName}", "${escapedAvatar}", ${isPrivate}, ${createdAt}, ${updatedAt});
+         VALUES "${escapedUserId}":("${escapedUserId}", "${escapedUsername}", "${escapedDisplayName}", "${escapedAvatar}", ${isPrivate}, ${createdAt}, ${updatedAt});
       `;
 
       try {
          await this.nebulaService.execute(query);
-         this.logger.debug(`Synced user to graph: ${user.id}`);
+         this.logger.debug(`Synced user to graph: ${user.userId}`);
       } catch (error) {
          this.logger.error(
-            `Failed to sync user to graph: ${user.id}`,
+            `Failed to sync user to graph: ${user.userId}`,
             error instanceof Error ? error.stack : undefined,
          );
          throw error;
@@ -53,9 +47,9 @@ export class FollowGraphRepository {
    async createFollow(
       followerId: string,
       followingId: string,
-      _status: FollowStatus = FollowStatus.ACCEPTED,
+      status: FollowStatus = FollowStatus.ACCEPTED,
    ): Promise<void> {
-      void _status;
+      void status;
       const query = `
          INSERT EDGE Follow(createdAt) VALUES "${followerId}" -> "${followingId}":(now());
       `;
@@ -76,8 +70,8 @@ export class FollowGraphRepository {
       return this.createFollow(followerId, followingId);
    }
 
-   async updateFollowStatus(followerId: string, followingId: string, _status: FollowStatus): Promise<void> {
-      void _status;
+   async updateFollowStatus(followerId: string, followingId: string, status: FollowStatus): Promise<void> {
+      void status;
       const query = `
          INSERT EDGE Follow(createdAt) VALUES "${followerId}" -> "${followingId}":(now());
       `;
@@ -129,15 +123,8 @@ export class FollowGraphRepository {
       }
    }
 
-   async getFollowers(
-      userId: string,
-      _status?: FollowStatus,
-      skip = 0,
-      take = 50,
-   ): Promise<
-      Array<{ followerId: string; followingId: string; status: FollowStatus; createdAt: Date; updatedAt: Date }>
-   > {
-      void _status;
+   async getFollowers(userId: string, status?: FollowStatus, skip = 0, take = 50): Promise<GraphFollowRelation[]> {
+      const resolvedStatus = status ?? FollowStatus.ACCEPTED;
       const limit = skip + take;
       const query = `
          GO FROM "${userId}" OVER Follow REVERSELY YIELD Follow._src AS followerId, Follow._dst AS followingId, Follow.createdAt AS createdAt | LIMIT ${limit};
@@ -150,7 +137,7 @@ export class FollowGraphRepository {
             return rows.map((row) => ({
                followerId: typeof row.followerId === 'string' ? row.followerId : '',
                followingId: userId,
-               status: FollowStatus.ACCEPTED,
+               status: resolvedStatus,
                createdAt: row.createdAt ? new Date(Number(row.createdAt)) : new Date(),
                updatedAt: row.createdAt ? new Date(Number(row.createdAt)) : new Date(),
             }));
@@ -165,15 +152,8 @@ export class FollowGraphRepository {
       }
    }
 
-   async getFollowing(
-      userId: string,
-      _status?: FollowStatus,
-      skip = 0,
-      take = 50,
-   ): Promise<
-      Array<{ followerId: string; followingId: string; status: FollowStatus; createdAt: Date; updatedAt: Date }>
-   > {
-      void _status;
+   async getFollowing(userId: string, status?: FollowStatus, skip = 0, take = 50): Promise<GraphFollowRelation[]> {
+      const resolvedStatus = status ?? FollowStatus.ACCEPTED;
       const limit = skip + take;
       const query = `
          GO FROM "${userId}" OVER Follow YIELD Follow._src AS followerId, Follow._dst AS followingId, Follow.createdAt AS createdAt | LIMIT ${limit};
@@ -186,7 +166,7 @@ export class FollowGraphRepository {
             return rows.map((row) => ({
                followerId: userId,
                followingId: typeof row.followingId === 'string' ? row.followingId : '',
-               status: FollowStatus.ACCEPTED,
+               status: resolvedStatus,
                createdAt: row.createdAt ? new Date(Number(row.createdAt)) : new Date(),
                updatedAt: row.createdAt ? new Date(Number(row.createdAt)) : new Date(),
             }));

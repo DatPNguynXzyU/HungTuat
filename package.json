@@ -138,10 +138,24 @@
          "^@user/core$": "<rootDir>/apps/user/src/core/index.ts",
          "^@user/modules$": "<rootDir>/apps/user/src/modules/index.ts",
          "^@user/shared$": "<rootDir>/apps/user/src/shared/index.ts",
+         "^@user/commands$": "<rootDir>/apps/user/src/commands/index.ts",
+         "^@user/commands/(.*)$": "<rootDir>/apps/user/src/commands/$1",
+         "^@user/unit-of-work$": "<rootDir>/apps/user/src/unit-of-work/index.ts",
+         "^@user/unit-of-work/(.*)$": "<rootDir>/apps/user/src/unit-of-work/$1",
          "^@auth/services/domain$": "<rootDir>/apps/auth/src/services/domain/index.ts",
          "^@auth/services/domain/(.*)$": "<rootDir>/apps/auth/src/services/domain/$1",
          "^@auth/services/infrastructure$": "<rootDir>/apps/auth/src/services/infrastructure/index.ts",
-         "^@auth/services/infrastructure/(.*)$": "<rootDir>/apps/auth/src/services/infrastructure/$1"
+         "^@auth/services/infrastructure/(.*)$": "<rootDir>/apps/auth/src/services/infrastructure/$1",
+         "^@user/services$": "<rootDir>/apps/user/src/services/index.ts",
+         "^@user/services/(.*)$": "<rootDir>/apps/user/src/services/$1",
+         "^@user/services/domain$": "<rootDir>/apps/user/src/services/domain/index.ts",
+         "^@user/services/domain/(.*)$": "<rootDir>/apps/user/src/services/domain/$1",
+         "^@user/services/infrastructure$": "<rootDir>/apps/user/src/services/infrastructure/index.ts",
+         "^@user/services/infrastructure/(.*)$": "<rootDir>/apps/user/src/services/infrastructure/$1",
+         "^@user/adapters$": "<rootDir>/apps/user/src/adapters/index.ts",
+         "^@user/adapters/(.*)$": "<rootDir>/apps/user/src/adapters/$1",
+         "^@user/cqrs$": "<rootDir>/apps/user/src/cqrs/index.ts",
+         "^@user/cqrs/(.*)$": "<rootDir>/apps/user/src/cqrs/$1"
       }
    }
 }

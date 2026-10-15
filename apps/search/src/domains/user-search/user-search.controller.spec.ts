@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RmqContext } from '@nestjs/microservices';
 import { AppLogger, RmqService } from '@common';
+import { BULK_OPERATIONS, SEARCH_INDICES } from '@contracts/search';
 import { UserSearchController } from '@search/domains/user-search/user-search.controller';
 import { UserSearchService } from '@search/domains/user-search/user-search.service';
 import { BulkIndexQueue } from '@search/core/queue';
@@ -68,14 +69,14 @@ describe('UserSearchController', () => {
 
    describe('handleUserCreated', () => {
       it('should add index operation to queue and ack context', async () => {
-         const data = { id: 'u-1', username: 'john' };
+         const data = { userId: 'u-1', username: 'john' };
          await controller.handleUserCreated(data, mockContext);
 
          expect(mockBulkQueue.addOperation).toHaveBeenCalledWith(
             expect.objectContaining({
-               operation: 'index',
-               index: 'users',
-               id: 'u-1',
+               operation: BULK_OPERATIONS.INDEX,
+               index: SEARCH_INDICES.USERS,
+               documentId: 'u-1',
             }),
          );
          expect(mockRmqService.ack).toHaveBeenCalledWith(mockContext);
@@ -84,7 +85,7 @@ describe('UserSearchController', () => {
       it('should nack context on queue error', async () => {
          mockBulkQueue.addOperation.mockRejectedValue(new Error('Queue full'));
 
-         await controller.handleUserCreated({ id: 'u-1' }, mockContext);
+         await controller.handleUserCreated({ userId: 'u-1' }, mockContext);
 
          expect(mockRmqService.nack).toHaveBeenCalledWith(mockContext, false);
       });
@@ -92,14 +93,14 @@ describe('UserSearchController', () => {
 
    describe('handleUserUpdated', () => {
       it('should add update operation to queue and ack context', async () => {
-         const data = { id: 'u-1', username: 'john_new' };
+         const data = { userId: 'u-1', username: 'john_new' };
          await controller.handleUserUpdated(data, mockContext);
 
          expect(mockBulkQueue.addOperation).toHaveBeenCalledWith(
             expect.objectContaining({
-               operation: 'update',
-               index: 'users',
-               id: 'u-1',
+               operation: BULK_OPERATIONS.UPDATE,
+               index: SEARCH_INDICES.USERS,
+               documentId: 'u-1',
             }),
          );
          expect(mockRmqService.ack).toHaveBeenCalledWith(mockContext);
@@ -108,12 +109,12 @@ describe('UserSearchController', () => {
 
    describe('handleUserDeleted', () => {
       it('should add delete operation to queue and ack context', async () => {
-         await controller.handleUserDeleted({ id: 'u-1' }, mockContext);
+         await controller.handleUserDeleted({ userId: 'u-1' }, mockContext);
 
          expect(mockBulkQueue.addOperation).toHaveBeenCalledWith({
-            operation: 'delete',
-            index: 'users',
-            id: 'u-1',
+            operation: BULK_OPERATIONS.DELETE,
+            index: SEARCH_INDICES.USERS,
+            documentId: 'u-1',
          });
          expect(mockRmqService.ack).toHaveBeenCalledWith(mockContext);
       });
@@ -121,14 +122,14 @@ describe('UserSearchController', () => {
 
    describe('handleUserSync', () => {
       it('should queue index operation for sync event and ack context', async () => {
-         const data = { id: 'u-1', username: 'john_sync' };
+         const data = { userId: 'u-1', username: 'john_sync' };
          await controller.handleUserSync(data, mockContext);
 
          expect(mockBulkQueue.addOperation).toHaveBeenCalledWith(
             expect.objectContaining({
-               operation: 'index',
-               index: 'users',
-               id: 'u-1',
+               operation: BULK_OPERATIONS.INDEX,
+               index: SEARCH_INDICES.USERS,
+               documentId: 'u-1',
             }),
          );
          expect(mockRmqService.ack).toHaveBeenCalledWith(mockContext);

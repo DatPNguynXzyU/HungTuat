@@ -58,7 +58,7 @@ describe('BulkIndexProcessor', () => {
          data: {
             operation: 'index' as const,
             index: 'users',
-            id: 'u-1',
+            documentId: 'u-1',
             data: { username: 'test' },
          },
       } as unknown as Job<BulkOperation>;
@@ -89,7 +89,7 @@ describe('BulkIndexProcessor', () => {
             data: {
                operation: 'index' as const,
                index: 'users',
-               id: `u-${i}`,
+               documentId: `u-${i}`,
                data: { index: i },
             },
          } as unknown as Job<BulkOperation>;
@@ -109,7 +109,7 @@ describe('BulkIndexProcessor', () => {
          data: {
             operation: 'update' as const,
             index: 'users',
-            id: 'u-update',
+            documentId: 'u-update',
             data: { doc: { name: 'updated' } },
          },
       } as unknown as Job<BulkOperation>;
@@ -118,7 +118,7 @@ describe('BulkIndexProcessor', () => {
          data: {
             operation: 'delete' as const,
             index: 'users',
-            id: 'u-delete',
+            documentId: 'u-delete',
          },
       } as unknown as Job<BulkOperation>;
 
@@ -144,10 +144,10 @@ describe('BulkIndexProcessor', () => {
       });
 
       const job1 = {
-         data: { operation: 'index' as const, index: 'users', id: 'u-1', data: {} },
+         data: { operation: 'index' as const, index: 'users', documentId: 'u-1', data: {} },
       } as unknown as Job<BulkOperation>;
       const job2 = {
-         data: { operation: 'index' as const, index: 'users', id: 'u-2', data: {} },
+         data: { operation: 'index' as const, index: 'users', documentId: 'u-2', data: {} },
       } as unknown as Job<BulkOperation>;
 
       const p1 = processor.process(job1);
@@ -169,7 +169,7 @@ describe('BulkIndexProcessor', () => {
       mockClient.bulk.mockRejectedValue(new Error('Connection refused'));
 
       const job = {
-         data: { operation: 'index' as const, index: 'users', id: 'u-err', data: {} },
+         data: { operation: 'index' as const, index: 'users', documentId: 'u-err', data: {} },
       } as unknown as Job<BulkOperation>;
 
       const p = processor.process(job);
@@ -186,7 +186,7 @@ describe('BulkIndexProcessor', () => {
 
    it('should flush pending items on module destroy', async () => {
       const job = {
-         data: { operation: 'delete' as const, index: 'users', id: 'u-destroy' },
+         data: { operation: 'delete' as const, index: 'users', documentId: 'u-destroy' },
       } as unknown as Job<BulkOperation>;
 
       void processor.process(job);

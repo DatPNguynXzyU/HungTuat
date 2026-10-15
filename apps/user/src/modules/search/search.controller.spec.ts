@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RmqService } from '@common';
+import { CommandBus, RmqService, type ICommandHandler } from '@common';
 import { SearchController } from '@user/modules/search/search.controller';
-import { UserSearchService } from '@user/modules/search/user-search.service';
+import { UserSearchService } from '@user/services/domain/user-search.service';
+import { USER_SEARCH_COMMAND_HANDLERS } from '@user/commands/search';
 
 describe('SearchController', () => {
    let controller: SearchController;
@@ -20,6 +21,8 @@ describe('SearchController', () => {
       const module: TestingModule = await Test.createTestingModule({
          controllers: [SearchController],
          providers: [
+            CommandBus,
+            ...USER_SEARCH_COMMAND_HANDLERS,
             {
                provide: UserSearchService,
                useValue: mockUserSearchService,
@@ -30,6 +33,14 @@ describe('SearchController', () => {
             },
          ],
       }).compile();
+
+      const commandBus = module.get<CommandBus>(CommandBus);
+      for (const handlerClass of USER_SEARCH_COMMAND_HANDLERS) {
+         const handler = module.get<ICommandHandler<never, never>>(handlerClass);
+         if (handler) {
+            commandBus.registerHandler(handler);
+         }
+      }
 
       controller = module.get<SearchController>(SearchController);
    });

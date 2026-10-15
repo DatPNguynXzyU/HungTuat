@@ -1,1 +1,2 @@
-export * from '@user/modules/profile/repositories//user-profile.repository';
+export * from '@user/modules/profile/repositories/user-profile.repository.interface';
+export * from '@user/modules/profile/repositories/user-profile.repository';

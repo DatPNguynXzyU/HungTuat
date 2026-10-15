@@ -1,21 +1,25 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, EventPattern, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { RmqService } from '@common';
+import { CommandBus, RmqService } from '@common';
 import { NOTIFICATION_EVENTS } from '@contracts/notification';
 import { USER_PATTERNS } from '@contracts/user';
-import { AuthService } from '@user/modules/authentication/auth.service';
+import { CheckUsernameCommand, HandleUserRegisteredCommand } from '@user/commands/authentication';
 
+/**
+ * AuthController acts as a transport adapter dispatching commands
+ * to the CommandBus layer, decoupling the transport layer from concrete services.
+ */
 @Controller()
 export class AuthController {
    constructor(
-      private readonly authService: AuthService,
+      private readonly commandBus: CommandBus,
       private readonly rmqService: RmqService,
    ) {}
 
    @EventPattern(NOTIFICATION_EVENTS.USER_REGISTERED)
    async handleUserRegistered(@Payload() data: { accountId: string; email?: string }, @Ctx() context?: RmqContext) {
       try {
-         const result = await this.authService.handleUserRegistered(data);
+         const result = await this.commandBus.execute(new HandleUserRegisteredCommand(data));
          if (context) {
             this.rmqService.ack(context);
          }
@@ -31,7 +35,7 @@ export class AuthController {
    @MessagePattern({ cmd: USER_PATTERNS.CHECK_USERNAME })
    async checkUsername(@Payload() data: { username: string }, @Ctx() context?: RmqContext) {
       try {
-         const result = await this.authService.checkUsername(data.username);
+         const result = await this.commandBus.execute(new CheckUsernameCommand(data.username));
          if (context) {
             this.rmqService.ack(context);
          }

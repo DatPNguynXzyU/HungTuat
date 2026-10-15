@@ -156,3 +156,29 @@ model Outbox {
   @@index([eventType])
   @@map("outbox")
 }
+
+model UserEventStream {
+  eventId   String   @id @default(uuid()) @map("event_id")
+  streamId  String   @map("stream_id")
+  eventType String   @map("event_type")
+  version   Int      @default(autoincrement()) @unique
+  data      Json
+  metadata  Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([streamId, version])
+  @@index([eventType])
+  @@map("user_event_streams")
+}
+
+model UserActivitySummary {
+  userId              String    @id @map("user_id")
+  totalEvents         Int       @default(0) @map("total_events")
+  lastEventType       String?   @map("last_event_type")
+  lastEventAt         DateTime? @map("last_event_at")
+  profileUpdatesCount Int       @default(0) @map("profile_updates_count")
+  followActionsCount  Int       @default(0) @map("follow_actions_count")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@map("user_activity_summaries")
+}

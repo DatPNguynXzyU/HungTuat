@@ -1,22 +1,22 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { SERVICES } from '@common';
 import { USER_EVENTS } from '@contracts/user';
 import { UserEntity } from '@user/core/database/entities';
+import { SEARCH_ADAPTER, type ISearchAdapter } from '@user/adapters/search';
+import { USER_METRICS_LOG_MESSAGES } from '@user/constants';
 
 @Injectable()
 export class UserIndexListener {
    private readonly logger = new Logger(UserIndexListener.name);
 
    constructor(
-      @Inject(SERVICES.SEARCH_SERVICE)
-      private readonly searchClient: ClientProxy,
+      @Inject(SEARCH_ADAPTER)
+      private readonly searchAdapter: ISearchAdapter,
    ) {}
 
    emitSearchIndexEvent(event: string, user: UserEntity): void {
       try {
-         this.searchClient.emit(event, {
-            id: user.id,
+         this.searchAdapter.emitIndexEvent(event, {
+            userId: user.userId,
             username: user.username,
             displayName: user.displayName,
             avatar: user.avatar,
@@ -28,15 +28,19 @@ export class UserIndexListener {
             updatedAt: user.updatedAt,
          });
       } catch (err) {
-         this.logger.warn(`Failed to emit ${event} to Search Service for user ${user.id}: ${String(err)}`);
+         this.logger.warn(
+            `${USER_METRICS_LOG_MESSAGES.EMIT_INDEX_EVENT_FAILED} [${event}] user [${user.userId}]: ${String(err)}`,
+         );
       }
    }
 
    emitSearchDeleteEvent(userId: string): void {
       try {
-         this.searchClient.emit(USER_EVENTS.DELETED, { id: userId });
+         this.searchAdapter.emitIndexEvent(USER_EVENTS.DELETED, { userId });
       } catch (err) {
-         this.logger.warn(`Failed to emit ${USER_EVENTS.DELETED} to Search Service for user ${userId}: ${String(err)}`);
+         this.logger.warn(
+            `${USER_METRICS_LOG_MESSAGES.EMIT_INDEX_EVENT_FAILED} [${USER_EVENTS.DELETED}] user [${userId}]: ${String(err)}`,
+         );
       }
    }
 }

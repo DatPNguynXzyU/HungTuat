@@ -1,39 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { uuidv7 } from '@common';
-import { PrismaService } from '@user/core/database/prisma';
-import { UserEntity, Gender, UserStatus } from '@user/core/database/entities';
-import { Prisma } from '@user/prisma-client';
+import { PrismaService, type PrismaClientOrTransaction } from '@user/core/database/prisma';
+import { UserEntity, UserStatus } from '@user/core/database/entities';
+import { UserEntityBuilder } from '@user/builders';
+import type { Prisma, User, UserProfile, UserStats, UserSettings } from '@user/prisma-client';
+import type {
+   CreateUserData,
+   UpdateUserData,
+   IUserProfileRepository,
+} from '@user/modules/profile/repositories/user-profile.repository.interface';
 
-export interface CreateUserData {
-   accountId: string;
-   username?: string | null;
-   displayName?: string | null;
-   bio?: string | null;
-   avatar?: string | null;
-   coverImage?: string | null;
-   website?: string | null;
-   location?: string | null;
-   dateOfBirth?: Date | null;
-   gender?: Gender | null;
-   isPrivate?: boolean;
-   isVerified?: boolean;
-   status?: UserStatus;
-}
+export * from '@user/modules/profile/repositories/user-profile.repository.interface';
 
-export interface UpdateUserData {
-   username?: string;
-   displayName?: string;
-   bio?: string;
-   avatar?: string;
-   coverImage?: string;
-   website?: string;
-   location?: string;
-   dateOfBirth?: Date;
-   gender?: Gender;
-   isPrivate?: boolean;
-   isVerified?: boolean;
-   status?: UserStatus;
-}
+type UserWithRelations = User & {
+   profile?: UserProfile | null;
+   stats?: UserStats | null;
+   settings?: UserSettings | null;
+};
 
 const userIncludeRelations = {
    profile: true,
@@ -41,20 +24,22 @@ const userIncludeRelations = {
    settings: true,
 } as const;
 
-export const USER_REPOSITORY = 'USER_REPOSITORY';
-export const USER_PROFILE_REPOSITORY = 'USER_REPOSITORY';
-
 @Injectable()
-export class UserProfileRepository {
-   constructor(private readonly prisma: PrismaService) {}
+export class UserProfileRepository implements IUserProfileRepository {
+   constructor(@Inject(PrismaService) private readonly prisma: PrismaClientOrTransaction) {}
 
-   async create(data: CreateUserData): Promise<UserEntity> {
-      const user = await this.prisma.user.create({
+   private toEntity(user: UserWithRelations): UserEntity {
+      return UserEntityBuilder.create().fromPrismaUser(user).build();
+   }
+
+   async create(data: CreateUserData, tx?: Prisma.TransactionClient): Promise<UserEntity> {
+      const client = tx ?? this.prisma;
+      const user = await client.user.create({
          data: {
             userId: uuidv7(),
             accountId: data.accountId,
             username: data.username,
-            status: data.status || UserStatus.ACTIVE,
+            status: data.status ?? UserStatus.ACTIVE,
             profile: {
                create: {
                   profileId: uuidv7(),
@@ -84,29 +69,29 @@ export class UserProfileRepository {
          include: userIncludeRelations,
       });
 
-      return new UserEntity(user);
+      return this.toEntity(user);
    }
 
    async findById(userId: string): Promise<UserEntity | null> {
-      const user = await this.prisma.user.findUnique({
-         where: { userId },
+      const user = await this.prisma.user.findFirst({
+         where: {
+            userId,
+            deletedAt: null,
+         },
          include: userIncludeRelations,
       });
-      if (!user || user.deletedAt) {
-         return null;
-      }
-      return new UserEntity(user);
+      return user ? this.toEntity(user) : null;
    }
 
    async findByAccountId(accountId: string): Promise<UserEntity | null> {
-      const user = await this.prisma.user.findUnique({
-         where: { accountId },
+      const user = await this.prisma.user.findFirst({
+         where: {
+            accountId,
+            deletedAt: null,
+         },
          include: userIncludeRelations,
       });
-      if (!user || user.deletedAt) {
-         return null;
-      }
-      return new UserEntity(user);
+      return user ? this.toEntity(user) : null;
    }
 
    async findDateOfBirth(idOrAccountId: string): Promise<{ userId: string; dateOfBirth: Date | null } | null> {
@@ -137,14 +122,14 @@ export class UserProfileRepository {
    }
 
    async findByUsername(username: string): Promise<UserEntity | null> {
-      const user = await this.prisma.user.findUnique({
-         where: { username },
+      const user = await this.prisma.user.findFirst({
+         where: {
+            username,
+            deletedAt: null,
+         },
          include: userIncludeRelations,
       });
-      if (!user || user.deletedAt) {
-         return null;
-      }
-      return new UserEntity(user);
+      return user ? this.toEntity(user) : null;
    }
 
    async findAllUsernames(): Promise<string[]> {
@@ -167,10 +152,10 @@ export class UserProfileRepository {
          take,
          include: userIncludeRelations,
       });
-      return users.map((user) => new UserEntity(user));
+      return users.map((user) => this.toEntity(user));
    }
 
-   async findByIds(userIds: string[]): Promise<UserEntity[]> {
+   async findByIds(userIds: string[], status?: UserStatus): Promise<UserEntity[]> {
       if (!userIds || userIds.length === 0) {
          return [];
       }
@@ -178,18 +163,22 @@ export class UserProfileRepository {
          where: {
             userId: { in: userIds },
             deletedAt: null,
-            status: UserStatus.ACTIVE,
+            ...(status !== undefined && { status }),
          },
          include: userIncludeRelations,
       });
-      return users.map((user) => new UserEntity(user));
+      return users.map((user) => this.toEntity(user));
    }
 
-   async findTopUsers(limit = 10, excludeUserIds: string[] = []): Promise<UserEntity[]> {
+   async findTopUsers(
+      limit = 10,
+      excludeUserIds: string[] = [],
+      status: UserStatus = UserStatus.ACTIVE,
+   ): Promise<UserEntity[]> {
       const users = await this.prisma.user.findMany({
          where: {
             deletedAt: null,
-            status: UserStatus.ACTIVE,
+            status,
             ...(excludeUserIds.length > 0 && {
                userId: { notIn: excludeUserIds },
             }),
@@ -198,10 +187,11 @@ export class UserProfileRepository {
          orderBy: [{ stats: { followersCount: 'desc' } }, { createdAt: 'desc' }],
          include: userIncludeRelations,
       });
-      return users.map((user) => new UserEntity(user));
+      return users.map((user) => this.toEntity(user));
    }
 
-   async update(userId: string, data: UpdateUserData): Promise<UserEntity> {
+   async update(userId: string, data: UpdateUserData, tx?: Prisma.TransactionClient): Promise<UserEntity> {
+      const client = tx ?? this.prisma;
       const {
          username,
          status,
@@ -233,7 +223,7 @@ export class UserProfileRepository {
          ...(isVerified !== undefined && { isVerified }),
       };
 
-      const user = await this.prisma.user.update({
+      const user = await client.user.update({
          where: { userId },
          data: {
             ...(username !== undefined && { username }),
@@ -258,25 +248,27 @@ export class UserProfileRepository {
          include: userIncludeRelations,
       });
 
-      return new UserEntity(user);
+      return this.toEntity(user);
    }
 
-   async softDelete(userId: string): Promise<UserEntity> {
-      const user = await this.prisma.user.update({
+   async softDelete(userId: string, tx?: Prisma.TransactionClient): Promise<UserEntity> {
+      const client = tx ?? this.prisma;
+      const user = await client.user.update({
          where: { userId },
          data: { deletedAt: new Date() },
          include: userIncludeRelations,
       });
-      return new UserEntity(user);
+      return this.toEntity(user);
    }
 
-   async restore(userId: string): Promise<UserEntity> {
-      const user = await this.prisma.user.update({
+   async restore(userId: string, tx?: Prisma.TransactionClient): Promise<UserEntity> {
+      const client = tx ?? this.prisma;
+      const user = await client.user.update({
          where: { userId },
          data: { deletedAt: null },
          include: userIncludeRelations,
       });
-      return new UserEntity(user);
+      return this.toEntity(user);
    }
 
    async incrementFollowersCount(userId: string, tx?: Prisma.TransactionClient): Promise<void> {

@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RmqService } from '@common';
+import { CommandBus, RmqService, type ICommandHandler } from '@common';
 import { AuthController } from '@user/modules/authentication/auth.controller';
-import { AuthService } from '@user/modules/authentication/auth.service';
+import { AuthService } from '@user/services/domain/auth.service';
+import { USER_AUTH_COMMAND_HANDLERS } from '@user/commands/authentication';
 
 describe('AuthController', () => {
    let controller: AuthController;
@@ -21,6 +22,8 @@ describe('AuthController', () => {
       const module: TestingModule = await Test.createTestingModule({
          controllers: [AuthController],
          providers: [
+            CommandBus,
+            ...USER_AUTH_COMMAND_HANDLERS,
             {
                provide: AuthService,
                useValue: mockAuthService,
@@ -31,6 +34,14 @@ describe('AuthController', () => {
             },
          ],
       }).compile();
+
+      const commandBus = module.get<CommandBus>(CommandBus);
+      for (const handlerClass of USER_AUTH_COMMAND_HANDLERS) {
+         const handler = module.get<ICommandHandler<never, never>>(handlerClass);
+         if (handler) {
+            commandBus.registerHandler(handler);
+         }
+      }
 
       controller = module.get<AuthController>(AuthController);
    });

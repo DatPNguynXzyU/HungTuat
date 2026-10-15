@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RmqService } from '@common';
+import { CommandBus, RmqService, type ICommandHandler } from '@common';
 import { ProfileController } from '@user/modules/profile/profile.controller';
-import { ProfileService } from '@user/modules/profile/profile.service';
+import { ProfileService } from '@user/services/domain/profile.service';
 import { UserEntity, UserStatus } from '@user/core/database/entities';
+import { USER_PROFILE_COMMAND_HANDLERS } from '@user/commands/profile';
 
 describe('ProfileController', () => {
    let controller: ProfileController;
@@ -33,6 +34,8 @@ describe('ProfileController', () => {
       const module: TestingModule = await Test.createTestingModule({
          controllers: [ProfileController],
          providers: [
+            CommandBus,
+            ...USER_PROFILE_COMMAND_HANDLERS,
             {
                provide: ProfileService,
                useValue: mockProfileService,
@@ -43,6 +46,14 @@ describe('ProfileController', () => {
             },
          ],
       }).compile();
+
+      const commandBus = module.get<CommandBus>(CommandBus);
+      for (const handlerClass of USER_PROFILE_COMMAND_HANDLERS) {
+         const handler = module.get<ICommandHandler<never, never>>(handlerClass);
+         if (handler) {
+            commandBus.registerHandler(handler);
+         }
+      }
 
       controller = module.get<ProfileController>(ProfileController);
    });
@@ -59,7 +70,7 @@ describe('ProfileController', () => {
       });
       mockProfileService.getUserById.mockResolvedValue(mockUser);
 
-      const result = await controller.getUserById({ data: { id: 'u1' } });
+      const result = await controller.getUserById({ data: { userId: 'u1' } });
       expect(result).toEqual(mockUser);
    });
 
@@ -73,7 +84,7 @@ describe('ProfileController', () => {
       mockProfileService.updateUserProfile.mockResolvedValue(mockUser);
 
       const result = await controller.updateUserProfile({
-         data: { id: 'u1', displayName: 'Updated' },
+         data: { userId: 'u1', displayName: 'Updated' },
          user: {
             userId: 'acc1',
             email: 'test@example.com',
@@ -95,7 +106,7 @@ describe('ProfileController', () => {
       mockProfileService.upsertUserProfile.mockResolvedValue(mockUser);
 
       const result = await controller.upsertUserProfile({
-         data: { id: 'acc1', displayName: 'Upserted' },
+         data: { userId: 'acc1', displayName: 'Upserted' },
          user: {
             userId: 'acc1',
             email: 'test@example.com',

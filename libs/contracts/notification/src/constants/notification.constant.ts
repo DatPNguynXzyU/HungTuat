@@ -5,6 +5,8 @@ export const NOTIFICATION_PATTERNS = {
    SEND_RESET_PASSWORD_EMAIL: 'notification.send_reset_password_email',
    SEND_OTP_EMAIL: 'notification.send_otp_email',
    SEND_CHANGE_PASSWORD_OTP_EMAIL: 'notification.send_change_password_otp_email',
+   USER_FOLLOWED: 'notification.user_followed',
+   FOLLOW_ACCEPTED: 'notification.follow_accepted',
 } as const;
 
 export const NOTIFICATION_EVENTS = {

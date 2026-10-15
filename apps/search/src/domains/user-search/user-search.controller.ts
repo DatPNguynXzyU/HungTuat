@@ -2,12 +2,12 @@ import { Controller } from '@nestjs/common';
 import { Ctx, EventPattern, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
 import { AppLogger, RmqService } from '@common';
 import { USER_EVENTS, USER_PATTERNS } from '@contracts/user';
-import { SEARCH_PATTERNS } from '@contracts/search';
+import { BULK_OPERATIONS, SEARCH_INDICES, SEARCH_PATTERNS } from '@contracts/search';
 import { UserSearchService } from '@search/domains/user-search/user-search.service';
 import { BulkIndexQueue } from '@search/core/queue';
 
 export interface UserEventPayload {
-   id: string;
+   userId: string;
    email?: string | null;
    username?: string | null;
    displayName?: string | null;
@@ -21,7 +21,7 @@ export interface UserEventPayload {
 }
 
 export interface UserDeletedPayload {
-   id: string;
+   userId: string;
 }
 
 export interface SearchUsersPayload {
@@ -44,13 +44,13 @@ export class UserSearchController {
    @EventPattern(USER_EVENTS.CREATED)
    async handleUserCreated(@Payload() data: UserEventPayload, @Ctx() context?: RmqContext): Promise<void> {
       try {
-         this.logger.log(`Received ${USER_EVENTS.CREATED} event for user ${data.id}`);
+         this.logger.log(`Received ${USER_EVENTS.CREATED} event for user ${data.userId}`);
          await this.bulkQueue.addOperation({
-            operation: 'index',
-            index: 'users',
-            id: data.id,
+            operation: BULK_OPERATIONS.INDEX,
+            index: SEARCH_INDICES.USERS,
+            documentId: data.userId,
             data: {
-               id: data.id,
+               userId: data.userId,
                email: data.email,
                username: data.username,
                displayName: data.displayName,
@@ -77,11 +77,11 @@ export class UserSearchController {
    @EventPattern(USER_EVENTS.UPDATED)
    async handleUserUpdated(@Payload() data: UserEventPayload, @Ctx() context?: RmqContext): Promise<void> {
       try {
-         this.logger.log(`Received ${USER_EVENTS.UPDATED} event for user ${data.id}`);
+         this.logger.log(`Received ${USER_EVENTS.UPDATED} event for user ${data.userId}`);
          await this.bulkQueue.addOperation({
-            operation: 'update',
-            index: 'users',
-            id: data.id,
+            operation: BULK_OPERATIONS.UPDATE,
+            index: SEARCH_INDICES.USERS,
+            documentId: data.userId,
             data: {
                doc: {
                   email: data.email,
@@ -110,11 +110,11 @@ export class UserSearchController {
    @EventPattern(USER_EVENTS.DELETED)
    async handleUserDeleted(@Payload() data: UserDeletedPayload, @Ctx() context?: RmqContext): Promise<void> {
       try {
-         this.logger.log(`Received ${USER_EVENTS.DELETED} event for user ${data.id}`);
+         this.logger.log(`Received ${USER_EVENTS.DELETED} event for user ${data.userId}`);
          await this.bulkQueue.addOperation({
-            operation: 'delete',
-            index: 'users',
-            id: data.id,
+            operation: BULK_OPERATIONS.DELETE,
+            index: SEARCH_INDICES.USERS,
+            documentId: data.userId,
          });
          if (context) {
             this.rmqService.ack(context);
@@ -130,13 +130,13 @@ export class UserSearchController {
    @EventPattern(USER_EVENTS.SYNC)
    async handleUserSync(@Payload() data: UserEventPayload, @Ctx() context?: RmqContext): Promise<void> {
       try {
-         this.logger.log(`Received ${USER_EVENTS.SYNC} event for user ${data.id}`);
+         this.logger.log(`Received ${USER_EVENTS.SYNC} event for user ${data.userId}`);
          await this.bulkQueue.addOperation({
-            operation: 'index',
-            index: 'users',
-            id: data.id,
+            operation: BULK_OPERATIONS.INDEX,
+            index: SEARCH_INDICES.USERS,
+            documentId: data.userId,
             data: {
-               id: data.id,
+               userId: data.userId,
                email: data.email,
                username: data.username,
                displayName: data.displayName,

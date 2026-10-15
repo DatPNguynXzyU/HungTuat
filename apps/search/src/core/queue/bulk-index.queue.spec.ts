@@ -41,7 +41,7 @@ describe('BulkIndexQueue', () => {
          const op: BulkOperation = {
             operation: 'index',
             index: 'users',
-            id: 'user-1',
+            documentId: 'user-1',
             data: { username: 'test' },
          };
 
@@ -57,8 +57,8 @@ describe('BulkIndexQueue', () => {
    describe('addOperations', () => {
       it('should call queue.addBulk for batch operations', async () => {
          const ops: BulkOperation[] = [
-            { operation: 'index', index: 'users', id: 'user-1' },
-            { operation: 'delete', index: 'users', id: 'user-2' },
+            { operation: 'index', index: 'users', documentId: 'user-1' },
+            { operation: 'delete', index: 'users', documentId: 'user-2' },
          ];
 
          await service.addOperations(ops);

@@ -3,6 +3,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter } from 'prom-client';
+import { BULK_OPERATIONS } from '@contracts/search';
 import { ElasticsearchService } from '@search/core/elasticsearch';
 import { BulkOperation } from '@search/core/queue/bulk-operation.interface';
 import { SEARCH_INDEXING_QUEUE } from '@search/core/queue/queue.constants';
@@ -83,19 +84,19 @@ export class BulkIndexProcessor extends WorkerHost implements OnModuleDestroy {
 
          for (const item of itemsToFlush) {
             const { op } = item;
-            if (op.operation === 'index') {
+            if (op.operation === BULK_OPERATIONS.INDEX) {
                operations.push({
-                  index: { _index: op.index, _id: op.id },
+                  index: { _index: op.index, _id: op.documentId },
                });
                operations.push(op.data ?? {});
-            } else if (op.operation === 'update') {
+            } else if (op.operation === BULK_OPERATIONS.UPDATE) {
                operations.push({
-                  update: { _index: op.index, _id: op.id },
+                  update: { _index: op.index, _id: op.documentId },
                });
                operations.push(op.data ?? {});
-            } else if (op.operation === 'delete') {
+            } else if (op.operation === BULK_OPERATIONS.DELETE) {
                operations.push({
-                  delete: { _index: op.index, _id: op.id },
+                  delete: { _index: op.index, _id: op.documentId },
                });
             }
          }

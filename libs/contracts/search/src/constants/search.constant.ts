@@ -19,3 +19,19 @@ export const SEARCH_RESPONSE_MESSAGES = {
 } as const;
 
 export type SearchResponseMessage = (typeof SEARCH_RESPONSE_MESSAGES)[keyof typeof SEARCH_RESPONSE_MESSAGES];
+
+export const SEARCH_INDICES = {
+   USERS: 'users',
+   POSTS: 'posts',
+   RECIPES: 'recipes',
+} as const;
+
+export type SearchIndex = (typeof SEARCH_INDICES)[keyof typeof SEARCH_INDICES];
+
+export const BULK_OPERATIONS = {
+   INDEX: 'index',
+   UPDATE: 'update',
+   DELETE: 'delete',
+} as const;
+
+export type BulkOperationType = (typeof BULK_OPERATIONS)[keyof typeof BULK_OPERATIONS];

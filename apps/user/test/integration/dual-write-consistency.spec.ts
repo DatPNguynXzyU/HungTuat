@@ -1,22 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppLogger, RetryQueueService } from '@common';
 import { USER_OUTBOX_EVENTS, USER_RETRY_QUEUES } from '@contracts/user';
-import { PrismaService } from '@user/core/database/prisma';
 import { USER_PROFILE_REPOSITORY } from '@user/modules/profile/repositories/user-profile.repository';
 import { FollowEntity, FollowStatus, UserEntity } from '@user/core/database/entities';
 import { OutboxService } from '@user/core/outbox';
-import { FollowService } from '@user/modules/follow/follow.service';
+import { FollowService } from '@user/services/domain/follow.service';
 import { FOLLOW_REPOSITORY } from '@user/modules/follow/repositories/follow.repository';
 import {
    FollowGraphRepository,
    GRAPH_FOLLOW_REPOSITORY,
 } from '@user/modules/follow/repositories/follow-graph.repository';
-import { FollowSyncService } from '@user/modules/follow/services/follow-sync.service';
-import { UserResolverService } from '@user/shared/services';
+import { UserGraphSyncService } from '@user/services/infrastructure/user-graph-sync.service';
+import { UserResolverService } from '@user/services/infrastructure/user-resolver.service';
+import { UNIT_OF_WORK } from '@user/unit-of-work';
 
 describe('Integration: Dual-Write Consistency & Transaction Boundaries', () => {
    let followService: FollowService;
-   let followSyncService: FollowSyncService;
+   let followSyncService: UserGraphSyncService;
    let retryQueueService: RetryQueueService;
 
    // In-memory simulation of PostgreSQL tables
@@ -31,10 +31,33 @@ describe('Integration: Dual-Write Consistency & Transaction Boundaries', () => {
       follows: new Set<string>(),
    };
 
-   const mockPrismaService = {
-      $transaction: jest.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
-         return callback({});
+   const mockOutboxRepository = {
+      create: jest.fn((data: { aggregateId: string; aggregateType: string; eventType: string }) => {
+         mockPostgresDb.outbox.push({
+            eventId: `evt-${Date.now()}`,
+            aggregateId: data.aggregateId,
+            eventType: data.eventType,
+         });
+         return Promise.resolve({ eventId: 'outbox-1' });
       }),
+   };
+
+   const mockUnitOfWork = {
+      runInTransaction: jest.fn(
+         async (
+            callback: (uow: {
+               followRepository: unknown;
+               userProfileRepository: unknown;
+               outboxRepository: unknown;
+            }) => Promise<unknown>,
+         ) => {
+            return callback({
+               followRepository: mockFollowRepository,
+               userProfileRepository: mockUserProfileRepository,
+               outboxRepository: mockOutboxRepository,
+            });
+         },
+      ),
    };
 
    const mockUserProfileRepository = {
@@ -73,12 +96,14 @@ describe('Integration: Dual-Write Consistency & Transaction Boundaries', () => {
    const mockFollowRepository = {
       create: jest.fn(
          (data: {
-            follower: { connect: { userId: string } };
-            following: { connect: { userId: string } };
+            followerId?: string;
+            followingId?: string;
+            follower?: { connect: { userId: string } };
+            following?: { connect: { userId: string } };
             status: FollowStatus;
          }) => {
-            const followerId = data.follower.connect.userId;
-            const followingId = data.following.connect.userId;
+            const followerId = data.followerId ?? data.follower?.connect.userId ?? '';
+            const followingId = data.followingId ?? data.following?.connect.userId ?? '';
             const followId = `f-${followerId}-${followingId}`;
             const entity = new FollowEntity({
                followId,
@@ -155,7 +180,7 @@ describe('Integration: Dual-Write Consistency & Transaction Boundaries', () => {
       const module: TestingModule = await Test.createTestingModule({
          providers: [
             FollowService,
-            FollowSyncService,
+            UserGraphSyncService,
             UserResolverService,
             {
                provide: USER_PROFILE_REPOSITORY,
@@ -178,8 +203,8 @@ describe('Integration: Dual-Write Consistency & Transaction Boundaries', () => {
                useValue: mockOutboxService,
             },
             {
-               provide: PrismaService,
-               useValue: mockPrismaService,
+               provide: UNIT_OF_WORK,
+               useValue: mockUnitOfWork,
             },
             {
                provide: RetryQueueService,
@@ -193,7 +218,7 @@ describe('Integration: Dual-Write Consistency & Transaction Boundaries', () => {
       }).compile();
 
       followService = module.get<FollowService>(FollowService);
-      followSyncService = module.get<FollowSyncService>(FollowSyncService);
+      followSyncService = module.get<UserGraphSyncService>(UserGraphSyncService);
    });
 
    it('should maintain zero data inconsistency: rolls back PostgreSQL when Graph fails (strict mode)', async () => {
