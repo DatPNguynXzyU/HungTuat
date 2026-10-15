@@ -118,6 +118,41 @@ describe('AuditLogService', () => {
 
          expect(result).toBeNull();
       });
+
+      it('should accept an AuditLogBuilder instance directly and unpack its built payload', async () => {
+         const createdAt = new Date('2026-09-28T00:00:00.000Z');
+         mockEventStore.appendEvent.mockResolvedValue({
+            eventId: 'audit-builder-1',
+            streamId: 'audit-user-id-1',
+            eventType: AUDIT_ACTIONS.AUTH_LOGIN_SUCCESS,
+            version: 1,
+            data: {},
+            metadata: { timestamp: createdAt.toISOString() },
+            createdAt,
+         });
+
+         const builder = service
+            .createBuilder()
+            .withAction(AUDIT_ACTIONS.AUTH_LOGIN_SUCCESS)
+            .asSuccess()
+            .withAccountId('user-id-1')
+            .withActorEmail('test@example.com')
+            .withIpAddress('127.0.0.1');
+
+         const result = await service.record(builder);
+
+         expect(result).not.toBeNull();
+         expect(result?.id).toBe('audit-builder-1');
+         expect(mockEventStore.appendEvent).toHaveBeenCalledWith(
+            expect.objectContaining({
+               action: AUDIT_ACTIONS.AUTH_LOGIN_SUCCESS,
+               status: AuditStatus.SUCCESS,
+               accountId: 'user-id-1',
+               actorEmail: 'test@example.com',
+               ipAddress: '127.0.0.1',
+            }),
+         );
+      });
    });
 
    describe('read queries', () => {

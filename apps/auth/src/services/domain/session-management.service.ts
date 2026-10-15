@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NotFoundException, type IDeviceInfo } from '@common';
 import {
@@ -12,14 +12,19 @@ import {
 import type { SessionEntity } from '@auth/entities/session.entity';
 import { SESSION_REPOSITORY, type ISessionRepository } from '@auth/repositories';
 import { AuditLogService, TOKEN_LIFECYCLE_SERVICE, type ITokenLifecycleService } from '@auth/services/infrastructure';
+import { AuditLogBuilder } from '@auth/builders/audit-log.builder';
 import {
    AUTH_DOMAIN_EVENTS,
+   ActiveSessionsCountedEvent,
    SESSION_REVOKE_REASONS,
+   SessionRevokeFailedEvent,
    SessionRevokedEvent,
+   SessionsRevokedAllEvent,
+   SessionsRevokedOthersEvent,
    type SessionRevokeReason,
 } from '@auth/domain/events';
-import { AUTH_METRICS_SERVICE, type IAuthMetricsService } from '@auth/services/infrastructure';
-import { AUTH_METRICS_SESSION_OPERATIONS, AUTH_METRICS_STATUS } from '@auth/constants';
+import { AUTH_METRICS_SESSION_OPERATIONS } from '@auth/constants';
+import { SessionBelongsToAccountSpecification } from '@auth/domain/specifications';
 
 @Injectable()
 export class SessionManagementService {
@@ -30,10 +35,10 @@ export class SessionManagementService {
       private readonly sessionRepository: ISessionRepository,
       @Inject(TOKEN_LIFECYCLE_SERVICE)
       private readonly tokenLifecycleService: ITokenLifecycleService,
-      @Inject(AUTH_METRICS_SERVICE)
-      private readonly metricsService: IAuthMetricsService,
       private readonly auditLogService: AuditLogService,
       private readonly eventEmitter: EventEmitter2,
+      @Optional()
+      private readonly sessionBelongsToAccountSpec: SessionBelongsToAccountSpecification = new SessionBelongsToAccountSpecification(),
    ) {}
 
    /**
@@ -41,7 +46,10 @@ export class SessionManagementService {
     */
    async getSessions(accountId: string, currentJti?: string): Promise<IUserSessionInfo[]> {
       const sessions: SessionEntity[] = (await this.sessionRepository.findActiveSessionsByAccountId(accountId)) || [];
-      this.metricsService.setActiveSessions(sessions.length);
+      this.eventEmitter.emit(
+         AUTH_DOMAIN_EVENTS.ACTIVE_SESSIONS_COUNTED,
+         new ActiveSessionsCountedEvent(sessions.length),
+      );
       return sessions.map((session) => this.toSessionInfo(session, currentJti));
    }
 
@@ -57,8 +65,13 @@ export class SessionManagementService {
       try {
          // Get session and validate ownership
          const session: SessionEntity | null = await this.sessionRepository.findById(sessionId);
-         if (!session || session.accountId !== accountId) {
+         if (!session) {
             throw new NotFoundException(AUTH_ERROR_CODES.SESSION_NOT_FOUND);
+         }
+
+         const ownershipValidation = this.sessionBelongsToAccountSpec.validate({ session, accountId });
+         if (ownershipValidation.isFailure()) {
+            throw new NotFoundException(ownershipValidation.getError());
          }
 
          if (session.isRevoked) {
@@ -89,15 +102,11 @@ export class SessionManagementService {
             new SessionRevokedEvent(accountId, sessionId, reason, new Date(), deviceInfo),
          );
 
-         this.metricsService.recordSessionOperation(
-            AUTH_METRICS_SESSION_OPERATIONS.REVOKE,
-            AUTH_METRICS_STATUS.SUCCESS,
-         );
          this.logger.log(`Session ${sessionId} revoked for account ${accountId}`);
       } catch (error) {
-         this.metricsService.recordSessionOperation(
-            AUTH_METRICS_SESSION_OPERATIONS.REVOKE,
-            AUTH_METRICS_STATUS.FAILURE,
+         this.eventEmitter.emit(
+            AUTH_DOMAIN_EVENTS.SESSION_REVOKE_FAILED,
+            new SessionRevokeFailedEvent(accountId, AUTH_METRICS_SESSION_OPERATIONS.REVOKE, error),
          );
          throw error;
       }
@@ -117,9 +126,9 @@ export class SessionManagementService {
          const otherSessions = allSessions.filter((s) => s.refreshTokenJti !== currentJti);
 
          if (otherSessions.length === 0) {
-            this.metricsService.recordSessionOperation(
-               AUTH_METRICS_SESSION_OPERATIONS.REVOKE_OTHER,
-               AUTH_METRICS_STATUS.SUCCESS,
+            this.eventEmitter.emit(
+               AUTH_DOMAIN_EVENTS.SESSIONS_REVOKED_OTHERS,
+               new SessionsRevokedOthersEvent(accountId, currentJti, 0),
             );
             return { revokedCount: 0 };
          }
@@ -142,17 +151,17 @@ export class SessionManagementService {
             this.logger.error('Failed to record audit log (non-blocking)', err);
          });
 
-         this.metricsService.recordSessionOperation(
-            AUTH_METRICS_SESSION_OPERATIONS.REVOKE_OTHER,
-            AUTH_METRICS_STATUS.SUCCESS,
+         this.eventEmitter.emit(
+            AUTH_DOMAIN_EVENTS.SESSIONS_REVOKED_OTHERS,
+            new SessionsRevokedOthersEvent(accountId, currentJti, revokedJtis.length),
          );
          this.logger.log(`Revoked ${revokedJtis.length} other sessions for account ${accountId}`);
 
          return { revokedCount: revokedJtis.length };
       } catch (error) {
-         this.metricsService.recordSessionOperation(
-            AUTH_METRICS_SESSION_OPERATIONS.REVOKE_OTHER,
-            AUTH_METRICS_STATUS.FAILURE,
+         this.eventEmitter.emit(
+            AUTH_DOMAIN_EVENTS.SESSION_REVOKE_FAILED,
+            new SessionRevokeFailedEvent(accountId, AUTH_METRICS_SESSION_OPERATIONS.REVOKE_OTHER, error),
          );
          throw error;
       }
@@ -171,15 +180,12 @@ export class SessionManagementService {
             { accountId },
             deviceInfo,
          );
-         this.metricsService.recordSessionOperation(
-            AUTH_METRICS_SESSION_OPERATIONS.REVOKE_ALL,
-            AUTH_METRICS_STATUS.SUCCESS,
-         );
+         this.eventEmitter.emit(AUTH_DOMAIN_EVENTS.SESSIONS_REVOKED_ALL, new SessionsRevokedAllEvent(accountId));
          this.logger.log(`All sessions revoked for account ${accountId}`);
       } catch (error) {
-         this.metricsService.recordSessionOperation(
-            AUTH_METRICS_SESSION_OPERATIONS.REVOKE_ALL,
-            AUTH_METRICS_STATUS.FAILURE,
+         this.eventEmitter.emit(
+            AUTH_DOMAIN_EVENTS.SESSION_REVOKE_FAILED,
+            new SessionRevokeFailedEvent(accountId, AUTH_METRICS_SESSION_OPERATIONS.REVOKE_ALL, error),
          );
          throw error;
       }
@@ -218,19 +224,14 @@ export class SessionManagementService {
       metadata: Record<string, unknown>,
       deviceInfo?: IDeviceInfo,
    ): Promise<void> {
-      await this.auditLogService.record({
-         accountId,
-         action,
-         status,
-         ipAddress: deviceInfo?.ipAddress,
-         userAgent: deviceInfo?.userAgent,
-         deviceType: deviceInfo?.deviceType,
-         deviceName: deviceInfo?.deviceName,
-         browser: deviceInfo?.browser,
-         os: deviceInfo?.os,
-         city: deviceInfo?.city,
-         country: deviceInfo?.country,
-         metadata,
-      });
+      await this.auditLogService.record(
+         AuditLogBuilder.create()
+            .withAction(action)
+            .withStatus(status)
+            .withAccountId(accountId)
+            .withDeviceInfo(deviceInfo)
+            .withMetadata(metadata)
+            .build(),
+      );
    }
 }

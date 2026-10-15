@@ -198,21 +198,6 @@ describe('AccountRepository', () => {
       expect(found?.roles).toEqual([]);
    });
 
-   it('should find email by id', async () => {
-      prismaService.account.findFirst.mockResolvedValue({
-         accountId: 'acc-1',
-         email: 'test@example.com',
-         isEmailVerified: true,
-      });
-
-      const found = await repository.findEmailById('acc-1');
-      expect(found).toEqual({
-         id: 'acc-1',
-         email: 'test@example.com',
-         isEmailVerified: true,
-      });
-   });
-
    it('should update account and return updated entity', async () => {
       prismaService.account.update.mockResolvedValue({
          accountId: 'acc-1',

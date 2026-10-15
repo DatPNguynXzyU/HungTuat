@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { RedisService, SERVICES, UnauthorizedException } from '@common';
+import { RedisService, UnauthorizedException } from '@common';
+import { NOTIFICATION_ADAPTER } from '@auth/adapters';
 import { AUTH_ERROR_CODES } from '@contracts/auth';
-import { AUTH_METRICS_OTP_OPERATIONS, AUTH_METRICS_OTP_TYPES, AUTH_METRICS_STATUS } from '@auth/constants';
+import { AUTH_DOMAIN_EVENTS } from '@auth/domain/events';
 import { PasswordManagementService } from '@auth/services/domain/password-management.service';
 import { ACCOUNT_REPOSITORY } from '@auth/repositories';
 import { AuthConfigService } from '@auth/config';
 import {
-   AUTH_METRICS_SERVICE,
    AUTH_RATE_LIMITER,
    AuditLogService,
    PASSWORD_HASHER,
@@ -46,8 +46,8 @@ describe('PasswordManagementService', () => {
       record: jest.fn().mockResolvedValue(undefined),
    };
 
-   const mockNotificationClient = {
-      emit: jest.fn(),
+   const mockNotificationAdapter = {
+      sendChangePasswordOtp: jest.fn().mockResolvedValue(undefined),
    };
 
    const mockRateLimiter = {
@@ -58,27 +58,12 @@ describe('PasswordManagementService', () => {
       reset: jest.fn(),
    };
 
-   const mockConfig = {
-      argon2Secret: 'test-secret',
+   const mockEventEmitter = {
+      emit: jest.fn(),
    };
 
-   const mockMetricsService = {
-      recordLoginAttempt: jest.fn(),
-      recordRegistrationAttempt: jest.fn(),
-      recordTokenOperation: jest.fn(),
-      recordOtpOperation: jest.fn(),
-      recordSessionOperation: jest.fn(),
-      setActiveSessions: jest.fn(),
-      setLockedAccounts: jest.fn(),
-      setOutboxPending: jest.fn(),
-      observeTokenGeneration: jest.fn(),
-      observeLoginDuration: jest.fn(),
-      observePasswordHash: jest.fn(),
-      observeOtpOperation: jest.fn(),
-      startTimer: jest.fn().mockReturnValue(100),
-      calculateDuration: jest.fn().mockReturnValue(0.05),
-      getMetrics: jest.fn(),
-      reset: jest.fn(),
+   const mockConfig = {
+      argon2Secret: 'test-secret',
    };
 
    beforeEach(async () => {
@@ -112,8 +97,8 @@ describe('PasswordManagementService', () => {
                useValue: mockAuditLogService,
             },
             {
-               provide: SERVICES.NOTIFICATION_SERVICE,
-               useValue: mockNotificationClient,
+               provide: NOTIFICATION_ADAPTER,
+               useValue: mockNotificationAdapter,
             },
             {
                provide: AuthConfigService,
@@ -121,11 +106,7 @@ describe('PasswordManagementService', () => {
             },
             {
                provide: EventEmitter2,
-               useValue: { emit: jest.fn() },
-            },
-            {
-               provide: AUTH_METRICS_SERVICE,
-               useValue: mockMetricsService,
+               useValue: mockEventEmitter,
             },
          ],
       }).compile();
@@ -300,23 +281,18 @@ describe('PasswordManagementService', () => {
 
          expect(result.success).toBe(true);
          expect(mockRedisService.setJson).toHaveBeenCalled();
-         expect(mockNotificationClient.emit).toHaveBeenCalled();
-         expect(mockAuditLogService.record).toHaveBeenCalled();
-         expect(mockMetricsService.observePasswordHash).toHaveBeenCalled();
-         expect(mockMetricsService.observeOtpOperation).toHaveBeenCalledWith(
-            AUTH_METRICS_OTP_OPERATIONS.SEND,
+         expect(mockNotificationAdapter.sendChangePasswordOtp).toHaveBeenCalledWith(
+            'test@example.com',
+            expect.any(String),
             expect.any(Number),
          );
-         expect(mockMetricsService.recordOtpOperation).toHaveBeenCalledWith(
-            AUTH_METRICS_OTP_OPERATIONS.SEND,
-            AUTH_METRICS_OTP_TYPES.PASSWORD_CHANGE,
-            AUTH_METRICS_STATUS.SUCCESS,
-         );
+         expect(mockAuditLogService.record).toHaveBeenCalled();
+         expect(mockEventEmitter.emit).toHaveBeenCalledWith(AUTH_DOMAIN_EVENTS.OTP_GENERATED, expect.any(Object));
       });
    });
 
-   describe('metrics on verifyChangePasswordOtp', () => {
-      it('should record success metrics when OTP is verified', async () => {
+   describe('domain events on verifyChangePasswordOtp', () => {
+      it('should emit success events when OTP is verified', async () => {
          mockAccountRepository.findById.mockResolvedValue({
             id: 'acc1',
             email: 'test@example.com',
@@ -330,18 +306,11 @@ describe('PasswordManagementService', () => {
 
          const result = await service.verifyChangePasswordOtp('acc1', { otp: '123456' });
          expect(result.success).toBe(true);
-         expect(mockMetricsService.observeOtpOperation).toHaveBeenCalledWith(
-            AUTH_METRICS_OTP_OPERATIONS.VERIFY,
-            expect.any(Number),
-         );
-         expect(mockMetricsService.recordOtpOperation).toHaveBeenCalledWith(
-            AUTH_METRICS_OTP_OPERATIONS.VERIFY,
-            AUTH_METRICS_OTP_TYPES.PASSWORD_CHANGE,
-            AUTH_METRICS_STATUS.SUCCESS,
-         );
+         expect(mockEventEmitter.emit).toHaveBeenCalledWith(AUTH_DOMAIN_EVENTS.OTP_VERIFIED, expect.any(Object));
+         expect(mockEventEmitter.emit).toHaveBeenCalledWith(AUTH_DOMAIN_EVENTS.PASSWORD_CHANGED, expect.any(Object));
       });
 
-      it('should record failure metrics when OTP is invalid', async () => {
+      it('should emit failure event when OTP is invalid', async () => {
          mockAccountRepository.findById.mockResolvedValue({
             id: 'acc1',
             email: 'test@example.com',
@@ -354,11 +323,7 @@ describe('PasswordManagementService', () => {
          });
 
          await expect(service.verifyChangePasswordOtp('acc1', { otp: 'wrong-otp' })).rejects.toThrow();
-         expect(mockMetricsService.recordOtpOperation).toHaveBeenCalledWith(
-            AUTH_METRICS_OTP_OPERATIONS.VERIFY,
-            AUTH_METRICS_OTP_TYPES.PASSWORD_CHANGE,
-            AUTH_METRICS_STATUS.FAILURE,
-         );
+         expect(mockEventEmitter.emit).toHaveBeenCalledWith(AUTH_DOMAIN_EVENTS.OTP_FAILED, expect.any(Object));
       });
    });
 });

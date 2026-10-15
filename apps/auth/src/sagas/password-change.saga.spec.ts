@@ -5,7 +5,6 @@ describe('PasswordChangeSaga', () => {
    let mockAccountRepository: {
       findByEmail: jest.Mock;
       findById: jest.Mock;
-      findEmailById: jest.Mock;
       findAllEmails: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
@@ -17,7 +16,6 @@ describe('PasswordChangeSaga', () => {
       mockAccountRepository = {
          findByEmail: jest.fn(),
          findById: jest.fn(),
-         findEmailById: jest.fn(),
          findAllEmails: jest.fn(),
          create: jest.fn(),
          update: jest.fn().mockResolvedValue(null),

@@ -1,16 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UUID_V7_REGEX } from '@common';
-import { AUTH_AGGREGATES, AUTH_OUTBOX_EVENTS } from '@contracts/auth';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import { OutboxRepository } from '@auth/outbox/repositories/outbox.repository';
 
 describe('OutboxRepository', () => {
    let repository: OutboxRepository;
    let prismaService: {
-      $transaction: jest.Mock;
-      account: {
-         create: jest.Mock;
-      };
       outboxEvent: {
          create: jest.Mock;
          findMany: jest.Mock;
@@ -23,10 +17,6 @@ describe('OutboxRepository', () => {
 
    beforeEach(async () => {
       prismaService = {
-         $transaction: jest.fn().mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => cb(prismaService)),
-         account: {
-            create: jest.fn(),
-         },
          outboxEvent: {
             create: jest.fn(),
             findMany: jest.fn(),
@@ -81,46 +71,6 @@ describe('OutboxRepository', () => {
       expect(result.eventId).toBe('event-1');
       expect(result.status).toBe('PENDING');
       expect(prismaService.outboxEvent.create).toHaveBeenCalled();
-   });
-
-   it('should create account with outbox event in transaction', async () => {
-      prismaService.account.create.mockImplementation(
-         ({ data }: { data: { accountId: string; email: string; passwordHash: string; createdAt?: Date } }) =>
-            Promise.resolve({
-               accountId: data.accountId,
-               email: data.email,
-               phoneNumber: null,
-               passwordHash: data.passwordHash,
-               status: 'ACTIVE',
-               isEmailVerified: false,
-               lastLoginAt: null,
-               version: 1,
-               deletedAt: null,
-               createdAt: new Date('2026-09-27T00:00:00.000Z'),
-               updatedAt: new Date('2026-09-27T00:00:00.000Z'),
-               accountRoles: [],
-            }),
-      );
-      prismaService.outboxEvent.create.mockResolvedValue({});
-
-      const account = await repository.createAccountWithEvent(
-         {
-            email: 'test@example.com',
-            passwordHash: 'hashed_password',
-         },
-         {
-            aggregateType: AUTH_AGGREGATES.ACCOUNT,
-            eventType: AUTH_OUTBOX_EVENTS.USER_REGISTERED,
-            payload: { email: 'test@example.com' },
-         },
-      );
-
-      expect(account).toBeDefined();
-      expect(account.id).toBeDefined();
-      expect(UUID_V7_REGEX.test(account.id)).toBe(true);
-      expect(account.email).toBe('test@example.com');
-      expect(prismaService.account.create).toHaveBeenCalledTimes(1);
-      expect(prismaService.outboxEvent.create).toHaveBeenCalledTimes(1);
    });
 
    it('should find pending events', async () => {

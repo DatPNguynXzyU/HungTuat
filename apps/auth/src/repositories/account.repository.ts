@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { uuidv7 } from '@common';
 import type { AccountEntity, CreateAccountData } from '@auth/entities/account.entity';
-import { PrismaService } from '@auth/prisma/prisma.service';
-import type { AccountEmailRecord, IAccountRepository } from '@auth/repositories/account.repository.interface';
+import { PrismaService, type PrismaClientOrTransaction } from '@auth/prisma';
+import type { IAccountRepository } from '@auth/repositories/account.repository.interface';
 import { type Account, type AccountStatus, type Role } from '@auth/prisma-client';
 
 type AccountWithRoles = Account & {
@@ -13,7 +13,7 @@ type AccountWithRoles = Account & {
 
 @Injectable()
 export class AccountRepository implements IAccountRepository {
-   constructor(private readonly prisma: PrismaService) {}
+   constructor(@Inject(PrismaService) private readonly prisma: PrismaClientOrTransaction) {}
 
    private toEntity(account: AccountWithRoles): AccountEntity {
       return {
@@ -67,28 +67,6 @@ export class AccountRepository implements IAccountRepository {
       });
 
       return account ? this.toEntity(account) : null;
-   }
-
-   async findEmailById(accountId: string): Promise<AccountEmailRecord | null> {
-      const record = await this.prisma.account.findFirst({
-         where: {
-            accountId,
-            deletedAt: null,
-         },
-         select: {
-            accountId: true,
-            email: true,
-            isEmailVerified: true,
-         },
-      });
-
-      return record
-         ? {
-              id: record.accountId,
-              email: record.email,
-              isEmailVerified: record.isEmailVerified,
-           }
-         : null;
    }
 
    async findAllEmails(): Promise<string[]> {

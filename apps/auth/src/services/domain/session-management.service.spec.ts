@@ -5,7 +5,7 @@ import { NotFoundException } from '@common';
 import { AUDIT_ACTIONS, AUDIT_STATUS } from '@contracts/auth';
 import type { IDeviceInfo } from '@common';
 import { SESSION_REPOSITORY } from '@auth/repositories';
-import { AuditLogService, AUTH_METRICS_SERVICE, TOKEN_LIFECYCLE_SERVICE } from '@auth/services/infrastructure';
+import { AuditLogService, TOKEN_LIFECYCLE_SERVICE } from '@auth/services/infrastructure';
 import type { SessionEntity } from '@auth/entities/session.entity';
 import { SessionManagementService } from '@auth/services/domain/session-management.service';
 
@@ -26,25 +26,6 @@ describe('SessionManagementService', () => {
 
    const mockAuditLogService = {
       record: jest.fn().mockResolvedValue(null),
-   };
-
-   const mockMetricsService = {
-      recordLoginAttempt: jest.fn(),
-      recordRegistrationAttempt: jest.fn(),
-      recordTokenOperation: jest.fn(),
-      recordOtpOperation: jest.fn(),
-      recordSessionOperation: jest.fn(),
-      setActiveSessions: jest.fn(),
-      setLockedAccounts: jest.fn(),
-      setOutboxPending: jest.fn(),
-      observeTokenGeneration: jest.fn(),
-      observeLoginDuration: jest.fn(),
-      observePasswordHash: jest.fn(),
-      observeOtpOperation: jest.fn(),
-      startTimer: jest.fn().mockReturnValue(100),
-      calculateDuration: jest.fn().mockReturnValue(0.05),
-      getMetrics: jest.fn(),
-      reset: jest.fn(),
    };
 
    const sampleSession: SessionEntity = {
@@ -91,10 +72,6 @@ describe('SessionManagementService', () => {
             {
                provide: EventEmitter2,
                useValue: { emit: jest.fn() },
-            },
-            {
-               provide: AUTH_METRICS_SERVICE,
-               useValue: mockMetricsService,
             },
          ],
       }).compile();

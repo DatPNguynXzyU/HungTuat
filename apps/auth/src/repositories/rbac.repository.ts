@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { PermissionEntity, RoleEntity } from '@auth/entities/account.entity';
-import { PrismaService } from '@auth/prisma/prisma.service';
+import { PrismaService, type PrismaClientOrTransaction } from '@auth/prisma';
 import type { IRbacRepository } from '@auth/repositories/rbac.repository.interface';
 import type { Permission, Role } from '@auth/prisma-client';
 
@@ -12,7 +12,7 @@ type RoleWithPermissions = Role & {
 
 @Injectable()
 export class RbacRepository implements IRbacRepository {
-   constructor(private readonly prisma: PrismaService) {}
+   constructor(@Inject(PrismaService) private readonly prisma: PrismaClientOrTransaction) {}
 
    private toRoleEntity(role: RoleWithPermissions): RoleEntity {
       return {

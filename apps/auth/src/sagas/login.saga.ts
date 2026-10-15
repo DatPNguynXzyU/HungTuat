@@ -2,8 +2,9 @@ import { Logger } from '@nestjs/common';
 import type { AccountEntity } from '@auth/entities';
 import type { IAccountRepository } from '@auth/repositories';
 import type { ITokenLifecycleService, TokenPair } from '@auth/services/infrastructure';
+import type { IAuthSaga } from '@auth/templates';
 
-export class LoginSaga {
+export class LoginSaga implements IAuthSaga {
    private account?: AccountEntity;
    private previousLastLoginAt?: string | null;
    private tokens?: TokenPair;

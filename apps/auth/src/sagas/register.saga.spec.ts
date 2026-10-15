@@ -7,7 +7,6 @@ describe('RegisterSaga', () => {
    let mockAccountRepository: {
       findByEmail: jest.Mock;
       findById: jest.Mock;
-      findEmailById: jest.Mock;
       findAllEmails: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
@@ -25,7 +24,6 @@ describe('RegisterSaga', () => {
    };
    let mockOutboxRepository: {
       create: jest.Mock;
-      createAccountWithEvent: jest.Mock;
       findPending: jest.Mock;
       markAsProcessing: jest.Mock;
       markAsPublished: jest.Mock;
@@ -51,7 +49,6 @@ describe('RegisterSaga', () => {
       mockAccountRepository = {
          findByEmail: jest.fn(),
          findById: jest.fn(),
-         findEmailById: jest.fn(),
          findAllEmails: jest.fn(),
          create: jest.fn(),
          update: jest.fn(),
@@ -71,7 +68,6 @@ describe('RegisterSaga', () => {
 
       mockOutboxRepository = {
          create: jest.fn(),
-         createAccountWithEvent: jest.fn(),
          findPending: jest.fn(),
          markAsProcessing: jest.fn(),
          markAsPublished: jest.fn(),

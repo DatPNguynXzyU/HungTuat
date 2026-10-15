@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const mediaEnvSchema = z.object({
    SERVICE_NAME: z.string().default('media-service'),
    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
    // Database
    POSTGRES_USER: z.string().default('postgres'),
@@ -32,6 +33,7 @@ export const mediaEnvSchema = z.object({
 export const MEDIA_ENV_KEYS = {
    SERVICE_NAME: 'SERVICE_NAME',
    NODE_ENV: 'NODE_ENV',
+   LOG_LEVEL: 'LOG_LEVEL',
    POSTGRES_USER: 'POSTGRES_USER',
    POSTGRES_PASSWORD: 'POSTGRES_PASSWORD',
    POSTGRES_DB: 'POSTGRES_DB',

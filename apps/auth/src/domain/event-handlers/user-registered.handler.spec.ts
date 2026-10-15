@@ -1,15 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { of, throwError } from 'rxjs';
-import { SERVICES } from '@common';
-import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES } from '@contracts/notification';
+import { NOTIFICATION_ADAPTER } from '@auth/adapters';
 import { UserRegisteredEventHandler } from '@auth/domain/event-handlers/user-registered.handler';
 import { UserRegisteredEvent } from '@auth/domain/events/user-registered.event';
 
 describe('UserRegisteredEventHandler', () => {
    let handler: UserRegisteredEventHandler;
 
-   const mockNotificationClient = {
-      emit: jest.fn(),
+   const mockNotificationAdapter = {
+      sendWelcomeEmail: jest.fn(),
    };
 
    beforeEach(async () => {
@@ -19,8 +17,8 @@ describe('UserRegisteredEventHandler', () => {
          providers: [
             UserRegisteredEventHandler,
             {
-               provide: SERVICES.NOTIFICATION_SERVICE,
-               useValue: mockNotificationClient,
+               provide: NOTIFICATION_ADAPTER,
+               useValue: mockNotificationAdapter,
             },
          ],
       }).compile();
@@ -32,8 +30,8 @@ describe('UserRegisteredEventHandler', () => {
       expect(handler).toBeDefined();
    });
 
-   it('should emit send_email pattern via notification client on user registered event', async () => {
-      mockNotificationClient.emit.mockReturnValue(of(true));
+   it('should send welcome email via notification adapter on user registered event', async () => {
+      mockNotificationAdapter.sendWelcomeEmail.mockResolvedValue(undefined);
 
       const event = new UserRegisteredEvent('acc-123', 'test@example.com', new Date('2026-01-01T00:00:00.000Z'), {
          ipAddress: '127.0.0.1',
@@ -41,19 +39,14 @@ describe('UserRegisteredEventHandler', () => {
 
       await handler.handle(event);
 
-      expect(mockNotificationClient.emit).toHaveBeenCalledWith(NOTIFICATION_PATTERNS.SEND_EMAIL, {
-         to: 'test@example.com',
-         subject: NOTIFICATION_EMAIL_SUBJECTS.WELCOME,
-         template: NOTIFICATION_TEMPLATES.WELCOME_EMAIL,
-         data: {
-            email: 'test@example.com',
-            registeredAt: event.registeredAt,
-         },
+      expect(mockNotificationAdapter.sendWelcomeEmail).toHaveBeenCalledWith({
+         email: 'test@example.com',
+         registeredAt: event.registeredAt,
       });
    });
 
-   it('should not throw if notification client fails', async () => {
-      mockNotificationClient.emit.mockReturnValue(throwError(() => new Error('RabbitMQ connection lost')));
+   it('should not throw if notification adapter fails', async () => {
+      mockNotificationAdapter.sendWelcomeEmail.mockRejectedValue(new Error('RabbitMQ connection lost'));
 
       const event = new UserRegisteredEvent('acc-123', 'test@example.com', new Date());
 

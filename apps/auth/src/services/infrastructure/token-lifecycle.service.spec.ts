@@ -13,14 +13,7 @@ import { SESSION_REPOSITORY } from '@auth/repositories';
 import { JWT_SERVICE } from '@auth/services/infrastructure/token.service.interface';
 import { JwtService } from '@auth/services/infrastructure/jwt.service';
 import { TokenLifecycleService } from '@auth/services/infrastructure/token-lifecycle.service';
-import { AUTH_METRICS_SERVICE } from '@auth/services/infrastructure/auth-metrics.interface';
-import {
-   AUTH_METRICS_STATUS,
-   AUTH_METRICS_TOKEN_OPERATIONS,
-   AUTH_METRICS_TOKEN_TYPES,
-   AuthRedisKeys,
-   TOKEN_REVOCATION_VALUE,
-} from '@auth/constants';
+import { AuthRedisKeys, TOKEN_REVOCATION_VALUE } from '@auth/constants';
 
 describe('TokenLifecycleService', () => {
    let service: TokenLifecycleService;
@@ -51,26 +44,6 @@ describe('TokenLifecycleService', () => {
       jwtKeyId: DEFAULT_JWT_KEY_ID,
       jwtAccessTokenExpiresIn: 900,
       jwtRefreshTokenExpiresIn: 604800,
-   };
-
-   const mockMetricsService = {
-      startTimer: jest.fn().mockReturnValue(1000),
-      calculateDuration: jest.fn().mockReturnValue(0.05),
-      observeTokenGeneration: jest.fn(),
-      recordTokenOperation: jest.fn(),
-      recordLoginAttempt: jest.fn(),
-      recordRegistrationAttempt: jest.fn(),
-      recordOtpOperation: jest.fn(),
-      recordSessionOperation: jest.fn(),
-      setActiveSessions: jest.fn(),
-      setLockedAccounts: jest.fn(),
-      setOutboxPending: jest.fn(),
-      observeLoginDuration: jest.fn(),
-      observePasswordHash: jest.fn(),
-      observeOtpOperation: jest.fn(),
-      getMetrics: jest.fn().mockResolvedValue(''),
-      reset: jest.fn(),
-      contentType: 'text/plain',
    };
 
    beforeEach(async () => {
@@ -105,10 +78,6 @@ describe('TokenLifecycleService', () => {
                   updateSessionByJti: mockUpdateSessionByJti,
                   revokeAllSessions: mockRevokeAllSessions,
                },
-            },
-            {
-               provide: AUTH_METRICS_SERVICE,
-               useValue: mockMetricsService,
             },
          ],
       }).compile();
@@ -246,50 +215,6 @@ describe('TokenLifecycleService', () => {
 
          expect(mockRedisService.del).toHaveBeenCalledWith(AuthRedisKeys.sessions('user-1'));
          expect(mockRevokeAllSessions).toHaveBeenCalledWith('user-1');
-      });
-   });
-
-   describe('metrics integration', () => {
-      it('should record metrics on generateTokenPair', async () => {
-         const payload: ITokenAccountPayload = {
-            id: 'user-1',
-            email: 'user@example.com',
-            roles: ['USER'],
-         };
-         await service.generateTokenPair(payload);
-         expect(mockMetricsService.startTimer).toHaveBeenCalled();
-         expect(mockMetricsService.observeTokenGeneration).toHaveBeenCalledWith(AUTH_METRICS_TOKEN_TYPES.ACCESS, 0.05);
-         expect(mockMetricsService.recordTokenOperation).toHaveBeenCalledWith(
-            AUTH_METRICS_TOKEN_OPERATIONS.GENERATE,
-            AUTH_METRICS_STATUS.SUCCESS,
-         );
-      });
-
-      it('should record metrics on rotateTokenPair', async () => {
-         const payload: ITokenAccountPayload = {
-            id: 'user-1',
-            email: 'user@example.com',
-            roles: ['USER'],
-         };
-         mockFindByJti.mockResolvedValue(null);
-         await service.rotateTokenPair(payload, 'old-jti');
-         expect(mockMetricsService.observeTokenGeneration).toHaveBeenCalledWith(AUTH_METRICS_TOKEN_TYPES.REFRESH, 0.05);
-         expect(mockMetricsService.recordTokenOperation).toHaveBeenCalledWith(
-            AUTH_METRICS_TOKEN_OPERATIONS.REFRESH,
-            AUTH_METRICS_STATUS.SUCCESS,
-         );
-      });
-
-      it('should record metrics on revokeToken', async () => {
-         const token = jwtService.sign(
-            { sub: 'user-1', email: 'user@example.com', tokenType: JWT_TOKEN_TYPE.ACCESS, jti: 'jti-123' },
-            900,
-         );
-         await service.revokeToken(token);
-         expect(mockMetricsService.recordTokenOperation).toHaveBeenCalledWith(
-            AUTH_METRICS_TOKEN_OPERATIONS.REVOKE,
-            AUTH_METRICS_STATUS.SUCCESS,
-         );
       });
    });
 });

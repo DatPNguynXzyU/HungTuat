@@ -1,11 +1,15 @@
-import { Module } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { RedisModule, RmqModule, SERVICES } from '@common';
+import { COMMAND_BUS, CommandBus, RedisModule, RmqModule, SERVICES, type ICommandHandler } from '@common';
 import { AuthController } from '@auth/auth.controller';
 import { AuthConfigModule } from '@auth/config';
 import { AuthLoggerModule } from '@auth/logger';
 import { OutboxModule } from '@auth/outbox';
 import { PrismaModule } from '@auth/prisma';
+import { UnitOfWorkModule, UNIT_OF_WORK, PrismaUnitOfWork } from '@auth/unit-of-work';
+import { AUTH_COMMAND_HANDLERS } from '@auth/commands';
+import { NOTIFICATION_ADAPTER, RabbitMqNotificationAdapter } from '@auth/adapters';
 import {
    ACCOUNT_REPOSITORY,
    AccountRepository,
@@ -38,13 +42,34 @@ import {
    AuthRegistrationService,
    PasswordManagementService,
    SessionManagementService,
+   AuthRbacService,
+   AuthAccountService,
+   AuthLoginService,
+   AuthTokenService,
 } from '@auth/services/domain';
 import {
    UserRegisteredEventHandler,
    AccountLockedEventHandler,
    PasswordChangedEventHandler,
    SessionRevokedEventHandler,
+   AuthMetricsHandler,
 } from '@auth/domain/event-handlers';
+import { MetricsTokenLifecycleDecorator, MetricsPasswordHasherDecorator } from '@auth/decorators';
+import {
+   AccountNotBlockedSpecification,
+   AccountActiveSpecification,
+   AccountCanAuthenticateSpecification,
+   PasswordMustChangeSpecification,
+   SessionBelongsToAccountSpecification,
+} from '@auth/domain/specifications';
+import {
+   LoginValidationPipeline,
+   RateLimitHandler,
+   LockoutHandler,
+   AccountLookupHandler,
+   PasswordVerificationHandler,
+   AccountStatusHandler,
+} from '@auth/chains/login-validation';
 import {
    AUDIT_EVENT_STORE,
    AuditEventStore,
@@ -66,6 +91,7 @@ import {
       PrismaModule,
       RedisModule,
       OutboxModule,
+      UnitOfWorkModule,
       RmqModule.register({
          name: SERVICES.NOTIFICATION_SERVICE,
       }),
@@ -78,11 +104,30 @@ import {
       PasswordChangedEventHandler,
       SessionRevokedEventHandler,
 
+      // Domain Specifications
+      AccountNotBlockedSpecification,
+      AccountActiveSpecification,
+      AccountCanAuthenticateSpecification,
+      PasswordMustChangeSpecification,
+      SessionBelongsToAccountSpecification,
+
       // Domain Services
       AuthCoreService,
       AuthRegistrationService,
       SessionManagementService,
       PasswordManagementService,
+      AuthRbacService,
+      AuthAccountService,
+      AuthLoginService,
+      AuthTokenService,
+
+      // Login Validation Chain Handlers & Pipeline
+      RateLimitHandler,
+      LockoutHandler,
+      AccountLookupHandler,
+      PasswordVerificationHandler,
+      AccountStatusHandler,
+      LoginValidationPipeline,
 
       // Infrastructure Services - Split Token Services
       JwtService,
@@ -96,9 +141,12 @@ import {
          useExisting: VerificationTokenService,
       },
       TokenLifecycleService,
+      MetricsTokenLifecycleDecorator,
       {
          provide: TOKEN_LIFECYCLE_SERVICE,
-         useExisting: TokenLifecycleService,
+         useFactory: (inner: TokenLifecycleService, metricsService: AuthMetricsService) =>
+            new MetricsTokenLifecycleDecorator(inner, metricsService),
+         inject: [TokenLifecycleService, AUTH_METRICS_SERVICE],
       },
       AuthRateLimiter,
       {
@@ -111,12 +159,23 @@ import {
          useExisting: AuthMetricsService,
       },
       PasswordHasherService,
+      MetricsPasswordHasherDecorator,
       {
          provide: PASSWORD_HASHER,
-         useExisting: PasswordHasherService,
+         useFactory: (inner: PasswordHasherService, metricsService: AuthMetricsService) =>
+            new MetricsPasswordHasherDecorator(inner, metricsService),
+         inject: [PasswordHasherService, AUTH_METRICS_SERVICE],
       },
+      AuthMetricsHandler,
       AuditLogService,
       EmailBloomFilterService,
+
+      // Notification Adapter
+      RabbitMqNotificationAdapter,
+      {
+         provide: NOTIFICATION_ADAPTER,
+         useClass: RabbitMqNotificationAdapter,
+      },
 
       // CQRS Audit Log Components
       AuditEventStore,
@@ -156,6 +215,11 @@ import {
       AuthRegistrationService,
       SessionManagementService,
       PasswordManagementService,
+      AuthRbacService,
+      AuthAccountService,
+      AuthLoginService,
+      AuthTokenService,
+      LoginValidationPipeline,
       JWT_SERVICE,
       JwtService,
       PASSWORD_HASHER,
@@ -185,10 +249,35 @@ import {
       ThreatDetectionMetricsProjection,
       AuditProjectionRebuildService,
       OutboxModule,
+      UnitOfWorkModule,
+      UNIT_OF_WORK,
+      PrismaUnitOfWork,
       UserRegisteredEventHandler,
       AccountLockedEventHandler,
       PasswordChangedEventHandler,
       SessionRevokedEventHandler,
+      AuthMetricsHandler,
+      MetricsTokenLifecycleDecorator,
+      MetricsPasswordHasherDecorator,
+      NOTIFICATION_ADAPTER,
+      RabbitMqNotificationAdapter,
+      COMMAND_BUS,
+      CommandBus,
+      ...AUTH_COMMAND_HANDLERS,
    ],
 })
-export class AuthModule {}
+export class AuthModule implements OnModuleInit {
+   constructor(
+      private readonly commandBus: CommandBus,
+      private readonly moduleRef: ModuleRef,
+   ) {}
+
+   onModuleInit(): void {
+      for (const handlerClass of AUTH_COMMAND_HANDLERS) {
+         const handler = this.moduleRef.get<ICommandHandler<never, never>>(handlerClass, { strict: false });
+         if (handler) {
+            this.commandBus.registerHandler(handler);
+         }
+      }
+   }
+}

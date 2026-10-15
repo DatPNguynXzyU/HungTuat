@@ -40,6 +40,12 @@ export const AUTH_REDIS_TTL = {
 export type AuthRedisTtl = (typeof AUTH_REDIS_TTL)[keyof typeof AUTH_REDIS_TTL];
 
 /**
+ * Sentinel value stored in Redis to mark an account as temporarily locked.
+ */
+export const AUTH_LOCKOUT_VALUE = 'locked' as const;
+export type AuthLockoutValue = typeof AUTH_LOCKOUT_VALUE;
+
+/**
  * Single source of truth for all Redis cache and state keys within the Auth service.
  * Eliminates string template interpolation duplication and enforces consistent key structures.
  */

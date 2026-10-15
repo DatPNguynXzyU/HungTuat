@@ -3,8 +3,9 @@ import type { AccountEntity } from '@auth/entities';
 import type { IAccountRepository } from '@auth/repositories';
 import type { IOutboxRepository } from '@auth/outbox/repositories/outbox.repository.interface';
 import type { ITokenLifecycleService, TokenPair } from '@auth/services/infrastructure';
+import type { IAuthSaga } from '@auth/templates';
 
-export class RegisterSaga {
+export class RegisterSaga implements IAuthSaga {
    private account?: AccountEntity;
    private tokens?: TokenPair;
    private readonly logger = new Logger(RegisterSaga.name);

@@ -2,6 +2,8 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { IAuditLogListResult, IAuditLogQuery } from '@contracts/auth';
 import { AuditStatus } from '@auth/prisma-client';
 import type { CreateAuditLogData, SecurityAuditLogEntity } from '@auth/entities/audit-log.entity';
+import { AuditLogBuilder } from '@auth/builders/audit-log.builder';
+import type { IBuilder } from '@common';
 import { AUDIT_LOG_REPOSITORY, type IAuditLogRepository } from '@auth/repositories/audit-log.repository.interface';
 import { AUDIT_EVENT_STORE } from '@auth/cqrs/constants/audit-cqrs.constant';
 import type { IAuditEventStore } from '@auth/cqrs/write/audit-event-store.interface';
@@ -16,6 +18,10 @@ import {
    type RebuildProjectionsOptions,
    type RebuildProjectionsResult,
 } from '@auth/cqrs/services/audit-projection-rebuild.service';
+
+function isBuilder(target: CreateAuditLogData | IBuilder<CreateAuditLogData>): target is IBuilder<CreateAuditLogData> {
+   return typeof (target as IBuilder<CreateAuditLogData>).build === 'function';
+}
 
 @Injectable()
 export class AuditLogService {
@@ -34,8 +40,13 @@ export class AuditLogService {
    /**
     * Command side: Writes immutable audit event to the append-only event store
     * and triggers asynchronous read model projections.
+    * Accepts either raw CreateAuditLogData or an IBuilder<CreateAuditLogData> (e.g., AuditLogBuilder).
     */
-   async record(data: CreateAuditLogData): Promise<SecurityAuditLogEntity | null> {
+   async record(
+      builderOrData: CreateAuditLogData | IBuilder<CreateAuditLogData>,
+   ): Promise<SecurityAuditLogEntity | null> {
+      const data: CreateAuditLogData = isBuilder(builderOrData) ? builderOrData.build() : builderOrData;
+
       try {
          const event = await this.eventStore.appendEvent(data);
          const status = data.status === 'FAILURE' ? AuditStatus.FAILURE : AuditStatus.SUCCESS;
@@ -64,6 +75,13 @@ export class AuditLogService {
          );
          return null;
       }
+   }
+
+   /**
+    * Creates a new fluent AuditLogBuilder instance.
+    */
+   createBuilder(): AuditLogBuilder {
+      return AuditLogBuilder.create();
    }
 
    /**

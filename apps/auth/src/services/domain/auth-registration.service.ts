@@ -1,18 +1,15 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ClientProxy } from '@nestjs/microservices';
 import {
    BadRequestException,
    DEFAULT_ROLES,
    OtpUtil,
    RedisService,
-   SERVICES,
    RbacCacheService,
    UnauthorizedException,
 } from '@common';
 import {
    AUDIT_ACTIONS,
-   AUDIT_STATUS,
    AUTH_AGGREGATES,
    AUTH_ERROR_CODES,
    AUTH_RESPONSE_MESSAGES,
@@ -25,15 +22,16 @@ import {
    type VerifyRegisterOtpResponseDto,
    type IAuthResult,
 } from '@contracts/auth';
-import { NOTIFICATION_EVENTS, NOTIFICATION_PATTERNS } from '@contracts/notification';
+import { NOTIFICATION_EVENTS } from '@contracts/notification';
+import { NOTIFICATION_ADAPTER, type INotificationAdapter } from '@auth/adapters';
 import type { IDeviceInfo } from '@common';
 import { ACCOUNT_REPOSITORY, type IAccountRepository, RBAC_REPOSITORY, type IRbacRepository } from '@auth/repositories';
+import { AuditLogBuilder } from '@auth/builders/audit-log.builder';
 import { AuthConfigService } from '@auth/config';
 import { OUTBOX_REPOSITORY, type IOutboxRepository } from '@auth/outbox/repositories/outbox.repository.interface';
 import { OutboxPublisherService } from '@auth/outbox';
+import { UNIT_OF_WORK, type IUnitOfWork } from '@auth/unit-of-work';
 import {
-   AUTH_METRICS_SERVICE,
-   type IAuthMetricsService,
    AUTH_RATE_LIMITER,
    type IAuthRateLimiter,
    AuditLogService,
@@ -41,30 +39,32 @@ import {
    TOKEN_LIFECYCLE_SERVICE,
    VERIFICATION_TOKEN_SERVICE,
 } from '@auth/services/infrastructure';
-import {
-   AUTH_METRICS_OTP_OPERATIONS,
-   AUTH_METRICS_OTP_TYPES,
-   AUTH_METRICS_REASONS,
-   AUTH_METRICS_STATUS,
-   AUTH_REDIS_TTL,
-   type AuthMetricReason,
-   AuthRedisKeys,
-} from '@auth/constants';
+import { AUTH_METRICS_OTP_OPERATIONS, AUTH_METRICS_OTP_TYPES, AUTH_REDIS_TTL, AuthRedisKeys } from '@auth/constants';
 import {
    PASSWORD_HASHER,
    type IPasswordHasher,
    type ITokenLifecycleService,
    type IVerificationTokenService,
 } from '@auth/services/infrastructure';
-import type { RoleEntity } from '@auth/entities';
+import type { RoleEntity, AccountEntity } from '@auth/entities';
 import { RegisterSaga } from '@auth/sagas';
 import { Email, Password, VerificationToken } from '@auth/domain/value-objects';
-import { AUTH_DOMAIN_EVENTS, UserRegisteredEvent } from '@auth/domain/events';
+import {
+   AUTH_DOMAIN_EVENTS,
+   OtpFailedEvent,
+   OtpGeneratedEvent,
+   OtpVerifiedEvent,
+   UserRegisteredEvent,
+   UserRegistrationFailedEvent,
+} from '@auth/domain/events';
+import { AbstractAuthFlow, type AuthFlowContext, type AuthProvisionResult } from '@auth/templates';
 
+/**
+ * AuthRegistrationService handles account registration, verification tokens, and OTP verification.
+ * Implements the concrete Template Method operations derived from AbstractAuthFlow.
+ */
 @Injectable()
-export class AuthRegistrationService {
-   private readonly logger = new Logger(AuthRegistrationService.name);
-
+export class AuthRegistrationService extends AbstractAuthFlow<RegisterDto, RegisterSaga> {
    constructor(
       @Inject(ACCOUNT_REPOSITORY)
       private readonly accountRepository: IAccountRepository,
@@ -72,11 +72,13 @@ export class AuthRegistrationService {
       private readonly rbacRepository: IRbacRepository,
       @Inject(OUTBOX_REPOSITORY)
       private readonly outboxRepository: IOutboxRepository,
+      @Inject(UNIT_OF_WORK)
+      private readonly unitOfWork: IUnitOfWork,
       private readonly rbacCacheService: RbacCacheService,
       @Inject(VERIFICATION_TOKEN_SERVICE)
       private readonly verificationTokenService: IVerificationTokenService,
       @Inject(TOKEN_LIFECYCLE_SERVICE)
-      private readonly tokenLifecycleService: ITokenLifecycleService,
+      tokenLifecycleService: ITokenLifecycleService,
       @Inject(PASSWORD_HASHER)
       private readonly passwordHasher: IPasswordHasher,
       @Inject(AUTH_RATE_LIMITER)
@@ -84,14 +86,14 @@ export class AuthRegistrationService {
       private readonly emailBloomFilterService: EmailBloomFilterService,
       private readonly outboxPublisherService: OutboxPublisherService,
       private readonly redisService: RedisService,
-      private readonly auditLogService: AuditLogService,
-      @Inject(AUTH_METRICS_SERVICE)
-      private readonly metricsService: IAuthMetricsService,
-      @Inject(SERVICES.NOTIFICATION_SERVICE)
-      private readonly notificationClient: ClientProxy,
+      auditLogService: AuditLogService,
+      @Inject(NOTIFICATION_ADAPTER)
+      private readonly notificationAdapter: INotificationAdapter,
       private readonly config: AuthConfigService,
-      private readonly eventEmitter: EventEmitter2,
-   ) {}
+      eventEmitter: EventEmitter2,
+   ) {
+      super(tokenLifecycleService, auditLogService, eventEmitter);
+   }
 
    private async getOrCacheRole(roleCode: string): Promise<RoleEntity | null> {
       const cached = await this.rbacCacheService.getRole(roleCode);
@@ -129,7 +131,7 @@ export class AuthRegistrationService {
    }
 
    async sendRegisterOtp(dto: SendRegisterOtpDto, deviceInfo?: IDeviceInfo): Promise<SendRegisterOtpResponseDto> {
-      const startTime = this.metricsService.startTimer();
+      const startTime = Date.now();
       try {
          const emailResult = Email.create(dto.email);
          if (emailResult.isFailure()) {
@@ -143,20 +145,14 @@ export class AuthRegistrationService {
 
          const isAvailable = await this.emailBloomFilterService.isEmailAvailable(normalizedEmail);
          if (!isAvailable) {
-            await this.auditLogService.record({
-               actorEmail: normalizedEmail,
-               action: AUDIT_ACTIONS.AUTH_OTP_FAILED,
-               status: AUDIT_STATUS.FAILURE,
-               ipAddress: deviceInfo?.ipAddress,
-               userAgent: deviceInfo?.userAgent,
-               deviceType: deviceInfo?.deviceType,
-               deviceName: deviceInfo?.deviceName,
-               browser: deviceInfo?.browser,
-               os: deviceInfo?.os,
-               city: deviceInfo?.city,
-               country: deviceInfo?.country,
-               reason: AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS,
-            });
+            await this.auditLogService.record(
+               AuditLogBuilder.create()
+                  .withAction(AUDIT_ACTIONS.AUTH_OTP_FAILED)
+                  .asFailure(AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS)
+                  .withActorEmail(normalizedEmail)
+                  .withDeviceInfo(deviceInfo)
+                  .build(),
+            );
             throw new BadRequestException(AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS, {
                params: { email: normalizedEmail },
             });
@@ -180,34 +176,24 @@ export class AuthRegistrationService {
             this.redisService.del(attemptsKey),
          ]);
 
-         this.notificationClient.emit(NOTIFICATION_PATTERNS.SEND_OTP_EMAIL, {
-            to: normalizedEmail,
-            otpCode: otp,
-            expiresInMinutes: Math.round(AUTH_REDIS_TTL.OTP_REGISTER / 60),
-         });
-
-         await this.auditLogService.record({
-            actorEmail: normalizedEmail,
-            action: AUDIT_ACTIONS.AUTH_OTP_SENT,
-            status: AUDIT_STATUS.SUCCESS,
-            ipAddress: deviceInfo?.ipAddress,
-            userAgent: deviceInfo?.userAgent,
-            deviceType: deviceInfo?.deviceType,
-            deviceName: deviceInfo?.deviceName,
-            browser: deviceInfo?.browser,
-            os: deviceInfo?.os,
-            city: deviceInfo?.city,
-            country: deviceInfo?.country,
-         });
-
-         this.metricsService.observeOtpOperation(
-            AUTH_METRICS_OTP_OPERATIONS.SEND,
-            this.metricsService.calculateDuration(startTime),
+         await this.notificationAdapter.sendRegistrationOtp(
+            normalizedEmail,
+            otp,
+            Math.round(AUTH_REDIS_TTL.OTP_REGISTER / 60),
          );
-         this.metricsService.recordOtpOperation(
-            AUTH_METRICS_OTP_OPERATIONS.SEND,
-            AUTH_METRICS_OTP_TYPES.REGISTER,
-            AUTH_METRICS_STATUS.SUCCESS,
+
+         await this.auditLogService.record(
+            AuditLogBuilder.create()
+               .withAction(AUDIT_ACTIONS.AUTH_OTP_SENT)
+               .asSuccess()
+               .withActorEmail(normalizedEmail)
+               .withDeviceInfo(deviceInfo)
+               .build(),
+         );
+
+         this.eventEmitter.emit(
+            AUTH_DOMAIN_EVENTS.OTP_GENERATED,
+            new OtpGeneratedEvent(AUTH_METRICS_OTP_TYPES.REGISTER, (Date.now() - startTime) / 1000, normalizedEmail),
          );
 
          return {
@@ -217,17 +203,21 @@ export class AuthRegistrationService {
             expiresInMinutes: Math.round(AUTH_REDIS_TTL.OTP_REGISTER / 60),
          };
       } catch (error) {
-         this.metricsService.recordOtpOperation(
-            AUTH_METRICS_OTP_OPERATIONS.SEND,
-            AUTH_METRICS_OTP_TYPES.REGISTER,
-            AUTH_METRICS_STATUS.FAILURE,
+         this.eventEmitter.emit(
+            AUTH_DOMAIN_EVENTS.OTP_FAILED,
+            new OtpFailedEvent(
+               AUTH_METRICS_OTP_OPERATIONS.SEND,
+               AUTH_METRICS_OTP_TYPES.REGISTER,
+               dto.email,
+               error instanceof Error ? error.message : undefined,
+            ),
          );
          throw error;
       }
    }
 
    async verifyRegisterOtp(dto: VerifyRegisterOtpDto, deviceInfo?: IDeviceInfo): Promise<VerifyRegisterOtpResponseDto> {
-      const startTime = this.metricsService.startTimer();
+      const startTime = Date.now();
       try {
          const emailResult = Email.create(dto.email);
          if (emailResult.isFailure()) {
@@ -244,13 +234,14 @@ export class AuthRegistrationService {
 
          const storedOtp = await this.redisService.get(otpKey);
          if (!storedOtp) {
-            await this.auditLogService.record({
-               actorEmail: normalizedEmail,
-               action: AUDIT_ACTIONS.AUTH_OTP_FAILED,
-               status: AUDIT_STATUS.FAILURE,
-               ipAddress: deviceInfo?.ipAddress,
-               reason: AUTH_ERROR_CODES.OTP_EXPIRED,
-            });
+            await this.auditLogService.record(
+               AuditLogBuilder.create()
+                  .withAction(AUDIT_ACTIONS.AUTH_OTP_FAILED)
+                  .asFailure(AUTH_ERROR_CODES.OTP_EXPIRED)
+                  .withActorEmail(normalizedEmail)
+                  .withIpAddress(deviceInfo?.ipAddress)
+                  .build(),
+            );
             throw new BadRequestException(AUTH_ERROR_CODES.OTP_EXPIRED);
          }
 
@@ -261,25 +252,27 @@ export class AuthRegistrationService {
 
          if (attempts > AUTH_SECURITY.MAX_OTP_ATTEMPTS) {
             await Promise.all([this.redisService.del(otpKey), this.redisService.del(attemptsKey)]);
-            await this.auditLogService.record({
-               actorEmail: normalizedEmail,
-               action: AUDIT_ACTIONS.AUTH_OTP_FAILED,
-               status: AUDIT_STATUS.FAILURE,
-               ipAddress: deviceInfo?.ipAddress,
-               reason: AUTH_ERROR_CODES.OTP_MAX_ATTEMPTS_EXCEEDED,
-            });
+            await this.auditLogService.record(
+               AuditLogBuilder.create()
+                  .withAction(AUDIT_ACTIONS.AUTH_OTP_FAILED)
+                  .asFailure(AUTH_ERROR_CODES.OTP_MAX_ATTEMPTS_EXCEEDED)
+                  .withActorEmail(normalizedEmail)
+                  .withIpAddress(deviceInfo?.ipAddress)
+                  .build(),
+            );
             throw new BadRequestException(AUTH_ERROR_CODES.OTP_MAX_ATTEMPTS_EXCEEDED);
          }
 
          if (storedOtp !== dto.otp) {
-            await this.auditLogService.record({
-               actorEmail: normalizedEmail,
-               action: AUDIT_ACTIONS.AUTH_OTP_FAILED,
-               status: AUDIT_STATUS.FAILURE,
-               ipAddress: deviceInfo?.ipAddress,
-               reason: AUTH_ERROR_CODES.OTP_INVALID,
-               metadata: { remainingAttempts: AUTH_SECURITY.MAX_OTP_ATTEMPTS - attempts },
-            });
+            await this.auditLogService.record(
+               AuditLogBuilder.create()
+                  .withAction(AUDIT_ACTIONS.AUTH_OTP_FAILED)
+                  .asFailure(AUTH_ERROR_CODES.OTP_INVALID)
+                  .withActorEmail(normalizedEmail)
+                  .withIpAddress(deviceInfo?.ipAddress)
+                  .withMetadata({ remainingAttempts: AUTH_SECURITY.MAX_OTP_ATTEMPTS - attempts })
+                  .build(),
+            );
 
             throw new BadRequestException(AUTH_ERROR_CODES.OTP_INVALID, {
                params: { remainingAttempts: AUTH_SECURITY.MAX_OTP_ATTEMPTS - attempts },
@@ -293,22 +286,18 @@ export class AuthRegistrationService {
 
          await Promise.all([this.redisService.del(otpKey), this.redisService.del(attemptsKey)]);
 
-         await this.auditLogService.record({
-            actorEmail: normalizedEmail,
-            action: AUDIT_ACTIONS.AUTH_OTP_VERIFIED,
-            status: AUDIT_STATUS.SUCCESS,
-            ipAddress: deviceInfo?.ipAddress,
-            userAgent: deviceInfo?.userAgent,
-         });
-
-         this.metricsService.observeOtpOperation(
-            AUTH_METRICS_OTP_OPERATIONS.VERIFY,
-            this.metricsService.calculateDuration(startTime),
+         await this.auditLogService.record(
+            AuditLogBuilder.create()
+               .withAction(AUDIT_ACTIONS.AUTH_OTP_VERIFIED)
+               .asSuccess()
+               .withActorEmail(normalizedEmail)
+               .withDeviceInfo(deviceInfo)
+               .build(),
          );
-         this.metricsService.recordOtpOperation(
-            AUTH_METRICS_OTP_OPERATIONS.VERIFY,
-            AUTH_METRICS_OTP_TYPES.REGISTER,
-            AUTH_METRICS_STATUS.SUCCESS,
+
+         this.eventEmitter.emit(
+            AUTH_DOMAIN_EVENTS.OTP_VERIFIED,
+            new OtpVerifiedEvent(AUTH_METRICS_OTP_TYPES.REGISTER, (Date.now() - startTime) / 1000, dto.email),
          );
 
          return {
@@ -317,16 +306,34 @@ export class AuthRegistrationService {
             expiresInSeconds: AUTH_REDIS_TTL.OTP_VERIFICATION_TOKEN,
          };
       } catch (error) {
-         this.metricsService.recordOtpOperation(
-            AUTH_METRICS_OTP_OPERATIONS.VERIFY,
-            AUTH_METRICS_OTP_TYPES.REGISTER,
-            AUTH_METRICS_STATUS.FAILURE,
+         this.eventEmitter.emit(
+            AUTH_DOMAIN_EVENTS.OTP_FAILED,
+            new OtpFailedEvent(
+               AUTH_METRICS_OTP_OPERATIONS.VERIFY,
+               AUTH_METRICS_OTP_TYPES.REGISTER,
+               dto.email,
+               error instanceof Error ? error.message : undefined,
+            ),
          );
          throw error;
       }
    }
 
+   /**
+    * Public entry point for user registration.
+    * Executes the Template Method defined in AbstractAuthFlow.
+    */
    async register(dto: RegisterDto, deviceInfo?: IDeviceInfo): Promise<IAuthResult> {
+      return this.execute(dto, deviceInfo);
+   }
+
+   /**
+    * Primitive step: Validates registration payload, hashes password, executes transaction, and prepares saga.
+    */
+   protected async authenticateOrProvision(
+      dto: RegisterDto,
+      deviceInfo?: IDeviceInfo,
+   ): Promise<AuthProvisionResult<RegisterSaga>> {
       const emailResult = Email.create(dto.email);
       if (emailResult.isFailure()) {
          throw new BadRequestException(AUTH_ERROR_CODES.INVALID_EMAIL_FORMAT, {
@@ -370,20 +377,14 @@ export class AuthRegistrationService {
       if (mightContain) {
          const existing = await this.accountRepository.findByEmail(normalizedEmail);
          if (existing) {
-            await this.auditLogService.record({
-               actorEmail: normalizedEmail,
-               action: AUDIT_ACTIONS.AUTH_REGISTER,
-               status: AUDIT_STATUS.FAILURE,
-               ipAddress: deviceInfo?.ipAddress,
-               userAgent: deviceInfo?.userAgent,
-               deviceType: deviceInfo?.deviceType,
-               deviceName: deviceInfo?.deviceName,
-               browser: deviceInfo?.browser,
-               os: deviceInfo?.os,
-               city: deviceInfo?.city,
-               country: deviceInfo?.country,
-               reason: AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS,
-            });
+            await this.auditLogService.record(
+               AuditLogBuilder.create()
+                  .withAction(AUDIT_ACTIONS.AUTH_REGISTER)
+                  .asFailure(AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS)
+                  .withActorEmail(normalizedEmail)
+                  .withDeviceInfo(deviceInfo)
+                  .build(),
+            );
             throw new BadRequestException(AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS, {
                params: { email: normalizedEmail },
             });
@@ -397,99 +398,80 @@ export class AuthRegistrationService {
 
       const saga = new RegisterSaga(this.accountRepository, this.tokenLifecycleService, this.outboxRepository);
 
-      try {
-         const newAccount = await this.outboxRepository.createAccountWithEvent(
-            {
+      const newAccount = await this.unitOfWork.runInTransaction(async (uow) => {
+         const account = await uow.accountRepository.create({
+            email: normalizedEmail,
+            passwordHash,
+            roleId: defaultRole?.id,
+            status: USER_STATUS.ACTIVE,
+            isEmailVerified,
+         });
+
+         await uow.outboxRepository.create({
+            aggregateType: AUTH_AGGREGATES.ACCOUNT,
+            aggregateId: account.id,
+            eventType: NOTIFICATION_EVENTS.USER_REGISTERED,
+            payload: {
                email: normalizedEmail,
-               passwordHash,
-               roleId: defaultRole?.id,
-               status: USER_STATUS.ACTIVE,
-               isEmailVerified,
+               accountId: account.id,
             },
-            {
-               aggregateType: AUTH_AGGREGATES.ACCOUNT,
-               eventType: NOTIFICATION_EVENTS.USER_REGISTERED,
-               payload: {
-                  email: normalizedEmail,
-               },
-            },
-         );
-         saga.setAccount(newAccount);
+         });
 
-         const accountRoles = newAccount.roles && newAccount.roles.length > 0 ? newAccount.roles : [DEFAULT_ROLES.USER];
+         return account;
+      });
+      saga.setAccount(newAccount);
 
-         const tokens = await this.tokenLifecycleService.generateTokenPair(
-            {
-               id: newAccount.id,
-               email: newAccount.email,
-               roles: accountRoles,
-            },
-            deviceInfo,
-         );
-         saga.setTokens(tokens);
+      return {
+         account: newAccount,
+         saga,
+         clientIp: this.extractClientIp(dto, deviceInfo),
+      };
+   }
 
-         await this.emailBloomFilterService.addEmail(normalizedEmail);
-         this.logger.log(`Created account ${newAccount.email} with Outbox event; triggering publisher`);
-         this.outboxPublisherService.triggerPublish();
+   /**
+    * Hook: Resolves roles and warms the RBAC cache.
+    */
+   protected override async resolveRoles(account: AccountEntity): Promise<string[]> {
+      const accountRoles = await super.resolveRoles(account);
+      await Promise.all(accountRoles.map((role) => this.getOrCacheRole(role)));
+      return accountRoles;
+   }
 
-         this.eventEmitter.emit(
-            AUTH_DOMAIN_EVENTS.USER_REGISTERED,
-            new UserRegisteredEvent(newAccount.id, newAccount.email, new Date(), deviceInfo),
-         );
+   /**
+    * Primitive step: Adds email to bloom filter and triggers outbox event publisher.
+    */
+   protected async onSuccess(context: AuthFlowContext<RegisterDto, RegisterSaga>): Promise<void> {
+      const normalizedEmail = context.account.email;
+      await this.emailBloomFilterService.addEmail(normalizedEmail);
+      this.logger.log(`Created account ${context.account.email} with Outbox event; triggering publisher`);
+      this.outboxPublisherService.triggerPublish();
+   }
 
-         this.auditLogService
-            .record({
-               accountId: newAccount.id,
-               actorEmail: newAccount.email,
-               action: AUDIT_ACTIONS.AUTH_REGISTER,
-               status: AUDIT_STATUS.SUCCESS,
-               ipAddress: deviceInfo?.ipAddress,
-               userAgent: deviceInfo?.userAgent,
-               deviceType: deviceInfo?.deviceType,
-               deviceName: deviceInfo?.deviceName,
-               browser: deviceInfo?.browser,
-               os: deviceInfo?.os,
-               city: deviceInfo?.city,
-               country: deviceInfo?.country,
-               metadata: { roles: accountRoles },
-            })
-            .catch((err: unknown) => {
-               this.logger.error('Failed to record register audit log (non-blocking)', err);
-            });
+   /**
+    * Hook: Identifies audit action for registration success.
+    */
+   protected getAuditAction(): string {
+      return AUDIT_ACTIONS.AUTH_REGISTER;
+   }
 
-         this.metricsService.recordRegistrationAttempt(AUTH_METRICS_STATUS.SUCCESS);
+   /**
+    * Primitive step: Emits domain event for user registered.
+    */
+   protected emitSuccessEvent(context: AuthFlowContext<RegisterDto, RegisterSaga>): void {
+      this.eventEmitter.emit(
+         AUTH_DOMAIN_EVENTS.USER_REGISTERED,
+         new UserRegisteredEvent(context.account.id, context.account.email, new Date(), context.deviceInfo),
+      );
+   }
 
-         return {
-            user: {
-               id: newAccount.id,
-               email: newAccount.email,
-               roles: accountRoles,
-               status: newAccount.status || USER_STATUS.ACTIVE,
-               isEmailVerified: newAccount.isEmailVerified ?? false,
-               lastLoginAt: newAccount.lastLoginAt ?? null,
-               createdAt: newAccount.createdAt,
-               updatedAt: newAccount.updatedAt,
-            },
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
-         };
-      } catch (error) {
-         if (saga) {
-            await saga.rollback();
-         }
-         let reason: AuthMetricReason = AUTH_METRICS_REASONS.UNKNOWN;
-         if (error instanceof BadRequestException) {
-            const errCode = (error as { errorCode?: string }).errorCode;
-            if (errCode === AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS) {
-               reason = AUTH_METRICS_REASONS.EMAIL_EXISTS;
-            } else if (errCode === AUTH_ERROR_CODES.OTP_INVALID) {
-               reason = AUTH_METRICS_REASONS.INVALID_OTP;
-            } else if (errCode === AUTH_ERROR_CODES.OTP_EXPIRED) {
-               reason = AUTH_METRICS_REASONS.OTP_EXPIRED;
-            }
-         }
-         this.metricsService.recordRegistrationAttempt(AUTH_METRICS_STATUS.FAILURE, reason);
-         throw error;
-      }
+   /**
+    * Primitive step: Emits domain event for registration failure.
+    */
+   protected emitFailureEvent(error: unknown, dto: RegisterDto, deviceInfo?: IDeviceInfo): void {
+      const reason = this.extractFailureReason(error);
+      this.eventEmitter.emit(
+         AUTH_DOMAIN_EVENTS.USER_REGISTRATION_FAILED,
+         new UserRegistrationFailedEvent(dto.email, reason, new Date(), deviceInfo),
+      );
    }
 }

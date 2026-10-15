@@ -1,18 +1,15 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
 import { OnEvent } from '@nestjs/event-emitter';
-import { SERVICES } from '@common';
-import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES } from '@contracts/notification';
-import { firstValueFrom } from 'rxjs';
 import { AUTH_DOMAIN_EVENTS, PasswordChangedEvent } from '@auth/domain/events';
+import { NOTIFICATION_ADAPTER, type INotificationAdapter } from '@auth/adapters';
 
 @Injectable()
 export class PasswordChangedEventHandler {
    private readonly logger = new Logger(PasswordChangedEventHandler.name);
 
    constructor(
-      @Inject(SERVICES.NOTIFICATION_SERVICE)
-      private readonly notificationClient: ClientProxy,
+      @Inject(NOTIFICATION_ADAPTER)
+      private readonly notificationAdapter: INotificationAdapter,
    ) {}
 
    @OnEvent(AUTH_DOMAIN_EVENTS.PASSWORD_CHANGED, { async: true })
@@ -29,18 +26,11 @@ export class PasswordChangedEventHandler {
    }
 
    private async sendPasswordChangeConfirmation(event: PasswordChangedEvent): Promise<void> {
-      await firstValueFrom(
-         this.notificationClient.emit(NOTIFICATION_PATTERNS.SEND_EMAIL, {
-            to: event.email,
-            subject: NOTIFICATION_EMAIL_SUBJECTS.PASSWORD_CHANGED,
-            template: NOTIFICATION_TEMPLATES.PASSWORD_CHANGED,
-            data: {
-               email: event.email,
-               changedAt: event.changedAt,
-               ipAddress: event.ipAddress,
-               deviceType: event.deviceInfo?.deviceType,
-            },
-         }),
-      );
+      await this.notificationAdapter.sendPasswordChangedConfirmation({
+         email: event.email,
+         changedAt: event.changedAt,
+         ipAddress: event.ipAddress,
+         deviceType: event.deviceInfo?.deviceType,
+      });
    }
 }

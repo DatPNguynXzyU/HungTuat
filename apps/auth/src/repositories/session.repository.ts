@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { uuidv7 } from '@common';
 import type { SessionEntity, CreateSessionData } from '@auth/entities/session.entity';
-import { PrismaService } from '@auth/prisma/prisma.service';
+import { PrismaService, type PrismaClientOrTransaction } from '@auth/prisma';
 import type { ISessionRepository } from '@auth/repositories/session.repository.interface';
 import type { AccountSession } from '@auth/prisma-client';
 
 @Injectable()
 export class SessionRepository implements ISessionRepository {
-   constructor(private readonly prisma: PrismaService) {}
+   constructor(@Inject(PrismaService) private readonly prisma: PrismaClientOrTransaction) {}
 
    private toEntity(session: AccountSession): SessionEntity {
       return {

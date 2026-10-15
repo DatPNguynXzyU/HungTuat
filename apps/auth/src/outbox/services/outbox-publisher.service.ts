@@ -1,9 +1,8 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
-import { SERVICES } from '@common';
 import { OUTBOX_REPOSITORY } from '@auth/outbox/repositories/outbox.repository.interface';
 import type { IOutboxRepository } from '@auth/outbox/repositories/outbox.repository.interface';
+import { OUTBOX_EVENT_PUBLISHER } from '@auth/outbox/adapters/outbox-event-publisher.interface';
+import type { IOutboxEventPublisher } from '@auth/outbox/adapters/outbox-event-publisher.interface';
 
 @Injectable()
 export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
@@ -16,10 +15,8 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
    constructor(
       @Inject(OUTBOX_REPOSITORY)
       private readonly outboxRepository: IOutboxRepository,
-      @Inject(SERVICES.NOTIFICATION_SERVICE)
-      private readonly notificationClient: ClientProxy,
-      @Inject(SERVICES.USER_SERVICE)
-      private readonly userClient: ClientProxy,
+      @Inject(OUTBOX_EVENT_PUBLISHER)
+      private readonly eventPublisher: IOutboxEventPublisher,
    ) {}
 
    onModuleInit(): void {
@@ -68,10 +65,7 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
          let successCount = 0;
          for (const event of pendingEvents) {
             try {
-               await Promise.allSettled([
-                  firstValueFrom(this.notificationClient.emit(event.eventType, event.payload)),
-                  firstValueFrom(this.userClient.emit(event.eventType, event.payload)),
-               ]);
+               await this.eventPublisher.publish(event.eventType, event.payload);
                await this.outboxRepository.markAsPublished(event.eventId);
                this.logger.log(`Outbox event published successfully: [${event.eventType}] ID: ${event.eventId}`);
                successCount++;

@@ -7,5 +7,6 @@ export class LoginSuccessEvent {
       public readonly loginAt: Date,
       public readonly ipAddress?: string,
       public readonly deviceInfo?: IDeviceInfo,
+      public readonly durationSeconds?: number,
    ) {}
 }

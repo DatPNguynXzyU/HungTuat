@@ -14,6 +14,14 @@ export class MediaConfigService {
       return this.configService.get(MEDIA_ENV_KEYS.NODE_ENV, { infer: true }) === 'production';
    }
 
+   get nodeEnv(): string {
+      return this.configService.get(MEDIA_ENV_KEYS.NODE_ENV, { infer: true });
+   }
+
+   get logLevel(): string {
+      return this.configService.get(MEDIA_ENV_KEYS.LOG_LEVEL, { infer: true });
+   }
+
    get databaseUrl(): string {
       const url = this.configService.get(MEDIA_ENV_KEYS.DATABASE_URL, { infer: true });
       if (url) {

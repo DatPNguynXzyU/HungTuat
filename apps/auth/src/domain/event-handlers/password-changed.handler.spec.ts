@@ -1,15 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { of, throwError } from 'rxjs';
-import { SERVICES } from '@common';
-import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES } from '@contracts/notification';
+import { NOTIFICATION_ADAPTER } from '@auth/adapters';
 import { PasswordChangedEventHandler } from '@auth/domain/event-handlers/password-changed.handler';
 import { PasswordChangedEvent } from '@auth/domain/events/password-changed.event';
 
 describe('PasswordChangedEventHandler', () => {
    let handler: PasswordChangedEventHandler;
 
-   const mockNotificationClient = {
-      emit: jest.fn(),
+   const mockNotificationAdapter = {
+      sendPasswordChangedConfirmation: jest.fn(),
    };
 
    beforeEach(async () => {
@@ -19,8 +17,8 @@ describe('PasswordChangedEventHandler', () => {
          providers: [
             PasswordChangedEventHandler,
             {
-               provide: SERVICES.NOTIFICATION_SERVICE,
-               useValue: mockNotificationClient,
+               provide: NOTIFICATION_ADAPTER,
+               useValue: mockNotificationAdapter,
             },
          ],
       }).compile();
@@ -32,8 +30,8 @@ describe('PasswordChangedEventHandler', () => {
       expect(handler).toBeDefined();
    });
 
-   it('should emit password changed confirmation email via notification client', async () => {
-      mockNotificationClient.emit.mockReturnValue(of(true));
+   it('should send password changed confirmation email via notification adapter', async () => {
+      mockNotificationAdapter.sendPasswordChangedConfirmation.mockResolvedValue(undefined);
 
       const event = new PasswordChangedEvent(
          'acc-123',
@@ -45,21 +43,16 @@ describe('PasswordChangedEventHandler', () => {
 
       await handler.handle(event);
 
-      expect(mockNotificationClient.emit).toHaveBeenCalledWith(NOTIFICATION_PATTERNS.SEND_EMAIL, {
-         to: 'user@example.com',
-         subject: NOTIFICATION_EMAIL_SUBJECTS.PASSWORD_CHANGED,
-         template: NOTIFICATION_TEMPLATES.PASSWORD_CHANGED,
-         data: {
-            email: 'user@example.com',
-            changedAt: event.changedAt,
-            ipAddress: '10.0.0.1',
-            deviceType: 'desktop',
-         },
+      expect(mockNotificationAdapter.sendPasswordChangedConfirmation).toHaveBeenCalledWith({
+         email: 'user@example.com',
+         changedAt: event.changedAt,
+         ipAddress: '10.0.0.1',
+         deviceType: 'desktop',
       });
    });
 
-   it('should catch error and not throw when notification client fails', async () => {
-      mockNotificationClient.emit.mockReturnValue(throwError(() => new Error('RabbitMQ disconnected')));
+   it('should catch error and not throw when notification adapter fails', async () => {
+      mockNotificationAdapter.sendPasswordChangedConfirmation.mockRejectedValue(new Error('RabbitMQ disconnected'));
 
       const event = new PasswordChangedEvent('acc-123', 'user@example.com', new Date());
 

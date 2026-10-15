@@ -1,15 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { of, throwError } from 'rxjs';
-import { SERVICES } from '@common';
-import { NOTIFICATION_EMAIL_SUBJECTS, NOTIFICATION_PATTERNS, NOTIFICATION_TEMPLATES } from '@contracts/notification';
+import { NOTIFICATION_ADAPTER } from '@auth/adapters';
 import { AccountLockedEventHandler } from '@auth/domain/event-handlers/account-locked.handler';
 import { AccountLockedEvent } from '@auth/domain/events/account-locked.event';
 
 describe('AccountLockedEventHandler', () => {
    let handler: AccountLockedEventHandler;
 
-   const mockNotificationClient = {
-      emit: jest.fn(),
+   const mockNotificationAdapter = {
+      sendSecurityAlert: jest.fn(),
    };
 
    beforeEach(async () => {
@@ -19,8 +17,8 @@ describe('AccountLockedEventHandler', () => {
          providers: [
             AccountLockedEventHandler,
             {
-               provide: SERVICES.NOTIFICATION_SERVICE,
-               useValue: mockNotificationClient,
+               provide: NOTIFICATION_ADAPTER,
+               useValue: mockNotificationAdapter,
             },
          ],
       }).compile();
@@ -32,8 +30,8 @@ describe('AccountLockedEventHandler', () => {
       expect(handler).toBeDefined();
    });
 
-   it('should emit security alert email via notification client on account locked event', async () => {
-      mockNotificationClient.emit.mockReturnValue(of(true));
+   it('should send security alert email via notification adapter on account locked event', async () => {
+      mockNotificationAdapter.sendSecurityAlert.mockResolvedValue(undefined);
 
       const event = new AccountLockedEvent(
          'acc-123',
@@ -46,21 +44,16 @@ describe('AccountLockedEventHandler', () => {
 
       await handler.handle(event);
 
-      expect(mockNotificationClient.emit).toHaveBeenCalledWith(NOTIFICATION_PATTERNS.SEND_EMAIL, {
-         to: 'locked@example.com',
-         subject: NOTIFICATION_EMAIL_SUBJECTS.ACCOUNT_LOCKED,
-         template: NOTIFICATION_TEMPLATES.SECURITY_ALERT_ACCOUNT_LOCKED,
-         data: {
-            email: 'locked@example.com',
-            ipAddress: '192.168.1.1',
-            lockedUntil: event.lockedUntil,
-            failedAttempts: 5,
-         },
+      expect(mockNotificationAdapter.sendSecurityAlert).toHaveBeenCalledWith({
+         email: 'locked@example.com',
+         ipAddress: '192.168.1.1',
+         lockedUntil: event.lockedUntil,
+         failedAttempts: 5,
       });
    });
 
-   it('should catch error and not throw when notification client fails', async () => {
-      mockNotificationClient.emit.mockReturnValue(throwError(() => new Error('RabbitMQ down')));
+   it('should catch error and not throw when notification adapter fails', async () => {
+      mockNotificationAdapter.sendSecurityAlert.mockRejectedValue(new Error('RabbitMQ down'));
 
       const event = new AccountLockedEvent(
          'acc-123',

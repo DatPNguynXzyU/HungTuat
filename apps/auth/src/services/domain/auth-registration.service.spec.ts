@@ -1,14 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { RbacCacheService, RedisService, SERVICES, UnauthorizedException } from '@common';
+import { RbacCacheService, RedisService, UnauthorizedException } from '@common';
+import { NOTIFICATION_ADAPTER } from '@auth/adapters';
 import { AUTH_ERROR_CODES } from '@contracts/auth';
 import { AuthRegistrationService } from '@auth/services/domain/auth-registration.service';
 import { ACCOUNT_REPOSITORY, RBAC_REPOSITORY } from '@auth/repositories';
 import { AuthConfigService } from '@auth/config';
 import { OUTBOX_REPOSITORY } from '@auth/outbox/repositories/outbox.repository.interface';
 import { OutboxPublisherService } from '@auth/outbox';
+import { UNIT_OF_WORK } from '@auth/unit-of-work';
 import {
-   AUTH_METRICS_SERVICE,
    AUTH_RATE_LIMITER,
    AuditLogService,
    EmailBloomFilterService,
@@ -22,6 +23,7 @@ describe('AuthRegistrationService', () => {
 
    const mockAccountRepository = {
       findByEmail: jest.fn(),
+      create: jest.fn(),
       delete: jest.fn().mockResolvedValue(true),
    };
 
@@ -56,8 +58,20 @@ describe('AuthRegistrationService', () => {
    };
 
    const mockOutboxRepository = {
-      createAccountWithEvent: jest.fn(),
+      create: jest.fn(),
       deleteByAggregateId: jest.fn().mockResolvedValue(undefined),
+   };
+
+   const mockUnitOfWork = {
+      runInTransaction: jest.fn().mockImplementation(async (work) => {
+         return await work({
+            accountRepository: mockAccountRepository,
+            outboxRepository: mockOutboxRepository,
+            rbacRepository: mockRbacRepository,
+            sessionRepository: {} as never,
+            auditLogRepository: {} as never,
+         });
+      }),
    };
 
    const mockRedisService = {
@@ -73,8 +87,8 @@ describe('AuthRegistrationService', () => {
       record: jest.fn().mockResolvedValue(undefined),
    };
 
-   const mockNotificationClient = {
-      emit: jest.fn(),
+   const mockNotificationAdapter = {
+      sendRegistrationOtp: jest.fn().mockResolvedValue(undefined),
    };
 
    const mockRateLimiter = {
@@ -88,25 +102,6 @@ describe('AuthRegistrationService', () => {
 
    const mockConfig = {
       argon2Secret: 'test-secret',
-   };
-
-   const mockMetricsService = {
-      recordLoginAttempt: jest.fn(),
-      recordRegistrationAttempt: jest.fn(),
-      recordTokenOperation: jest.fn(),
-      recordOtpOperation: jest.fn(),
-      recordSessionOperation: jest.fn(),
-      setActiveSessions: jest.fn(),
-      setLockedAccounts: jest.fn(),
-      setOutboxPending: jest.fn(),
-      observeTokenGeneration: jest.fn(),
-      observeLoginDuration: jest.fn(),
-      observePasswordHash: jest.fn(),
-      observeOtpOperation: jest.fn(),
-      startTimer: jest.fn().mockReturnValue(100),
-      calculateDuration: jest.fn().mockReturnValue(0.05),
-      getMetrics: jest.fn(),
-      reset: jest.fn(),
    };
 
    beforeEach(async () => {
@@ -156,6 +151,10 @@ describe('AuthRegistrationService', () => {
                useValue: mockOutboxRepository,
             },
             {
+               provide: UNIT_OF_WORK,
+               useValue: mockUnitOfWork,
+            },
+            {
                provide: RedisService,
                useValue: mockRedisService,
             },
@@ -164,8 +163,8 @@ describe('AuthRegistrationService', () => {
                useValue: mockAuditLogService,
             },
             {
-               provide: SERVICES.NOTIFICATION_SERVICE,
-               useValue: mockNotificationClient,
+               provide: NOTIFICATION_ADAPTER,
+               useValue: mockNotificationAdapter,
             },
             {
                provide: AuthConfigService,
@@ -174,10 +173,6 @@ describe('AuthRegistrationService', () => {
             {
                provide: EventEmitter2,
                useValue: { emit: jest.fn() },
-            },
-            {
-               provide: AUTH_METRICS_SERVICE,
-               useValue: mockMetricsService,
             },
          ],
       }).compile();
@@ -197,7 +192,11 @@ describe('AuthRegistrationService', () => {
    it('should send register OTP', async () => {
       const result = await service.sendRegisterOtp({ email: 'test@example.com' });
       expect(result.success).toBe(true);
-      expect(mockNotificationClient.emit).toHaveBeenCalled();
+      expect(mockNotificationAdapter.sendRegistrationOtp).toHaveBeenCalledWith(
+         'test@example.com',
+         expect.any(String),
+         expect.any(Number),
+      );
    });
 
    describe('register with RegisterSaga', () => {
@@ -214,7 +213,14 @@ describe('AuthRegistrationService', () => {
 
       beforeEach(() => {
          mockPasswordHasher.hash.mockResolvedValue('$argon2id$hashed');
-         mockOutboxRepository.createAccountWithEvent.mockResolvedValue(mockCreatedAccount);
+         mockAccountRepository.create.mockResolvedValue(mockCreatedAccount);
+         mockOutboxRepository.create.mockResolvedValue({
+            eventId: 'mock-event-id',
+            aggregateType: 'ACCOUNT',
+            aggregateId: 'new-account-id',
+            eventType: 'USER_REGISTERED',
+            payload: { email: 'newuser@example.com' },
+         });
          mockTokenLifecycleService.generateTokenPair.mockResolvedValue({
             accessToken: 'mock-reg-access',
             refreshToken: 'mock-reg-refresh',
@@ -232,7 +238,9 @@ describe('AuthRegistrationService', () => {
          expect(result.accessToken).toBe('mock-reg-access');
          expect(result.refreshToken).toBe('mock-reg-refresh');
 
-         expect(mockOutboxRepository.createAccountWithEvent).toHaveBeenCalled();
+         expect(mockUnitOfWork.runInTransaction).toHaveBeenCalled();
+         expect(mockAccountRepository.create).toHaveBeenCalled();
+         expect(mockOutboxRepository.create).toHaveBeenCalled();
          expect(mockTokenLifecycleService.generateTokenPair).toHaveBeenCalledWith(
             expect.objectContaining({ id: 'new-account-id', email: 'newuser@example.com' }),
             undefined,

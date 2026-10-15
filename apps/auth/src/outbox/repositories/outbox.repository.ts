@@ -1,27 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { uuidv7 } from '@common';
-import type { AccountEntity, CreateAccountData } from '@auth/entities/account.entity';
-import { PrismaService } from '@auth/prisma/prisma.service';
+import { PrismaService, type PrismaClientOrTransaction } from '@auth/prisma';
 import type { CreateOutboxEventData, OutboxEventEntity } from '@auth/outbox/entities/outbox-event.entity';
 import type { IOutboxRepository } from '@auth/outbox/repositories/outbox.repository.interface';
-import {
-   type Account,
-   type AccountStatus,
-   type OutboxEvent,
-   type Prisma,
-   type Role,
-   OutboxStatus,
-} from '@auth/prisma-client';
-
-type AccountWithRoles = Account & {
-   accountRoles?: Array<{
-      role: Role;
-   }>;
-};
+import { type OutboxEvent, type Prisma, OutboxStatus } from '@auth/prisma-client';
 
 @Injectable()
 export class OutboxRepository implements IOutboxRepository {
-   constructor(private readonly prisma: PrismaService) {}
+   constructor(@Inject(PrismaService) private readonly prisma: PrismaClientOrTransaction) {}
 
    private toEntity(event: OutboxEvent): OutboxEventEntity {
       return {
@@ -36,23 +22,6 @@ export class OutboxRepository implements IOutboxRepository {
          processedAt: event.processedAt ? event.processedAt.toISOString() : null,
          createdAt: event.createdAt.toISOString(),
          updatedAt: event.updatedAt.toISOString(),
-      };
-   }
-
-   private toAccountEntity(account: AccountWithRoles): AccountEntity {
-      return {
-         id: account.accountId,
-         email: account.email,
-         phoneNumber: account.phoneNumber,
-         passwordHash: account.passwordHash,
-         status: account.status,
-         isEmailVerified: account.isEmailVerified,
-         lastLoginAt: account.lastLoginAt ? account.lastLoginAt.toISOString() : null,
-         version: account.version,
-         deletedAt: account.deletedAt ? account.deletedAt.toISOString() : null,
-         roles: account.accountRoles ? account.accountRoles.map((ur) => ur.role.code) : [],
-         createdAt: account.createdAt.toISOString(),
-         updatedAt: account.updatedAt.toISOString(),
       };
    }
 
@@ -71,58 +40,6 @@ export class OutboxRepository implements IOutboxRepository {
       });
 
       return this.toEntity(event);
-   }
-
-   async createAccountWithEvent(accountData: CreateAccountData, event: CreateOutboxEventData): Promise<AccountEntity> {
-      const accountId = accountData.id || uuidv7();
-
-      const account = await this.prisma.$transaction(async (tx) => {
-         const createdAccount = await tx.account.create({
-            data: {
-               accountId,
-               email: accountData.email,
-               phoneNumber: accountData.phoneNumber,
-               passwordHash: accountData.passwordHash,
-               status: accountData.status as AccountStatus,
-               isEmailVerified: accountData.isEmailVerified,
-               createdAt: accountData.createdAt ? new Date(accountData.createdAt) : undefined,
-               accountRoles: accountData.roleId
-                  ? {
-                       create: [
-                          {
-                             roleId: accountData.roleId,
-                          },
-                       ],
-                    }
-                  : undefined,
-            },
-            include: {
-               accountRoles: {
-                  include: {
-                     role: true,
-                  },
-               },
-            },
-         });
-
-         await tx.outboxEvent.create({
-            data: {
-               eventId: event.eventId || uuidv7(),
-               aggregateType: event.aggregateType,
-               aggregateId: event.aggregateId || accountId,
-               eventType: event.eventType,
-               payload: {
-                  ...event.payload,
-                  accountId,
-               },
-               status: OutboxStatus.PENDING,
-            },
-         });
-
-         return createdAccount;
-      });
-
-      return this.toAccountEntity(account);
    }
 
    async findPending(limit = 50): Promise<OutboxEventEntity[]> {

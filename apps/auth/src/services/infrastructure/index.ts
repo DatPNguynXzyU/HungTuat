@@ -10,3 +10,4 @@ export * from '@auth/services/infrastructure/auth-metrics.interface';
 export * from '@auth/services/infrastructure/auth-metrics.service';
 export * from '@auth/services/infrastructure/password-hasher.interface';
 export * from '@auth/services/infrastructure/password-hasher.service';
+export * from '@auth/adapters';

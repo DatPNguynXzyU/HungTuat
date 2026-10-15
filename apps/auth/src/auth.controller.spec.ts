@@ -2,12 +2,25 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RmqContext } from '@nestjs/microservices';
 import { of } from 'rxjs';
-import { BloomFilterService, DEFAULT_ROLES, RbacCacheService, RedisService, RmqService, SERVICES } from '@common';
+import {
+   BloomFilterService,
+   CommandBus,
+   DEFAULT_ROLES,
+   PERMISSIONS,
+   RbacCacheService,
+   RedisService,
+   RmqService,
+   SERVICES,
+   type ICommandHandler,
+} from '@common';
 import { DEFAULT_DEV_RSA_PRIVATE_KEY, DEFAULT_DEV_RSA_PUBLIC_KEY, DEFAULT_JWT_KEY_ID } from '@contracts/auth';
 import { AuthController } from '@auth/auth.controller';
+import { NOTIFICATION_ADAPTER } from '@auth/adapters';
+import { AUTH_COMMAND_HANDLERS } from '@auth/commands';
 import { AuthConfigService } from '@auth/config';
 import { OutboxPublisherService } from '@auth/outbox/services/outbox-publisher.service';
 import { PrismaService } from '@auth/prisma/prisma.service';
+import { UNIT_OF_WORK } from '@auth/unit-of-work';
 import {
    ACCOUNT_REPOSITORY,
    AccountRepository,
@@ -39,6 +52,10 @@ import {
    AuthRegistrationService,
    SessionManagementService,
    PasswordManagementService,
+   AuthRbacService,
+   AuthAccountService,
+   AuthLoginService,
+   AuthTokenService,
 } from '@auth/services/domain';
 
 interface MockUserRecord {
@@ -70,7 +87,17 @@ describe('AuthController', () => {
       const mockPrisma: Record<string, unknown> = {
          $transaction: jest.fn().mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => cb(mockPrisma)),
          outboxEvent: {
-            create: jest.fn().mockResolvedValue({}),
+            create: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+               Promise.resolve({
+                  id: 'outbox-id-1',
+                  ...data,
+                  retryCount: 0,
+                  lastError: null,
+                  processedAt: null,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+               }),
+            ),
          },
          securityAuditLog: {
             create: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
@@ -199,7 +226,7 @@ describe('AuthController', () => {
                   {
                      permission: {
                         id: 'perm-1',
-                        code: 'USERS:READ',
+                        code: PERMISSIONS.USERS_READ,
                         name: 'Read Users',
                         description: null,
                      },
@@ -215,7 +242,7 @@ describe('AuthController', () => {
                   {
                      permission: {
                         id: 'perm-1',
-                        code: 'USERS:READ',
+                        code: PERMISSIONS.USERS_READ,
                         name: 'Read Users',
                         description: null,
                      },
@@ -230,10 +257,10 @@ describe('AuthController', () => {
             id: 'role-user-id',
             code: DEFAULT_ROLES.USER,
             name: 'Standard User',
-            permissions: ['USERS:READ'],
+            permissions: [PERMISSIONS.USERS_READ],
          }),
          setRole: jest.fn().mockResolvedValue(undefined),
-         getRolePermissions: jest.fn().mockResolvedValue(['USERS:READ']),
+         getRolePermissions: jest.fn().mockResolvedValue([PERMISSIONS.USERS_READ]),
          setRolePermissions: jest.fn().mockResolvedValue(undefined),
          invalidateRole: jest.fn().mockResolvedValue(undefined),
       };
@@ -305,6 +332,15 @@ describe('AuthController', () => {
          send: jest.fn().mockReturnValue(of(true)),
       };
 
+      const mockNotificationAdapter = {
+         sendRegistrationOtp: jest.fn().mockResolvedValue(undefined),
+         sendChangePasswordOtp: jest.fn().mockResolvedValue(undefined),
+         sendSecurityAlert: jest.fn().mockResolvedValue(undefined),
+         sendPasswordChangedConfirmation: jest.fn().mockResolvedValue(undefined),
+         sendWelcomeEmail: jest.fn().mockResolvedValue(undefined),
+         sendEmail: jest.fn().mockResolvedValue(undefined),
+      };
+
       const mockOutboxPublisherService = {
          triggerPublish: jest.fn(),
          publishPendingEvents: jest.fn().mockResolvedValue(0),
@@ -342,6 +378,10 @@ describe('AuthController', () => {
             AuthRegistrationService,
             SessionManagementService,
             PasswordManagementService,
+            AuthRbacService,
+            AuthAccountService,
+            AuthLoginService,
+            AuthTokenService,
             {
                provide: AuditLogService,
                useValue: {
@@ -356,6 +396,17 @@ describe('AuthController', () => {
             },
             EmailBloomFilterService,
             BloomFilterService,
+            {
+               provide: UNIT_OF_WORK,
+               useFactory: (accountRepo: AccountRepository, outboxRepo: OutboxRepository) => ({
+                  runInTransaction: jest
+                     .fn()
+                     .mockImplementation((work: (tx: unknown) => Promise<unknown>) =>
+                        work({ accountRepository: accountRepo, outboxRepository: outboxRepo }),
+                     ),
+               }),
+               inject: [ACCOUNT_REPOSITORY, OUTBOX_REPOSITORY],
+            },
             {
                provide: AUTH_METRICS_SERVICE,
                useValue: {
@@ -406,6 +457,10 @@ describe('AuthController', () => {
                useValue: mockNotificationClient,
             },
             {
+               provide: NOTIFICATION_ADAPTER,
+               useValue: mockNotificationAdapter,
+            },
+            {
                provide: PrismaService,
                useValue: mockPrisma,
             },
@@ -439,8 +494,18 @@ describe('AuthController', () => {
                provide: EventEmitter2,
                useValue: { emit: jest.fn() },
             },
+            CommandBus,
+            ...AUTH_COMMAND_HANDLERS,
          ],
       }).compile();
+
+      const commandBus = module.get<CommandBus>(CommandBus);
+      for (const handlerClass of AUTH_COMMAND_HANDLERS) {
+         const handler = module.get<ICommandHandler<never, never>>(handlerClass);
+         if (handler) {
+            commandBus.registerHandler(handler);
+         }
+      }
 
       authController = module.get<AuthController>(AuthController);
       authCoreService = module.get<AuthCoreService>(AuthCoreService);
@@ -458,13 +523,13 @@ describe('AuthController', () => {
       expect(passwordManagementService).toBeDefined();
    });
 
-   it('should handle getJwks message', () => {
+   it('should handle getJwks message', async () => {
       const mockContext = {
          getChannelRef: jest.fn(),
          getMessage: jest.fn(),
       } as unknown as RmqContext;
 
-      const jwks = authController.getJwks(mockContext);
+      const jwks = await authController.getJwks(mockContext);
       expect(jwks).toBeDefined();
       expect(Array.isArray(jwks.keys)).toBe(true);
       expect(jwks.keys[0].kty).toBe('RSA');

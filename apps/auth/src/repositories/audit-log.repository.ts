@@ -1,14 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { AuditStatus, Prisma, type SecurityAuditLog } from '@auth/prisma-client';
 import { AuditSanitizerUtil, uuidv7 } from '@common';
 import type { IAuditLogListResult, IAuditLogQuery } from '@contracts/auth';
 import type { CreateAuditLogData, SecurityAuditLogEntity } from '@auth/entities/audit-log.entity';
-import { PrismaService } from '@auth/prisma/prisma.service';
+import { PrismaService, type PrismaClientOrTransaction } from '@auth/prisma';
 import type { IAuditLogRepository } from '@auth/repositories/audit-log.repository.interface';
 
 @Injectable()
 export class AuditLogRepository implements IAuditLogRepository {
-   constructor(private readonly prisma: PrismaService) {}
+   constructor(@Inject(PrismaService) private readonly prisma: PrismaClientOrTransaction) {}
 
    private toEntity(log: SecurityAuditLog): SecurityAuditLogEntity {
       return {

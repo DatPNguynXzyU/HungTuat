@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { of } from 'rxjs';
-import { SERVICES } from '@common';
 import { OUTBOX_REPOSITORY } from '@auth/outbox/repositories/outbox.repository.interface';
+import { OUTBOX_EVENT_PUBLISHER } from '@auth/outbox/adapters/outbox-event-publisher.interface';
 import { OutboxPublisherService } from '@auth/outbox/services/outbox-publisher.service';
 
 describe('OutboxPublisherService', () => {
@@ -12,11 +11,8 @@ describe('OutboxPublisherService', () => {
       markAsPublished: jest.Mock;
       markAsFailed: jest.Mock;
    };
-   let notificationClient: {
-      emit: jest.Mock;
-   };
-   let userClient: {
-      emit: jest.Mock;
+   let eventPublisher: {
+      publish: jest.Mock;
    };
 
    beforeEach(async () => {
@@ -27,12 +23,8 @@ describe('OutboxPublisherService', () => {
          markAsFailed: jest.fn(),
       };
 
-      notificationClient = {
-         emit: jest.fn().mockReturnValue(of(true)),
-      };
-
-      userClient = {
-         emit: jest.fn().mockReturnValue(of(true)),
+      eventPublisher = {
+         publish: jest.fn().mockResolvedValue(undefined),
       };
 
       const module: TestingModule = await Test.createTestingModule({
@@ -43,12 +35,8 @@ describe('OutboxPublisherService', () => {
                useValue: outboxRepository,
             },
             {
-               provide: SERVICES.NOTIFICATION_SERVICE,
-               useValue: notificationClient,
-            },
-            {
-               provide: SERVICES.USER_SERVICE,
-               useValue: userClient,
+               provide: OUTBOX_EVENT_PUBLISHER,
+               useValue: eventPublisher,
             },
          ],
       }).compile();
@@ -68,11 +56,10 @@ describe('OutboxPublisherService', () => {
       outboxRepository.findPending.mockResolvedValue([]);
       const count = await service.publishPendingEvents();
       expect(count).toBe(0);
-      expect(notificationClient.emit).not.toHaveBeenCalled();
-      expect(userClient.emit).not.toHaveBeenCalled();
+      expect(eventPublisher.publish).not.toHaveBeenCalled();
    });
 
-   it('should publish pending events to both notification and user services and mark them as published', async () => {
+   it('should publish pending events via event publisher adapter and mark them as published', async () => {
       const pendingEvents = [
          {
             eventId: 'event-1',
@@ -88,15 +75,12 @@ describe('OutboxPublisherService', () => {
       ];
 
       outboxRepository.findPending.mockResolvedValue(pendingEvents);
-      notificationClient.emit.mockReturnValue(of(true));
-      userClient.emit.mockReturnValue(of(true));
 
       const count = await service.publishPendingEvents();
 
       expect(count).toBe(1);
       expect(outboxRepository.markAsProcessing).toHaveBeenCalledWith(['event-1']);
-      expect(notificationClient.emit).toHaveBeenCalledWith('USER_REGISTERED', { email: 'test@example.com' });
-      expect(userClient.emit).toHaveBeenCalledWith('USER_REGISTERED', { email: 'test@example.com' });
+      expect(eventPublisher.publish).toHaveBeenCalledWith('USER_REGISTERED', { email: 'test@example.com' });
       expect(outboxRepository.markAsPublished).toHaveBeenCalledWith('event-1');
    });
 
