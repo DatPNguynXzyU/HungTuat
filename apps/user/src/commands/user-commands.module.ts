@@ -12,6 +12,8 @@ import {
    FollowSagaFactory,
    PROFILE_VALIDATION_PIPELINE_FACTORY,
    ProfileValidationPipelineFactory,
+   FOLLOW_VALIDATION_PIPELINE_FACTORY,
+   FollowValidationPipelineFactory,
 } from '@user/factories';
 import { USER_COMMAND_HANDLERS } from '@user/commands';
 import {
@@ -31,6 +33,13 @@ import {
    ProfileDetailsFormatHandler,
    UsernameAvailabilityHandler,
 } from '@user/chains/profile-validation';
+import {
+   FollowValidationPipeline,
+   FollowSelfValidationHandler,
+   FollowUserResolutionHandler,
+   FollowRelationshipHandler,
+   FollowRequestStatusHandler,
+} from '@user/chains/follow-validation';
 import { FollowUserSaga, UnfollowUserSaga, AcceptFollowRequestSaga, RejectFollowRequestSaga } from '@user/sagas/follow';
 import {
    UsernameBloomFilterService,
@@ -90,6 +99,11 @@ import {
       UsernameFormatHandler,
       ProfileDetailsFormatHandler,
       UsernameAvailabilityHandler,
+      FollowValidationPipeline,
+      FollowSelfValidationHandler,
+      FollowUserResolutionHandler,
+      FollowRelationshipHandler,
+      FollowRequestStatusHandler,
 
       // Sagas
       FollowUserSaga,
@@ -105,6 +119,10 @@ import {
       {
          provide: PROFILE_VALIDATION_PIPELINE_FACTORY,
          useClass: ProfileValidationPipelineFactory,
+      },
+      {
+         provide: FOLLOW_VALIDATION_PIPELINE_FACTORY,
+         useClass: FollowValidationPipelineFactory,
       },
 
       // Infrastructure Services

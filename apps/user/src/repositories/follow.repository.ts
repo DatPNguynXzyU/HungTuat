@@ -4,6 +4,11 @@ import { PrismaService, type PrismaClientOrTransaction } from '@user/prisma';
 import { FollowEntity, FollowStatus } from '@user/entities';
 import { FollowEntityBuilder } from '@user/builders';
 import { USER_ERROR_CODES } from '@contracts/user';
+import { FOLLOW_FIELDS } from '@user/constants';
+import {
+   resolveMissingFollowTargetField,
+   createMissingFieldParams,
+} from '@user/chains/follow-validation/follow-validation.helper';
 import type { Follow, Prisma } from '@user/prisma-client';
 import type {
    CreateFollowData,
@@ -27,9 +32,10 @@ export class FollowRepository implements IFollowRepository {
       const followerId = data.followerId ?? data.follower?.connect?.userId;
       const followingId = data.followingId ?? data.following?.connect?.userId;
 
-      if (!followerId || !followingId) {
+      const missingField = resolveMissingFollowTargetField({ followerId, followingId });
+      if (missingField) {
          throw new BadRequestException(USER_ERROR_CODES.USER_ID_REQUIRED, {
-            params: { field: !followerId ? 'followerId' : 'followingId' },
+            params: createMissingFieldParams(missingField, FOLLOW_FIELDS.FIELD),
          });
       }
 

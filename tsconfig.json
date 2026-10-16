@@ -97,7 +97,9 @@
          "@user/chains": ["apps/user/src/chains/index.ts"],
          "@user/chains/*": ["apps/user/src/chains/*"],
          "@user/graph": ["apps/user/src/graph/index.ts"],
-         "@user/graph/*": ["apps/user/src/graph/*"]
+         "@user/graph/*": ["apps/user/src/graph/*"],
+         "@user/templates": ["apps/user/src/templates/index.ts"],
+         "@user/templates/*": ["apps/user/src/templates/*"]
       },
       "jsx": "react-jsx"
    }

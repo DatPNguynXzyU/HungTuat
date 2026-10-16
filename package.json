@@ -169,7 +169,9 @@
          "^@user/chains$": "<rootDir>/apps/user/src/chains/index.ts",
          "^@user/chains/(.*)$": "<rootDir>/apps/user/src/chains/$1",
          "^@user/graph$": "<rootDir>/apps/user/src/graph/index.ts",
-         "^@user/graph/(.*)$": "<rootDir>/apps/user/src/graph/$1"
+         "^@user/graph/(.*)$": "<rootDir>/apps/user/src/graph/$1",
+         "^@user/templates$": "<rootDir>/apps/user/src/templates/index.ts",
+         "^@user/templates/(.*)$": "<rootDir>/apps/user/src/templates/$1"
       }
    }
 }

@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { BadRequestException, ConflictException, NotFoundException, RetryQueueService } from '@common';
-import { USER_ERROR_CODES, USER_SUGGESTION_REASONS, UserSuggestionItemDto } from '@contracts/user';
+import { RetryQueueService } from '@common';
+import { USER_SUGGESTION_REASONS, UserSuggestionItemDto } from '@contracts/user';
 import { FollowEntity, FollowStatus, UserEntity, UserStatus } from '@user/entities';
 import { FollowEntityBuilder } from '@user/builders';
 import type { IUserProfileRepository } from '@user/repositories/user-profile.repository.interface';
@@ -22,15 +22,24 @@ import {
    RejectFollowRequestSaga,
    type FollowOperationOptions,
 } from '@user/sagas/follow';
-import { FOLLOW_SAGA_FACTORY, USER_DOMAIN_EVENT_FACTORY, USER_SPECIFICATION_FACTORY } from '@user/constants';
+import {
+   FOLLOW_OPERATIONS,
+   FOLLOW_SAGA_FACTORY,
+   FOLLOW_VALIDATION_PIPELINE_FACTORY,
+   USER_DOMAIN_EVENT_FACTORY,
+   USER_SPECIFICATION_FACTORY,
+} from '@user/constants';
 import {
    FollowSagaFactory,
+   FollowValidationPipelineFactory,
    UserDomainEventFactory,
    UserSpecificationFactory,
    type IFollowSagaFactory,
+   type IFollowValidationPipelineFactory,
    type IUserDomainEventFactory,
    type IUserSpecificationFactory,
 } from '@user/factories';
+import { FollowValidationPipeline, type FollowValidationContext } from '@user/chains/follow-validation';
 
 export type { FollowOperationOptions };
 
@@ -38,6 +47,8 @@ export type { FollowOperationOptions };
 export class FollowService {
    private readonly logger = new Logger(FollowService.name);
    private readonly followSagaFactory: IFollowSagaFactory;
+   private readonly followValidationPipelineFactory: IFollowValidationPipelineFactory;
+   private readonly followValidationPipeline: FollowValidationPipeline;
    private readonly domainEventFactory: IUserDomainEventFactory;
    private readonly cannotFollowSelfSpec: CannotFollowSelfSpecification;
    private readonly followRequestPendingSpec: FollowRequestPendingSpecification;
@@ -77,6 +88,11 @@ export class FollowService {
       @Optional()
       @Inject(USER_DOMAIN_EVENT_FACTORY)
       domainEventFactory?: IUserDomainEventFactory,
+      @Optional()
+      followValidationPipeline?: FollowValidationPipeline,
+      @Optional()
+      @Inject(FOLLOW_VALIDATION_PIPELINE_FACTORY)
+      followValidationPipelineFactory?: IFollowValidationPipelineFactory,
    ) {
       this.followSagaFactory =
          followSagaFactory ??
@@ -85,6 +101,16 @@ export class FollowService {
       const specFactory = specificationFactory ?? new UserSpecificationFactory();
       this.cannotFollowSelfSpec = specFactory.createCannotFollowSelfSpecification();
       this.followRequestPendingSpec = specFactory.createFollowRequestPendingSpecification();
+
+      this.followValidationPipelineFactory =
+         followValidationPipelineFactory ??
+         new FollowValidationPipelineFactory(
+            this.userResolverService,
+            this.followRepository,
+            this.graphFollowRepository,
+            specFactory,
+         );
+      this.followValidationPipeline = followValidationPipeline ?? this.followValidationPipelineFactory.createPipeline();
 
       this.followUserSaga = followUserSaga ?? this.followSagaFactory.createFollowUserSaga();
       this.unfollowUserSaga = unfollowUserSaga ?? this.followSagaFactory.createUnfollowUserSaga();
@@ -97,24 +123,18 @@ export class FollowService {
    }
 
    async followUser(followerId: string, followingId: string, options?: FollowOperationOptions): Promise<FollowEntity> {
-      const selfSpecResult = this.cannotFollowSelfSpec.validate({ followerId, followingId });
-      if (selfSpecResult.isFailure()) {
-         throw new BadRequestException(selfSpecResult.getError(), {
-            params: selfSpecResult.getParams(),
-         });
-      }
+      const context: FollowValidationContext = {
+         operation: FOLLOW_OPERATIONS.FOLLOW,
+         followerId,
+         followingId,
+         options,
+      };
 
-      const follower = await this.getUserById(followerId);
-      const following = await this.getUserById(followingId);
+      await this.followValidationPipeline.validate(context);
 
-      const existingFollow = await this.graphFollowRepository.findFollow(follower.userId, following.userId);
-      if (existingFollow) {
-         throw new ConflictException(USER_ERROR_CODES.ALREADY_FOLLOWING, {
-            params: { followerId, followingId },
-         });
-      }
-
-      const status = following.isPrivate ? FollowStatus.PENDING : FollowStatus.ACCEPTED;
+      const follower = context.follower!;
+      const following = context.following!;
+      const status = context.status!;
 
       const follow = await this.followUserSaga.execute({
          follower,
@@ -134,15 +154,18 @@ export class FollowService {
    }
 
    async unfollowUser(followerId: string, followingId: string, options?: FollowOperationOptions): Promise<void> {
-      const follower = await this.getUserById(followerId);
-      const following = await this.getUserById(followingId);
+      const context: FollowValidationContext = {
+         operation: FOLLOW_OPERATIONS.UNFOLLOW,
+         followerId,
+         followingId,
+         options,
+      };
 
-      const follow = await this.followRepository.findByFollowerAndFollowing(follower.userId, following.userId);
-      if (!follow) {
-         throw new NotFoundException(USER_ERROR_CODES.FOLLOW_NOT_FOUND, {
-            params: { followerId, followingId },
-         });
-      }
+      await this.followValidationPipeline.validate(context);
+
+      const follower = context.follower!;
+      const following = context.following!;
+      const follow = context.follow!;
 
       await this.unfollowUserSaga.execute({
          follower,
@@ -160,25 +183,15 @@ export class FollowService {
    }
 
    async acceptFollowRequest(followId: string, options?: FollowOperationOptions): Promise<FollowEntity> {
-      const follow = await this.followRepository.findById(followId);
-      if (!follow) {
-         throw new NotFoundException(USER_ERROR_CODES.FOLLOW_NOT_FOUND, {
-            params: { followId },
-         });
-      }
+      const context: FollowValidationContext = {
+         operation: FOLLOW_OPERATIONS.ACCEPT_REQUEST,
+         followId,
+         options,
+      };
 
-      if (follow.status === FollowStatus.ACCEPTED) {
-         throw new BadRequestException(USER_ERROR_CODES.ALREADY_FOLLOWING, {
-            params: { followId },
-         });
-      }
+      await this.followValidationPipeline.validate(context);
 
-      const pendingResult = this.followRequestPendingSpec.validate({ status: follow.status });
-      if (pendingResult.isFailure()) {
-         throw new BadRequestException(pendingResult.getError(), {
-            params: pendingResult.getParams(),
-         });
-      }
+      const follow = context.follow!;
 
       const updatedFollow = await this.acceptFollowRequestSaga.execute({
          follow,
@@ -196,12 +209,15 @@ export class FollowService {
    }
 
    async rejectFollowRequest(followId: string, options?: FollowOperationOptions): Promise<FollowEntity> {
-      const follow = await this.followRepository.findById(followId);
-      if (!follow) {
-         throw new NotFoundException(USER_ERROR_CODES.FOLLOW_NOT_FOUND, {
-            params: { followId },
-         });
-      }
+      const context: FollowValidationContext = {
+         operation: FOLLOW_OPERATIONS.REJECT_REQUEST,
+         followId,
+         options,
+      };
+
+      await this.followValidationPipeline.validate(context);
+
+      const follow = context.follow!;
 
       const updatedFollow = await this.rejectFollowRequestSaga.execute({
          follow,

@@ -15,7 +15,18 @@ import {
    FollowSagaFactory,
    PROFILE_VALIDATION_PIPELINE_FACTORY,
    ProfileValidationPipelineFactory,
+   FOLLOW_VALIDATION_PIPELINE_FACTORY,
+   FollowValidationPipelineFactory,
+   PROFILE_OPERATION_FACTORY,
+   ProfileOperationFactory,
 } from '@user/factories';
+import {
+   CreateProfileOperation,
+   UpdateProfileOperation,
+   UpdateUsernameOperation,
+   DeleteProfileOperation,
+   RestoreProfileOperation,
+} from '@user/templates';
 import { UserCqrsModule } from '@user/cqrs';
 import { USER_COMMAND_HANDLERS, UserCommandsModule } from '@user/commands';
 import { UserController } from '@user/user.controller';
@@ -37,6 +48,13 @@ import {
    ProfileDetailsFormatHandler,
    UsernameAvailabilityHandler,
 } from '@user/chains/profile-validation';
+import {
+   FollowValidationPipeline,
+   FollowSelfValidationHandler,
+   FollowUserResolutionHandler,
+   FollowRelationshipHandler,
+   FollowRequestStatusHandler,
+} from '@user/chains/follow-validation';
 import { FollowUserSaga, UnfollowUserSaga, AcceptFollowRequestSaga, RejectFollowRequestSaga } from '@user/sagas/follow';
 import {
    UsernameBloomFilterService,
@@ -102,12 +120,24 @@ import {
       UsernameFormatHandler,
       ProfileDetailsFormatHandler,
       UsernameAvailabilityHandler,
+      FollowValidationPipeline,
+      FollowSelfValidationHandler,
+      FollowUserResolutionHandler,
+      FollowRelationshipHandler,
+      FollowRequestStatusHandler,
 
       // Sagas
       FollowUserSaga,
       UnfollowUserSaga,
       AcceptFollowRequestSaga,
       RejectFollowRequestSaga,
+
+      // Profile Operations (Template Method Pattern)
+      CreateProfileOperation,
+      UpdateProfileOperation,
+      UpdateUsernameOperation,
+      DeleteProfileOperation,
+      RestoreProfileOperation,
 
       // Factory Providers
       {
@@ -118,6 +148,15 @@ import {
          provide: PROFILE_VALIDATION_PIPELINE_FACTORY,
          useClass: ProfileValidationPipelineFactory,
       },
+      {
+         provide: FOLLOW_VALIDATION_PIPELINE_FACTORY,
+         useClass: FollowValidationPipelineFactory,
+      },
+      {
+         provide: PROFILE_OPERATION_FACTORY,
+         useClass: ProfileOperationFactory,
+      },
+      ProfileOperationFactory,
 
       // Infrastructure Services
       UsernameBloomFilterService,
@@ -175,6 +214,13 @@ import {
       UserAdaptersModule,
       UserCommandsModule,
       UserCqrsModule,
+      CreateProfileOperation,
+      UpdateProfileOperation,
+      UpdateUsernameOperation,
+      DeleteProfileOperation,
+      RestoreProfileOperation,
+      ProfileOperationFactory,
+      PROFILE_OPERATION_FACTORY,
       UserResolverService,
       ProfileSyncService,
       UsernameBloomFilterService,

@@ -8,22 +8,45 @@ import {
    type UpdateUserData,
 } from '@user/repositories';
 import { UsernameBloomFilterService } from '@user/services/infrastructure/username-bloom-filter.service';
-import { PROFILE_OPERATIONS } from '@user/constants';
+import {
+   PROFILE_OPERATION_FACTORY,
+   PROFILE_OPERATION_LOG_MESSAGES,
+   PROFILE_VALIDATION_PIPELINE_FACTORY,
+} from '@user/constants';
 import { ProfileQueryService } from '@user/services/domain/profile-query.service';
 import { ProfileSyncService } from '@user/services/infrastructure/profile-sync.service';
 import { ProfileValidationPipeline } from '@user/chains/profile-validation';
-import { PROFILE_VALIDATION_PIPELINE_FACTORY } from '@user/constants';
-import { ProfileValidationPipelineFactory, type IProfileValidationPipelineFactory } from '@user/factories';
+import {
+   ProfileValidationPipelineFactory,
+   type IProfileValidationPipelineFactory,
+   ProfileOperationFactory,
+   type IProfileOperationFactory,
+} from '@user/factories';
+import {
+   CreateProfileOperation,
+   UpdateProfileOperation,
+   UpdateUsernameOperation,
+   DeleteProfileOperation,
+   RestoreProfileOperation,
+} from '@user/templates';
 
 /**
  * ProfileLifecycleService manages state transitions and lifecycle mutations for user profiles
  * (creation, update, upsert, username modification, deletion, and restoration).
- * All validation logic is orchestrated via the ProfileValidationPipeline Chain of Responsibility.
+ *
+ * Implements the GoF Template Method Pattern via AbstractProfileOperation subclasses,
+ * coordinating validation via the ProfileValidationPipeline Chain of Responsibility.
  */
 @Injectable()
 export class ProfileLifecycleService {
    private readonly logger = new Logger(ProfileLifecycleService.name);
    private readonly profileValidationPipeline: ProfileValidationPipeline;
+   private readonly profileOperationFactory: IProfileOperationFactory;
+   private readonly createProfileOp: CreateProfileOperation;
+   private readonly updateProfileOp: UpdateProfileOperation;
+   private readonly updateUsernameOp: UpdateUsernameOperation;
+   private readonly deleteProfileOp: DeleteProfileOperation;
+   private readonly restoreProfileOp: RestoreProfileOperation;
 
    constructor(
       @Inject(USER_PROFILE_REPOSITORY)
@@ -36,58 +59,51 @@ export class ProfileLifecycleService {
       @Optional()
       @Inject(PROFILE_VALIDATION_PIPELINE_FACTORY)
       pipelineFactory?: IProfileValidationPipelineFactory,
+      @Optional()
+      @Inject(PROFILE_OPERATION_FACTORY)
+      operationFactory?: IProfileOperationFactory,
+      @Optional()
+      createProfileOp?: CreateProfileOperation,
+      @Optional()
+      updateProfileOp?: UpdateProfileOperation,
+      @Optional()
+      updateUsernameOp?: UpdateUsernameOperation,
+      @Optional()
+      deleteProfileOp?: DeleteProfileOperation,
+      @Optional()
+      restoreProfileOp?: RestoreProfileOperation,
    ) {
-      const factory =
+      const validationFactory =
          pipelineFactory ??
          new ProfileValidationPipelineFactory(
             this.profileQueryService,
             this.usernameBloomFilterService,
             this.userProfileRepository,
          );
-      this.profileValidationPipeline = profileValidationPipeline ?? factory.createPipeline();
+      this.profileValidationPipeline = profileValidationPipeline ?? validationFactory.createPipeline();
+
+      this.profileOperationFactory =
+         operationFactory ??
+         new ProfileOperationFactory(
+            this.userProfileRepository,
+            this.profileQueryService,
+            this.profileSyncService,
+            this.profileValidationPipeline,
+         );
+
+      this.createProfileOp = createProfileOp ?? this.profileOperationFactory.createCreateProfileOperation();
+      this.updateProfileOp = updateProfileOp ?? this.profileOperationFactory.createUpdateProfileOperation();
+      this.updateUsernameOp = updateUsernameOp ?? this.profileOperationFactory.createUpdateUsernameOperation();
+      this.deleteProfileOp = deleteProfileOp ?? this.profileOperationFactory.createDeleteProfileOperation();
+      this.restoreProfileOp = restoreProfileOp ?? this.profileOperationFactory.createRestoreProfileOperation();
    }
 
    async createUser(data: CreateUserData): Promise<UserEntity> {
-      await this.profileValidationPipeline.validate({
-         operation: PROFILE_OPERATIONS.CREATE,
-         accountId: data.accountId,
-         username: data.username,
-         displayName: data.displayName,
-         bio: data.bio,
-         avatar: data.avatar,
-         coverImage: data.coverImage,
-         website: data.website,
-         location: data.location,
-         dateOfBirth: data.dateOfBirth,
-         gender: data.gender,
-      });
-
-      const user = await this.userProfileRepository.create(data);
-      await this.profileSyncService.syncUserCreated(user);
-      return user;
+      return this.createProfileOp.execute(data);
    }
 
    async updateUserProfile(userId: string, data: UpdateUserData): Promise<UserEntity> {
-      const user = await this.profileQueryService.getUserById(userId);
-
-      await this.profileValidationPipeline.validate({
-         operation: PROFILE_OPERATIONS.UPDATE,
-         userId,
-         username: data.username,
-         displayName: data.displayName,
-         bio: data.bio,
-         avatar: data.avatar,
-         coverImage: data.coverImage,
-         website: data.website,
-         location: data.location,
-         dateOfBirth: data.dateOfBirth,
-         gender: data.gender,
-         existingUser: user,
-      });
-
-      const updatedUser = await this.userProfileRepository.update(user.userId, data);
-      await this.profileSyncService.syncUserUpdated(updatedUser, data, user);
-      return updatedUser;
+      return this.updateProfileOp.execute({ userId, data });
    }
 
    async upsertUserProfile(userIdOrAccountId: string, data: UpdateUserData): Promise<UserEntity> {
@@ -101,7 +117,7 @@ export class ProfileLifecycleService {
                (err as { statusCode?: HttpStatus }).statusCode === HttpStatus.NOT_FOUND);
 
          if (isNotFound) {
-            this.logger.log(`User ${userIdOrAccountId} not found during upsert; creating initial user profile`);
+            this.logger.log(`${PROFILE_OPERATION_LOG_MESSAGES.USER_NOT_FOUND_UPSERT} [${userIdOrAccountId}]`);
             return await this.createUser({
                accountId: userIdOrAccountId,
                ...data,
@@ -112,35 +128,14 @@ export class ProfileLifecycleService {
    }
 
    async updateUsername(userId: string, username: string): Promise<UserEntity> {
-      const user = await this.profileQueryService.getUserById(userId);
-
-      const normalizedUsername = username.toLowerCase().trim();
-      if (normalizedUsername === user.username?.toLowerCase().trim()) {
-         return user;
-      }
-
-      await this.profileValidationPipeline.validate({
-         operation: PROFILE_OPERATIONS.UPDATE,
-         userId,
-         username,
-         existingUser: user,
-      });
-
-      const updatedUser = await this.userProfileRepository.update(user.userId, { username });
-      await this.profileSyncService.syncUserUpdated(updatedUser, { username: normalizedUsername }, user);
-      return updatedUser;
+      return this.updateUsernameOp.execute({ userId, username });
    }
 
    async deleteUser(userId: string): Promise<UserEntity> {
-      const user = await this.profileQueryService.getUserById(userId);
-      const deletedUser = await this.userProfileRepository.softDelete(user.userId);
-      await this.profileSyncService.syncUserDeleted(user.userId, user.accountId);
-      return deletedUser;
+      return this.deleteProfileOp.execute({ userId });
    }
 
    async restoreUser(userId: string): Promise<UserEntity> {
-      const restoredUser = await this.userProfileRepository.restore(userId);
-      await this.profileSyncService.syncUserRestored(restoredUser);
-      return restoredUser;
+      return this.restoreProfileOp.execute({ userId });
    }
 }
