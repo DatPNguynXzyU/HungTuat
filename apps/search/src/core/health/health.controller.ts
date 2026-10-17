@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { HealthCheck, HealthCheckService, MemoryHealthIndicator, DiskHealthIndicator } from '@nestjs/terminus';
 import { ElasticsearchHealthIndicator } from '@search/core/health/elasticsearch.health';
 
-@Controller('health')
+@Controller()
 export class HealthController {
    constructor(
       private readonly health: HealthCheckService,
@@ -11,24 +11,24 @@ export class HealthController {
       private readonly disk: DiskHealthIndicator,
    ) {}
 
-   @Get()
+   @Get(['', 'health'])
    @HealthCheck()
    check() {
       return this.health.check([
          () => this.elasticsearch.isHealthy('elasticsearch'),
          () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024),
          () => this.memory.checkRSS('memory_rss', 500 * 1024 * 1024),
-         () => this.disk.checkStorage('disk', { threshold: 0.9, path: '/' }),
+         () => this.disk.checkStorage('disk', { thresholdPercent: 0.9, path: '/' }),
       ]);
    }
 
-   @Get('live')
+   @Get(['live', 'health/live'])
    @HealthCheck()
    liveness() {
       return this.health.check([() => this.memory.checkHeap('memory_heap', 500 * 1024 * 1024)]);
    }
 
-   @Get('ready')
+   @Get(['ready', 'health/ready'])
    @HealthCheck()
    readiness() {
       return this.health.check([() => this.elasticsearch.isHealthy('elasticsearch')]);

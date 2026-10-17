@@ -12,8 +12,11 @@ async function bootstrap() {
    app.useLogger(logger);
 
    const rmqService = app.get(RmqService);
-   app.connectMicroservice(rmqService.getOptions(SERVICES.SEARCH_SERVICE));
    app.useGlobalFilters(new AllRpcExceptionsFilter());
+
+   app.connectMicroservice(rmqService.getOptions(SERVICES.SEARCH_SERVICE), {
+      inheritAppConfig: true,
+   });
 
    await app.startAllMicroservices();
    logger.log('Search Microservice is listening on RabbitMQ queue: SEARCH_SERVICE');

@@ -56,7 +56,9 @@
          "@contracts/search": ["libs/contracts/search/src"],
          "@contracts/search/*": ["libs/contracts/search/src/*"],
          "@contracts/media": ["libs/contracts/media/src"],
-         "@contracts/media/*": ["libs/contracts/media/src/*"]
+         "@contracts/media/*": ["libs/contracts/media/src/*"],
+         "@contracts/post": ["libs/contracts/post/src"],
+         "@contracts/post/*": ["libs/contracts/post/src/*"]
       },
       "jsx": "react-jsx"
    }

@@ -1,5 +1,5 @@
 import { RpcException } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import { EMPTY, firstValueFrom } from 'rxjs';
 import { BadRequestException } from '@common/exceptions';
 import { AllRpcExceptionsFilter } from '@common/filters/all-rpc-exceptions.filter';
 
@@ -32,5 +32,33 @@ describe('AllRpcExceptionsFilter', () => {
             params: { email: 'test@example.com' },
          });
       }
+   });
+
+   it('should delegate to AllExceptionsFilter when host type is http', () => {
+      const mockResponse = {
+         status: jest.fn().mockReturnThis(),
+         json: jest.fn(),
+         setHeader: jest.fn(),
+      };
+      const mockRequest = {
+         url: '/test',
+         method: 'GET',
+         headers: {},
+      };
+      const mockHost = {
+         getType: jest.fn().mockReturnValue('http'),
+         switchToHttp: jest.fn().mockReturnValue({
+            getResponse: jest.fn().mockReturnValue(mockResponse),
+            getRequest: jest.fn().mockReturnValue(mockRequest),
+         }),
+      };
+
+      const appException = new BadRequestException('COMMON.INVALID_REQUEST');
+      const result$ = filter.catch(appException, mockHost as never);
+
+      expect(result$).toBe(EMPTY);
+      expect(mockHost.getType).toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalled();
    });
 });

@@ -1,113 +1,78 @@
-import { Controller, Optional } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { PostService } from '@post/post.service';
-import { RmqService } from '@common';
+import { RmqService, type IServiceMessage } from '@common';
+import {
+   POST_PATTERNS,
+   type GetPostFeedDto,
+   type PostFeedResponseDto,
+   type PostIngredientDto,
+   type PostItemDto,
+} from '@contracts/post';
+import { PostService } from '@post/services';
 
 @Controller()
 export class PostController {
    constructor(
       private readonly postService: PostService,
-      @Optional() private readonly rmqService?: RmqService,
+      private readonly rmqService: RmqService,
    ) {}
 
-   @MessagePattern('post.create')
-   createPost(@Payload() data: { userId: string; content: string; mediaUrls?: string[] }, @Ctx() context?: RmqContext) {
+   @MessagePattern({ cmd: POST_PATTERNS.GET_FEED })
+   async getFeed(
+      @Payload() payload: IServiceMessage<GetPostFeedDto> | GetPostFeedDto,
+      @Ctx() context: RmqContext,
+   ): Promise<PostFeedResponseDto> {
       try {
-         const result = this.postService.createPost(data);
-         if (context && this.rmqService) {
-            this.rmqService.ack(context);
-         }
+         const dto =
+            payload && typeof payload === 'object' && 'data' in payload && payload.data
+               ? payload.data
+               : (payload as GetPostFeedDto);
+
+         const result = await this.postService.getFeed(dto || {});
+         this.rmqService.ack(context);
          return result;
       } catch (error) {
-         if (context && this.rmqService) {
-            this.rmqService.ack(context);
-         }
+         this.rmqService.ack(context);
          throw error;
       }
    }
 
-   @MessagePattern('post.get')
-   getPost(@Payload() data: { postId: string }, @Ctx() context?: RmqContext) {
+   @MessagePattern({ cmd: POST_PATTERNS.GET_BY_ID })
+   async getPostById(
+      @Payload() payload: { postId: string } | IServiceMessage<{ postId: string }>,
+      @Ctx() context: RmqContext,
+   ): Promise<PostItemDto> {
       try {
-         const result = this.postService.getPost(data.postId);
-         if (context && this.rmqService) {
-            this.rmqService.ack(context);
-         }
+         const data =
+            payload && typeof payload === 'object' && 'data' in payload && payload.data
+               ? payload.data
+               : (payload as { postId: string });
+
+         const result = await this.postService.getPostById(data.postId);
+         this.rmqService.ack(context);
          return result;
       } catch (error) {
-         if (context && this.rmqService) {
-            this.rmqService.ack(context);
-         }
+         this.rmqService.ack(context);
          throw error;
       }
    }
 
-   @MessagePattern('post.list')
-   listPosts(@Payload() data: { userId?: string; page?: number; limit?: number }, @Ctx() context?: RmqContext) {
+   @MessagePattern({ cmd: POST_PATTERNS.GET_INGREDIENTS })
+   async getIngredients(
+      @Payload() payload: { postId: string } | IServiceMessage<{ postId: string }>,
+      @Ctx() context: RmqContext,
+   ): Promise<PostIngredientDto[]> {
       try {
-         const result = this.postService.listPosts(data);
-         if (context && this.rmqService) {
-            this.rmqService.ack(context);
-         }
-         return result;
-      } catch (error) {
-         if (context && this.rmqService) {
-            this.rmqService.ack(context);
-         }
-         throw error;
-      }
-   }
+         const data =
+            payload && typeof payload === 'object' && 'data' in payload && payload.data
+               ? payload.data
+               : (payload as { postId: string });
 
-   @MessagePattern('post.update')
-   updatePost(
-      @Payload() data: { postId: string; content?: string; mediaUrls?: string[] },
-      @Ctx() context?: RmqContext,
-   ) {
-      try {
-         const result = this.postService.updatePost(data);
-         if (context && this.rmqService) {
-            this.rmqService.ack(context);
-         }
+         const result = await this.postService.getIngredientsByPostId(data.postId);
+         this.rmqService.ack(context);
          return result;
       } catch (error) {
-         if (context && this.rmqService) {
-            this.rmqService.ack(context);
-         }
-         throw error;
-      }
-   }
-
-   @MessagePattern('post.delete')
-   deletePost(@Payload() data: { postId: string }, @Ctx() context?: RmqContext) {
-      try {
-         const result = this.postService.deletePost(data.postId);
-         if (context && this.rmqService) {
-            this.rmqService.ack(context);
-         }
-         return result;
-      } catch (error) {
-         if (context && this.rmqService) {
-            this.rmqService.ack(context);
-         }
-         throw error;
-      }
-   }
-
-   @MessagePattern('post.uploadVideo')
-   uploadVideo(
-      @Payload() data: { postId: string; videoUrl: string; metadata?: Record<string, unknown> },
-      @Ctx() context?: RmqContext,
-   ) {
-      try {
-         const result = this.postService.uploadVideo(data);
-         if (context && this.rmqService) {
-            this.rmqService.ack(context);
-         }
-         return result;
-      } catch (error) {
-         if (context && this.rmqService) {
-            this.rmqService.ack(context);
-         }
+         this.rmqService.ack(context);
          throw error;
       }
    }

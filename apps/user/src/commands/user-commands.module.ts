@@ -46,17 +46,14 @@ import {
    UserResolverService,
    ProfileSyncService,
    UserGraphSyncService,
-   UserMetricsService,
    USER_METRICS_SERVICE,
    type IUserMetricsService,
    USER_GRAPH_SYNC_SERVICE,
 } from '@user/services/infrastructure';
 import { MetricsUserGraphSyncDecorator } from '@user/decorators';
-import { GraphSchemaService } from '@user/graph';
 import {
    UserProfileRepository,
    USER_PROFILE_REPOSITORY,
-   USER_REPOSITORY,
    FollowRepository,
    FOLLOW_REPOSITORY,
    FollowGraphRepository,
@@ -130,13 +127,6 @@ import {
       UserResolverService,
       ProfileSyncService,
       UserGraphSyncService,
-      GraphSchemaService,
-      UserMetricsService,
-      {
-         provide: USER_METRICS_SERVICE,
-         useExisting: UserMetricsService,
-      },
-      MetricsUserGraphSyncDecorator,
       {
          provide: USER_GRAPH_SYNC_SERVICE,
          useFactory: (inner: UserGraphSyncService, metrics: IUserMetricsService, logger: AppLogger) =>
@@ -149,10 +139,6 @@ import {
       {
          provide: USER_PROFILE_REPOSITORY,
          useClass: UserProfileRepository,
-      },
-      {
-         provide: USER_REPOSITORY,
-         useExisting: USER_PROFILE_REPOSITORY,
       },
       FollowRepository,
       {
@@ -178,7 +164,6 @@ import {
       ProfileQueryService,
       ProfileAvatarService,
       USER_PROFILE_REPOSITORY,
-      USER_REPOSITORY,
       FOLLOW_REPOSITORY,
       GRAPH_FOLLOW_REPOSITORY,
    ],

@@ -132,6 +132,15 @@
          "compilerOptions": {
             "tsConfigPath": "libs/contracts/media/tsconfig.lib.json"
          }
+      },
+      "contracts-post": {
+         "type": "library",
+         "root": "libs/contracts/post",
+         "entryFile": "index",
+         "sourceRoot": "libs/contracts/post/src",
+         "compilerOptions": {
+            "tsConfigPath": "libs/contracts/post/tsconfig.lib.json"
+         }
       }
    }
 }

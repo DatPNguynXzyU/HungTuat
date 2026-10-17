@@ -15,10 +15,18 @@ interface NebulaRawResponse {
 export class NebulaService implements OnModuleInit, OnModuleDestroy {
    private readonly logger = new Logger(NebulaService.name);
    private client: Client | null = null;
+   private initPromise: Promise<void> | null = null;
 
    constructor(private readonly config: NebulaConfig) {}
 
    async onModuleInit(): Promise<void> {
+      if (!this.initPromise) {
+         this.initPromise = this.init();
+      }
+      await this.initPromise;
+   }
+
+   private async init(): Promise<void> {
       await this.bootstrap();
       this.connect();
    }
@@ -135,6 +143,7 @@ export class NebulaService implements OnModuleInit, OnModuleDestroy {
          if (this.client) {
             await this.client.close();
             this.client = null;
+            this.initPromise = null;
          }
          this.logger.log('Disconnected from NebulaGraph');
       } catch (error) {
@@ -166,6 +175,13 @@ export class NebulaService implements OnModuleInit, OnModuleDestroy {
    }
 
    async execute(query: string, options?: { silent?: boolean }): Promise<NebulaExecutionResponse> {
+      if (!this.client) {
+         if (!this.initPromise) {
+            this.initPromise = this.init();
+         }
+         await this.initPromise;
+      }
+
       if (!this.client) {
          throw new Error('NebulaGraph client not initialized');
       }

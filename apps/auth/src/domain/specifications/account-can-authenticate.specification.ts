@@ -15,11 +15,10 @@ import { AccountActiveSpecification } from '@auth/domain/specifications/account-
 export class AccountCanAuthenticateSpecification extends Specification<IAccountStatusCandidate> {
    protected readonly errorCode = AUTH_ERROR_CODES.ACCOUNT_BLOCKED;
    private readonly compositeSpec: ISpecification<IAccountStatusCandidate>;
+   private readonly notBlockedSpec = new AccountNotBlockedSpecification();
+   private readonly activeSpec = new AccountActiveSpecification();
 
-   constructor(
-      private readonly notBlockedSpec = new AccountNotBlockedSpecification(),
-      private readonly activeSpec = new AccountActiveSpecification(),
-   ) {
+   constructor() {
       super();
       this.compositeSpec = this.notBlockedSpec.and(this.activeSpec);
    }

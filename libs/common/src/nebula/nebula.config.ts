@@ -5,7 +5,7 @@ export const nebulaEnvSchema = z.object({
    NEBULA_GRAPHD_PORT: z.coerce.number().int().positive().default(9669),
    NEBULA_USERNAME: z.string().default('root'),
    NEBULA_PASSWORD: z.string().default('nebula'),
-   NEBULA_SPACE: z.string().default('omni_users'),
+   NEBULA_SPACE: z.string().default('social_graph'),
 });
 
 export type NebulaEnvConfig = z.infer<typeof nebulaEnvSchema>;

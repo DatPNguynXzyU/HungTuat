@@ -9,84 +9,192 @@ generator client {
 
 enum PostStatus {
   DRAFT
+  PENDING_REVIEW
   PUBLISHED
   ARCHIVED
   DELETED
 }
 
-enum MediaType {
-  IMAGE
-  VIDEO
-  AUDIO
-  DOCUMENT
+enum Visibility {
+  PUBLIC
+  FOLLOWERS_ONLY
+  PRIVATE
 }
 
-enum VideoProcessingStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+  EXPERT
 }
 
 model Post {
-  postId       String     @id @default(uuid()) @map("post_id")
-  userId       String     @map("user_id")
-  content      String     @db.Text
-  status       PostStatus @default(DRAFT)
-  viewCount    Int        @default(0) @map("view_count")
-  likeCount    Int        @default(0) @map("like_count")
-  shareCount   Int        @default(0) @map("share_count")
-  commentCount Int        @default(0) @map("comment_count")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
-  publishedAt  DateTime?  @map("published_at")
+  postId        String      @id @default(uuid()) @map("post_id")
+  userId        String      @map("user_id")
+  title         String      @db.VarChar(200)
+  caption       String?     @db.Text
+  status        PostStatus  @default(PUBLISHED)
+  visibility    Visibility  @default(PUBLIC)
 
-  media Media[]
-  tags  PostTag[]
+  // Media Reference from Media Service & Video Playback
+  mediaId       String?     @map("media_id")
+  videoUrl      String      @map("video_url")
+  playbackUrl   String?     @map("playback_url")
+  thumbnailUrl  String      @map("thumbnail_url")
+  blurHash      String?     @map("blur_hash")
+  duration      Int         @default(0) // seconds
+  videoWidth    Int?        @map("video_width")
+  videoHeight   Int?        @map("video_height")
 
+  // Engagement Counters
+  viewCount     Int         @default(0) @map("view_count")
+  likeCount     Int         @default(0) @map("like_count")
+  commentCount  Int         @default(0) @map("comment_count")
+  shareCount    Int         @default(0) @map("share_count")
+  saveCount     Int         @default(0) @map("save_count")
+
+  // Configurations
+  allowComments Boolean     @default(true) @map("allow_comments")
+  allowDuet     Boolean     @default(false) @map("allow_duet")
+
+  // Timestamps
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  publishedAt   DateTime?   @map("published_at")
+
+  // Relations
+  recipe        Recipe?
+  ingredients   PostIngredient[]
+  tags          PostTag[]
+  categories    PostCategory[]
+  likes         PostLike[]
+  saves         PostSave[]
+
+  // Foreign key and lookup indexes
   @@index([userId])
-  @@index([status])
-  @@index([createdAt])
-  @@index([publishedAt])
+  @@index([mediaId])
+  @@index([userId, status, createdAt(sort: Desc)])
+  @@index([status, visibility])
+  @@index([createdAt(sort: Desc)])
+  @@index([viewCount(sort: Desc)])
+  @@index([likeCount(sort: Desc)])
+  @@index([saveCount(sort: Desc)])
   @@map("posts")
 }
 
-model Media {
-  mediaId          String                @id @default(uuid()) @map("media_id")
-  postId           String                @map("post_id")
-  type             MediaType
-  url              String
-  thumbnailUrl     String?               @map("thumbnail_url")
-  width            Int?
-  height           Int?
-  duration         Int? // For videos in seconds
-  size             BigInt? // File size in bytes
-  mimeType         String?               @map("mime_type")
-  metadata         Json? // Additional metadata (resolution, codec, etc.)
-  processingStatus VideoProcessingStatus @default(PENDING) @map("processing_status")
-  createdAt        DateTime              @default(now()) @map("created_at")
-  updatedAt        DateTime              @updatedAt @map("updated_at")
+model Recipe {
+  recipeId        String              @id @default(uuid()) @map("recipe_id")
+  postId          String              @unique @map("post_id")
+  prepTimeMinutes Int                 @default(0) @map("prep_time_minutes")
+  cookTimeMinutes Int                 @default(0) @map("cook_time_minutes")
+  servings        Int                 @default(1)
+  difficulty      Difficulty          @default(EASY)
+  calories        Int?
+  cuisine         String?             @db.VarChar(50)
+  chefTips        String?             @db.Text @map("chef_tips")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
 
-  post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  post            Post                @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  ingredients     RecipeIngredient[]
+  steps           RecipeStep[]
 
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  recipeIngredientId String   @id @default(uuid()) @map("recipe_ingredient_id")
+  recipeId           String   @map("recipe_id")
+  name               String   @db.VarChar(100)
+  amount             Decimal? @db.Decimal(10, 2)
+  unit               String?  @db.VarChar(30)
+  group              String?  @db.VarChar(50)
+  sortOrder          Int      @default(0) @map("sort_order")
+
+  recipe             Recipe   @relation(fields: [recipeId], references: [recipeId], onDelete: Cascade)
+
+  // Foreign key and lookup indexes
+  @@index([recipeId])
+  @@index([recipeId, sortOrder])
+  @@index([name])
+  @@map("recipe_ingredients")
+}
+
+model PostIngredient {
+  ingredientId String   @id @default(uuid()) @map("ingredient_id")
+  postId       String   @map("post_id")
+  name         String   @db.VarChar(100)
+  amount       Decimal? @db.Decimal(10, 2)
+  unit         String?  @db.VarChar(30)
+  group        String?  @db.VarChar(50)
+  sortOrder    Int      @default(0) @map("sort_order")
+
+  post         Post     @relation(fields: [postId], references: [postId], onDelete: Cascade)
+
+  // Foreign key and lookup indexes
   @@index([postId])
-  @@index([type])
-  @@index([processingStatus])
-  @@map("media")
+  @@index([postId, sortOrder])
+  @@index([name])
+  @@map("post_ingredients")
+}
+
+model RecipeStep {
+  stepId           String   @id @default(uuid()) @map("step_id")
+  recipeId         String   @map("recipe_id")
+  stepNumber       Int      @map("step_number")
+  title            String?  @db.VarChar(150)
+  instruction      String   @db.Text
+  timestampSeconds Int?     @map("timestamp_seconds")
+  imageUrl         String?  @map("image_url")
+  mediaId          String?  @map("media_id")
+
+  recipe           Recipe   @relation(fields: [recipeId], references: [recipeId], onDelete: Cascade)
+
+  // Foreign key and lookup indexes
+  @@unique([recipeId, stepNumber])
+  @@index([recipeId])
+  @@index([mediaId])
+  @@map("recipe_steps")
+}
+
+model Category {
+  categoryId String         @id @default(uuid()) @map("category_id")
+  name       String         @unique @db.VarChar(50)
+  slug       String         @unique @db.VarChar(60)
+  iconUrl    String?        @map("icon_url")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  posts      PostCategory[]
+
+  @@map("categories")
+}
+
+model PostCategory {
+  postId     String   @map("post_id")
+  categoryId String   @map("category_id")
+
+  post       Post     @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [categoryId], onDelete: Cascade)
+
+  // Composite PK + FK indexes
+  @@id([postId, categoryId])
+  @@index([postId])
+  @@index([categoryId])
+  @@map("post_categories")
 }
 
 model Tag {
-  tagId      String   @id @default(uuid()) @map("tag_id")
-  name       String   @unique
-  slug       String   @unique
-  usageCount Int      @default(0) @map("usage_count")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  tagId      String    @id @default(uuid()) @map("tag_id")
+  name       String    @unique @db.VarChar(50)
+  slug       String    @unique @db.VarChar(60)
+  usageCount Int       @default(0) @map("usage_count")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
 
-  posts PostTag[]
+  posts      PostTag[]
 
   @@index([slug])
-  @@index([usageCount])
+  @@index([usageCount(sort: Desc)])
   @@map("tags")
 }
 
@@ -95,11 +203,42 @@ model PostTag {
   tagId     String   @map("tag_id")
   createdAt DateTime @default(now()) @map("created_at")
 
-  post Post @relation(fields: [postId], references: [postId], onDelete: Cascade)
-  tag  Tag  @relation(fields: [tagId], references: [tagId], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [tagId], onDelete: Cascade)
 
+  // Composite PK + FK indexes
   @@id([postId, tagId])
   @@index([postId])
   @@index([tagId])
   @@map("post_tags")
+}
+
+model PostLike {
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post      Post     @relation(fields: [postId], references: [postId], onDelete: Cascade)
+
+  // Composite PK + FK indexes & sorting for user feed
+  @@id([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("post_likes")
+}
+
+model PostSave {
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post      Post     @relation(fields: [postId], references: [postId], onDelete: Cascade)
+
+  // Composite PK + FK indexes & sorting for saved recipes feed
+  @@id([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("post_saves")
 }

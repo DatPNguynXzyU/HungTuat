@@ -14,9 +14,12 @@ async function bootstrap() {
 
    app.useLogger(logger);
 
-   // Connect RabbitMQ microservice
-   app.connectMicroservice(rmqService.getOptions(SERVICES.AUTH_SERVICE));
    app.useGlobalFilters(new AllRpcExceptionsFilter());
+
+   // Connect RabbitMQ microservice
+   app.connectMicroservice(rmqService.getOptions(SERVICES.AUTH_SERVICE), {
+      inheritAppConfig: true,
+   });
 
    await app.startAllMicroservices();
 

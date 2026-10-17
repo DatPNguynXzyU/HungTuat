@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { UserAdaptersModule } from '@user/adapters';
+import { UserAdaptersModule } from '@user/adapters/adapters.module';
 import {
    CannotFollowSelfSpecification,
    FollowRequestPendingSpecification,

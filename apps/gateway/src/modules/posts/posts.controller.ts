@@ -1,0 +1,105 @@
+import { Controller, Get, HttpCode, HttpStatus, Param, Query } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiErrorResponses, COMMON_ERROR_CODES, Public, ResponseMessage } from '@common';
+import {
+   GetPostFeedDto,
+   POST_ERROR_CODES,
+   POST_RESPONSE_MESSAGES,
+   PostFeedResponseDto,
+   PostIngredientDto,
+   PostItemDto,
+} from '@contracts/post';
+import { PostsService } from '@/modules/posts/posts.service';
+
+@ApiTags('Posts')
+@Controller('posts')
+export class PostsController {
+   constructor(private readonly postsService: PostsService) {}
+
+   @Get('feed')
+   @Public()
+   @HttpCode(HttpStatus.OK)
+   @ApiOperation({
+      operationId: 'getPostFeed',
+      summary: 'Get infinite scroll video post feed',
+      description:
+         'Retrieves a batch of video posts (default 3 per batch) with embedded ingredients list, optimized for TikTok-style infinite scrolling using cursor-based pagination.',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Post feed batch retrieved successfully.',
+      type: PostFeedResponseDto,
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Invalid pagination cursor format or parameters',
+         errorCodes: [POST_ERROR_CODES.INVALID_CURSOR, COMMON_ERROR_CODES.INVALID_REQUEST],
+      },
+   ])
+   @ResponseMessage(POST_RESPONSE_MESSAGES.GET_FEED_SUCCESS)
+   async getFeed(@Query() query: GetPostFeedDto): Promise<PostFeedResponseDto> {
+      return this.postsService.getFeed(query);
+   }
+
+   @Get(':id')
+   @Public()
+   @HttpCode(HttpStatus.OK)
+   @ApiOperation({
+      operationId: 'getPostById',
+      summary: 'Get post details by ID',
+      description: 'Retrieves single post metadata by its unique UUID.',
+   })
+   @ApiParam({
+      name: 'id',
+      description: 'Unique UUID identifier of the post',
+      example: '0192e21b-0002-7000-8000-000000000001',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Post details retrieved successfully.',
+      type: PostItemDto,
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'Post not found',
+         errorCodes: [POST_ERROR_CODES.POST_NOT_FOUND],
+      },
+   ])
+   @ResponseMessage(POST_RESPONSE_MESSAGES.GET_POST_SUCCESS)
+   async getPostById(@Param('id') id: string): Promise<PostItemDto> {
+      return this.postsService.getPostById(id);
+   }
+
+   @Get(':id/ingredients')
+   @Public()
+   @HttpCode(HttpStatus.OK)
+   @ApiOperation({
+      operationId: 'getPostIngredients',
+      summary: 'Get dish ingredients for a video post',
+      description:
+         'Retrieves the list of ingredients selected/listed by the creator for this video dish (used for the "Xem nguyên liệu" drawer/dialog).',
+   })
+   @ApiParam({
+      name: 'id',
+      description: 'Unique UUID identifier of the post',
+      example: '0192e21b-0002-7000-8000-000000000001',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Ingredients list retrieved successfully.',
+      type: [PostIngredientDto],
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'Post not found',
+         errorCodes: [POST_ERROR_CODES.POST_NOT_FOUND],
+      },
+   ])
+   @ResponseMessage(POST_RESPONSE_MESSAGES.GET_INGREDIENTS_SUCCESS)
+   async getIngredients(@Param('id') id: string): Promise<PostIngredientDto[]> {
+      return this.postsService.getIngredients(id);
+   }
+}

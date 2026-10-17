@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
 import { CommandBus, IDeviceInfo, RmqService } from '@common';
 import {
@@ -49,6 +49,11 @@ export class AuthController {
       private readonly commandBus: CommandBus,
       private readonly rmqService: RmqService,
    ) {}
+
+   @Get(['', 'health'])
+   healthCheck() {
+      return { status: 'ok', service: 'auth', timestamp: new Date().toISOString() };
+   }
 
    @MessagePattern({ cmd: AUTH_PATTERNS.GET_JWKS })
    async getJwks(@Ctx() context: RmqContext) {

@@ -7,7 +7,7 @@ import { AuthConfigModule } from '@auth/config';
 import { AuthLoggerModule } from '@auth/logger';
 import { OutboxModule } from '@auth/outbox';
 import { PrismaModule } from '@auth/prisma';
-import { UnitOfWorkModule, UNIT_OF_WORK, PrismaUnitOfWork } from '@auth/unit-of-work';
+import { UnitOfWorkModule } from '@auth/unit-of-work';
 import { AUTH_COMMAND_HANDLERS } from '@auth/commands';
 import { NOTIFICATION_ADAPTER, RabbitMqNotificationAdapter } from '@auth/adapters';
 import {
@@ -141,7 +141,6 @@ import {
          useExisting: VerificationTokenService,
       },
       TokenLifecycleService,
-      MetricsTokenLifecycleDecorator,
       {
          provide: TOKEN_LIFECYCLE_SERVICE,
          useFactory: (inner: TokenLifecycleService, metricsService: AuthMetricsService) =>
@@ -159,7 +158,6 @@ import {
          useExisting: AuthMetricsService,
       },
       PasswordHasherService,
-      MetricsPasswordHasherDecorator,
       {
          provide: PASSWORD_HASHER,
          useFactory: (inner: PasswordHasherService, metricsService: AuthMetricsService) =>
@@ -209,6 +207,14 @@ import {
          useClass: AuditLogRepository,
       },
       AuditLogRepository,
+
+      // Command Bus & Handlers
+      CommandBus,
+      {
+         provide: COMMAND_BUS,
+         useExisting: CommandBus,
+      },
+      ...AUTH_COMMAND_HANDLERS,
    ],
    exports: [
       AuthCoreService,
@@ -250,15 +256,11 @@ import {
       AuditProjectionRebuildService,
       OutboxModule,
       UnitOfWorkModule,
-      UNIT_OF_WORK,
-      PrismaUnitOfWork,
       UserRegisteredEventHandler,
       AccountLockedEventHandler,
       PasswordChangedEventHandler,
       SessionRevokedEventHandler,
       AuthMetricsHandler,
-      MetricsTokenLifecycleDecorator,
-      MetricsPasswordHasherDecorator,
       NOTIFICATION_ADAPTER,
       RabbitMqNotificationAdapter,
       COMMAND_BUS,

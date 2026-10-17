@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { Ctx, EventPattern, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
 import { CommandBus, RmqService } from '@common';
 import { NOTIFICATION_EVENTS } from '@contracts/notification';
@@ -51,6 +51,11 @@ export class UserController {
       private readonly rmqService: RmqService,
       private readonly userCoreService: UserCoreService,
    ) {}
+
+   @Get(['', 'health'])
+   healthCheck() {
+      return { status: 'ok', service: 'user', timestamp: new Date().toISOString() };
+   }
 
    /*
     -- Authentication & Registration Events --

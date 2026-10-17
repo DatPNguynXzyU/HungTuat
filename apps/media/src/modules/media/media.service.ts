@@ -121,13 +121,17 @@ export class MediaService {
          throw new ForbiddenException(MEDIA_ERROR_CODES.CONFIRMATION_FAILED);
       }
 
+      const existingMetadata = (media.metadata as Record<string, unknown>) || {};
       const updated = await this.mediaRepository.update(dto.mediaId, {
          status: MEDIA_STATUSES.READY,
          size: dto.size ?? media.size,
          key: dto.key ?? media.key,
          metadata: {
-            width: dto.width,
-            height: dto.height,
+            ...existingMetadata,
+            ...(dto.width !== undefined && { width: dto.width }),
+            ...(dto.height !== undefined && { height: dto.height }),
+            ...(dto.duration !== undefined && { duration: dto.duration }),
+            ...(dto.thumbnailUrl !== undefined && { thumbnailUrl: dto.thumbnailUrl }),
          },
       });
 

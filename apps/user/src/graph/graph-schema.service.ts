@@ -1,9 +1,9 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { NebulaService } from '@common';
 import { AppLogger } from '@common';
 
 @Injectable()
-export class GraphSchemaService implements OnModuleInit {
+export class GraphSchemaService implements OnApplicationBootstrap {
    constructor(
       private readonly nebulaService: NebulaService,
       private readonly logger: AppLogger,
@@ -11,7 +11,7 @@ export class GraphSchemaService implements OnModuleInit {
       this.logger.setContext(GraphSchemaService.name);
    }
 
-   async onModuleInit() {
+   async onApplicationBootstrap() {
       await this.createSchema();
    }
 

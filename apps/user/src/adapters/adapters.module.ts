@@ -8,7 +8,8 @@ import {
    MetricsNotificationAdapterDecorator,
    MetricsSearchAdapterDecorator,
 } from '@user/decorators';
-import { USER_METRICS_SERVICE, type IUserMetricsService } from '@user/services/infrastructure';
+import { USER_METRICS_SERVICE, type IUserMetricsService } from '@user/services/infrastructure/user-metrics.interface';
+import { UserMetricsService } from '@user/services/infrastructure/user-metrics.service';
 
 @Module({
    imports: [
@@ -23,15 +24,17 @@ import { USER_METRICS_SERVICE, type IUserMetricsService } from '@user/services/i
       }),
    ],
    providers: [
+      // Metrics Service
+      UserMetricsService,
+      {
+         provide: USER_METRICS_SERVICE,
+         useExisting: UserMetricsService,
+      },
+
       // Base Adapters
       RabbitMqMediaAdapter,
       RabbitMqSearchAdapter,
       RabbitMqNotificationAdapter,
-
-      // Decorators
-      MetricsMediaAdapterDecorator,
-      MetricsSearchAdapterDecorator,
-      MetricsNotificationAdapterDecorator,
 
       // Decorator Pattern Providers
       {
@@ -54,15 +57,14 @@ import { USER_METRICS_SERVICE, type IUserMetricsService } from '@user/services/i
       },
    ],
    exports: [
+      USER_METRICS_SERVICE,
+      UserMetricsService,
       MEDIA_ADAPTER,
       SEARCH_ADAPTER,
       NOTIFICATION_ADAPTER,
       RabbitMqMediaAdapter,
       RabbitMqSearchAdapter,
       RabbitMqNotificationAdapter,
-      MetricsMediaAdapterDecorator,
-      MetricsSearchAdapterDecorator,
-      MetricsNotificationAdapterDecorator,
    ],
 })
 export class UserAdaptersModule {}

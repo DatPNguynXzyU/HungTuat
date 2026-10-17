@@ -41,4 +41,20 @@ export class ConfirmUploadDto {
    @IsOptional()
    @IsNumber()
    height?: number;
+
+   @ApiPropertyOptional({
+      description: 'Video duration in seconds (optional for images/documents)',
+      example: 45.5,
+   })
+   @IsOptional()
+   @IsNumber()
+   duration?: number;
+
+   @ApiPropertyOptional({
+      description: 'Public URL to video thumbnail or poster image',
+      example: 'https://pub-xxx.r2.dev/omni/posts/thumbnails/thumb_123.jpg',
+   })
+   @IsOptional()
+   @IsString()
+   thumbnailUrl?: string;
 }

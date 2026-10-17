@@ -1,16 +1,22 @@
-import { Catch, HttpException, HttpStatus, Logger, RpcExceptionFilter } from '@nestjs/common';
+import { ArgumentsHost, Catch, HttpException, HttpStatus, Logger, RpcExceptionFilter } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { Observable, throwError } from 'rxjs';
+import { EMPTY, Observable, throwError } from 'rxjs';
 import { AppException } from '@common/exceptions/app.exception';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
 import { IAppExceptionPayload } from '@common/exceptions/exception.types';
 import { IValidationErrorDetail } from '@common/interfaces/response.interface';
+import { AllExceptionsFilter } from '@common/filters/all-exceptions.filter';
 
 @Catch()
 export class AllRpcExceptionsFilter implements RpcExceptionFilter {
    private readonly logger = new Logger(AllRpcExceptionsFilter.name);
+   private readonly httpFilter = new AllExceptionsFilter();
 
-   catch(exception: unknown): Observable<never> {
+   catch(exception: unknown, host?: ArgumentsHost): Observable<never> {
+      if (host && host.getType() === 'http') {
+         this.httpFilter.catch(exception, host);
+         return EMPTY;
+      }
       let payload: IAppExceptionPayload;
 
       if (exception instanceof AppException) {

@@ -1,10 +1,52 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PostController } from '@post/post.controller';
-import { PostService } from '@post/post.service';
+import { PostService } from '@post/services';
+import { RmqService } from '@common';
+import { RmqContext } from '@nestjs/microservices';
+import { PostFeedResponseDto, PostItemDto } from '@contracts/post';
 
 describe('PostController', () => {
    let controller: PostController;
    let service: PostService;
+   let rmqService: RmqService;
+
+   const mockPostItem: PostItemDto = {
+      postId: 'post-1',
+      userId: 'user-1',
+      title: 'Hanoi Beef Pho',
+      caption: 'Pho tutorial',
+      mediaId: 'media-1',
+      videoUrl: 'https://r2.dev/video.mp4',
+      playbackUrl: null,
+      thumbnailUrl: 'https://r2.dev/thumb.jpg',
+      blurHash: 'LEHV6nWB',
+      duration: 45,
+      videoWidth: 1080,
+      videoHeight: 1920,
+      viewCount: 100,
+      likeCount: 10,
+      commentCount: 2,
+      shareCount: 1,
+      saveCount: 5,
+      allowComments: true,
+      allowDuet: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ingredients: [],
+   };
+
+   const mockFeedResponse: PostFeedResponseDto = {
+      items: [mockPostItem],
+      nextCursor: 'next-cursor-token',
+      hasMore: true,
+   };
+
+   const mockRmqContext = {
+      getChannelRef: jest.fn().mockReturnValue({
+         ack: jest.fn(),
+      }),
+      getMessage: jest.fn().mockReturnValue({}),
+   } as unknown as RmqContext;
 
    beforeEach(async () => {
       const module: TestingModule = await Test.createTestingModule({
@@ -13,12 +55,14 @@ describe('PostController', () => {
             {
                provide: PostService,
                useValue: {
-                  createPost: jest.fn(),
-                  getPost: jest.fn(),
-                  listPosts: jest.fn(),
-                  updatePost: jest.fn(),
-                  deletePost: jest.fn(),
-                  uploadVideo: jest.fn(),
+                  getFeed: jest.fn().mockResolvedValue(mockFeedResponse),
+                  getPostById: jest.fn().mockResolvedValue(mockPostItem),
+               },
+            },
+            {
+               provide: RmqService,
+               useValue: {
+                  ack: jest.fn(),
                },
             },
          ],
@@ -26,52 +70,32 @@ describe('PostController', () => {
 
       controller = module.get<PostController>(PostController);
       service = module.get<PostService>(PostService);
+      rmqService = module.get<RmqService>(RmqService);
    });
 
    it('should be defined', () => {
       expect(controller).toBeDefined();
    });
 
-   describe('createPost', () => {
-      it('should create a post', () => {
-         const data = { userId: 'user-1', content: 'Test post' };
-         const result = {
-            success: true,
-            message: 'Post created successfully',
-            data: {
-               postId: 'temp-id',
-               userId: data.userId,
-               content: data.content,
-               mediaUrls: [],
-               createdAt: new Date(),
-            },
-         };
+   describe('getFeed', () => {
+      it('should return feed response and ack context', async () => {
+         const dto = { limit: 3 };
+         const result = await controller.getFeed(dto, mockRmqContext);
 
-         const createPostSpy = jest.spyOn(service, 'createPost').mockReturnValue(result);
-
-         expect(controller.createPost(data)).toBe(result);
-         expect(createPostSpy).toHaveBeenCalledWith(data);
+         expect(result).toEqual(mockFeedResponse);
+         expect(service.getFeed).toHaveBeenCalledWith(dto);
+         expect(rmqService.ack).toHaveBeenCalledWith(mockRmqContext);
       });
    });
 
-   describe('getPost', () => {
-      it('should get a post', () => {
-         const data = { postId: 'post-1' };
-         const result = {
-            success: true,
-            data: {
-               postId: data.postId,
-               userId: 'user-id',
-               content: 'Sample post content',
-               mediaUrls: [],
-               createdAt: new Date(),
-            },
-         };
+   describe('getPostById', () => {
+      it('should return post detail and ack context', async () => {
+         const payload = { postId: 'post-1' };
+         const result = await controller.getPostById(payload, mockRmqContext);
 
-         const getPostSpy = jest.spyOn(service, 'getPost').mockReturnValue(result);
-
-         expect(controller.getPost(data)).toBe(result);
-         expect(getPostSpy).toHaveBeenCalledWith(data.postId);
+         expect(result).toEqual(mockPostItem);
+         expect(service.getPostById).toHaveBeenCalledWith('post-1');
+         expect(rmqService.ack).toHaveBeenCalledWith(mockRmqContext);
       });
    });
 });

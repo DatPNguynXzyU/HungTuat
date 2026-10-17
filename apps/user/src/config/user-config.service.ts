@@ -29,7 +29,7 @@ export class UserConfigService extends CommonConfigService {
          graphPort: Number(this.configService.get(USER_ENV_KEYS.NEBULA_GRAPHD_PORT, { infer: true }) || 9669),
          username: this.configService.get(USER_ENV_KEYS.NEBULA_USERNAME, { infer: true }) || 'root',
          password: this.configService.get(USER_ENV_KEYS.NEBULA_PASSWORD, { infer: true }) || 'nebula',
-         space: this.configService.get(USER_ENV_KEYS.NEBULA_SPACE, { infer: true }) || 'omni_users',
+         space: this.configService.get(USER_ENV_KEYS.NEBULA_SPACE, { infer: true }) || 'social_graph',
       };
    }
 }

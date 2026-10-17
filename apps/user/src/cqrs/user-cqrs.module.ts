@@ -12,8 +12,7 @@ import { UserEventStore } from '@user/cqrs/write/user-event-store';
 import { UserActivityProjection, UserProfileProjection, UserStatsProjection } from '@user/cqrs/read';
 import { UserProjectionRebuildService } from '@user/cqrs/services/user-projection-rebuild.service';
 import { UserEventSourcingListener } from '@user/cqrs/listeners/user-event-sourcing.listener';
-import { USER_CQRS_EVENT_FACTORY } from '@user/constants';
-import { UserCqrsEventFactory, UserFactoriesModule } from '@user/factories';
+import { UserFactoriesModule } from '@user/factories';
 
 @Module({
    imports: [PrismaModule, RedisModule, UserFactoriesModule],
@@ -58,8 +57,6 @@ import { UserCqrsEventFactory, UserFactoriesModule } from '@user/factories';
       USER_PROJECTION_REBUILD_SERVICE,
       UserEventSourcingListener,
       UserFactoriesModule,
-      UserCqrsEventFactory,
-      USER_CQRS_EVENT_FACTORY,
    ],
 })
 export class UserCqrsModule {}

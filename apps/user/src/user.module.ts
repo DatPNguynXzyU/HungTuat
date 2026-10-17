@@ -1,12 +1,12 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { AppLogger, COMMAND_BUS, CommandBus, NebulaModule, RedisModule, type ICommandHandler } from '@common';
+import { AppLogger, CommandBus, NebulaModule, RedisModule, RmqModule, type ICommandHandler } from '@common';
 import { UserConfigModule } from '@user/config';
 import { UserLoggerModule } from '@user/logger';
 import { PrismaModule } from '@user/prisma';
 import { OutboxModule } from '@user/outbox';
-import { UnitOfWorkModule, UNIT_OF_WORK, PrismaUnitOfWork } from '@user/unit-of-work';
+import { UnitOfWorkModule } from '@user/unit-of-work';
 import { UserAdaptersModule } from '@user/adapters';
 import { UserDomainModule } from '@user/domain';
 import {
@@ -61,7 +61,6 @@ import {
    UserResolverService,
    ProfileSyncService,
    UserGraphSyncService,
-   UserMetricsService,
    USER_METRICS_SERVICE,
    type IUserMetricsService,
    USER_GRAPH_SYNC_SERVICE,
@@ -71,7 +70,6 @@ import { GraphSchemaService } from '@user/graph';
 import {
    UserProfileRepository,
    USER_PROFILE_REPOSITORY,
-   USER_REPOSITORY,
    FollowRepository,
    FOLLOW_REPOSITORY,
    FollowGraphRepository,
@@ -93,7 +91,8 @@ import {
       RedisModule,
       OutboxModule,
       UnitOfWorkModule,
-      NebulaModule.forRoot(),
+      NebulaModule.forRoot({ space: 'social_graph' }),
+      RmqModule,
 
       // Domain & Feature Architecture Modules
       UserAdaptersModule,
@@ -164,12 +163,6 @@ import {
       ProfileSyncService,
       UserGraphSyncService,
       GraphSchemaService,
-      UserMetricsService,
-      {
-         provide: USER_METRICS_SERVICE,
-         useExisting: UserMetricsService,
-      },
-      MetricsUserGraphSyncDecorator,
       {
          provide: USER_GRAPH_SYNC_SERVICE,
          useFactory: (inner: UserGraphSyncService, metrics: IUserMetricsService, logger: AppLogger) =>
@@ -182,10 +175,6 @@ import {
       {
          provide: USER_PROFILE_REPOSITORY,
          useClass: UserProfileRepository,
-      },
-      {
-         provide: USER_REPOSITORY,
-         useExisting: USER_PROFILE_REPOSITORY,
       },
       FollowRepository,
       {
@@ -207,8 +196,6 @@ import {
       ProfileLifecycleService,
       ProfileQueryService,
       ProfileAvatarService,
-      UserController,
-      UserMetricsController,
       UserDomainModule,
       UserFactoriesModule,
       UserAdaptersModule,
@@ -225,23 +212,14 @@ import {
       ProfileSyncService,
       UsernameBloomFilterService,
       UserGraphSyncService,
-      MetricsUserGraphSyncDecorator,
       USER_GRAPH_SYNC_SERVICE,
-      USER_METRICS_SERVICE,
-      UserMetricsService,
       USER_PROFILE_REPOSITORY,
       UserProfileRepository,
-      USER_REPOSITORY,
       FOLLOW_REPOSITORY,
       FollowRepository,
       GRAPH_FOLLOW_REPOSITORY,
       FollowGraphRepository,
       UnitOfWorkModule,
-      UNIT_OF_WORK,
-      PrismaUnitOfWork,
-      COMMAND_BUS,
-      CommandBus,
-      ...USER_COMMAND_HANDLERS,
    ],
 })
 export class UserModule implements OnModuleInit {
