@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
 import { CommonConfigService } from '@common/config/common-config.service';
+import { CacheHealthState } from '@common/constants/health.constant';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
@@ -25,8 +26,28 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
             },
          });
 
+         this.client.on('connect', () => {
+            this.logger.log('Redis client connection initiated');
+         });
+
+         this.client.on('ready', () => {
+            this.logger.log('Redis client connection established and ready');
+         });
+
          this.client.on('error', (err: Error) => {
             this.logger.warn(`Redis client error: ${err.message}`);
+         });
+
+         this.client.on('close', () => {
+            this.logger.warn('Redis client connection closed');
+         });
+
+         this.client.on('reconnecting', (delay: number) => {
+            this.logger.log(`Redis client reconnecting in ${delay}ms`);
+         });
+
+         this.client.on('end', () => {
+            this.logger.warn('Redis client connection ended');
          });
       } catch (err: unknown) {
          const error = err as Error;
@@ -42,6 +63,38 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
    getClient(): Redis | null {
       return this.client;
+   }
+
+   /**
+    * Executes a PING command with timeout to assess Redis connectivity and latency.
+    */
+   async healthCheck(
+      timeoutMs: number = 2000,
+   ): Promise<{ status: CacheHealthState; latency?: number; message?: string }> {
+      if (!this.client) {
+         return { status: CacheHealthState.DOWN, message: 'Redis client is not initialized' };
+      }
+      const start = Date.now();
+      try {
+         const pingPromise = this.client.ping();
+         let timer: ReturnType<typeof setTimeout> | undefined;
+         const timeoutPromise = new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Redis health check ping timeout')), timeoutMs);
+            timer.unref?.();
+         });
+         const res = await Promise.race([pingPromise, timeoutPromise]).finally(() => {
+            if (timer) clearTimeout(timer);
+         });
+         const latency = Date.now() - start;
+         if (res === 'PONG') {
+            return { status: CacheHealthState.UP, latency };
+         }
+         return { status: CacheHealthState.DOWN, latency, message: `Unexpected response: ${String(res)}` };
+      } catch (err: unknown) {
+         const error = err as Error;
+         const latency = Date.now() - start;
+         return { status: CacheHealthState.DOWN, latency, message: error.message };
+      }
    }
 
    async get(key: string): Promise<string | null> {

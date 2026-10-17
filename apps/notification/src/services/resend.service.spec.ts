@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Resend } from 'resend';
 import { AppException } from '@common';
 import { NotificationConfigService } from '@notification/config';
+import { TranslationService } from '@notification/i18n';
 import { EmailTemplateService } from '@notification/services/email-template.service';
 import { ResendService } from '@notification/services/resend.service';
 
@@ -16,6 +17,7 @@ describe('ResendService', () => {
       emailFrom: 'noreply@omniservices.dev',
       emailFromName: 'OmniServices',
       defaultSender: 'OmniServices <noreply@omniservices.dev>',
+      appUrl: 'https://app.omniservices.dev',
    };
 
    beforeEach(async () => {
@@ -29,6 +31,7 @@ describe('ResendService', () => {
       const module: TestingModule = await Test.createTestingModule({
          providers: [
             ResendService,
+            TranslationService,
             EmailTemplateService,
             {
                provide: NotificationConfigService,

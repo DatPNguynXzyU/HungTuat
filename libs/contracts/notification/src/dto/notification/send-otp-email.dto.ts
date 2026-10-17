@@ -34,4 +34,12 @@ export class SendOtpEmailDto {
    @IsNumber()
    @IsOptional()
    expiresInMinutes?: number;
+
+   @ApiPropertyOptional({
+      example: 'en',
+      description: 'Preferred recipient language / locale (e.g. en, vi)',
+   })
+   @IsString()
+   @IsOptional()
+   locale?: string;
 }

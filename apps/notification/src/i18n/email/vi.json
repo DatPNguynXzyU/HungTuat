@@ -1,0 +1,66 @@
+{
+   "common": {
+      "brandName": "OmniServices",
+      "copyright": "© {year} OmniServices. Bảo lưu mọi quyền.",
+      "autoEmailNotice": "Đây là email tự động, vui lòng không trả lời trực tiếp.",
+      "securityNotice": "Đây là thông báo bảo mật tự động. Vui lòng không trả lời trực tiếp email này.",
+      "support": "Trân trọng,\nĐội ngũ OmniServices"
+   },
+   "welcome": {
+      "preview": "Chào mừng đến với OmniServices, {fullName}!",
+      "badge": "CHÀO MỪNG",
+      "heading": "Chào mừng bạn, {fullName}!",
+      "body1": "Chúng tôi rất vui mừng được chào đón bạn đến với OmniServices. Tài khoản của bạn đã được kích hoạt và sẵn sàng sử dụng.",
+      "body2": "Khám phá nền tảng của chúng tôi và bắt đầu quản lý không gian làm việc một cách liền mạch.",
+      "ctaButton": "Bắt Đầu",
+      "supportText": "Nếu bạn có bất kỳ câu hỏi nào, đội ngũ hỗ trợ của chúng tôi luôn sẵn sàng giúp đỡ.",
+      "signoff": "Trân trọng,\n**Đội ngũ OmniServices**"
+   },
+   "otp": {
+      "preview": "Mã xác minh OmniServices của bạn: {otpCode}",
+      "badge": "XÁC MINH BẢO MẬT",
+      "heading": "Mã Xác Minh Của Bạn",
+      "greeting": "Xin chào {fullName},",
+      "body": "Sử dụng mã OTP (One-Time Password) sau để hoàn tất xác minh. Mã này là bảo mật và chỉ có hiệu lực cho một lần sử dụng.",
+      "otpLabel": "MÃ XÁC MINH MỘT LẦN",
+      "expiryBadge": "Hết hạn sau {minutes} phút",
+      "securityNoticeTitle": "Thông Báo Bảo Mật:",
+      "securityNoticeBody": "Không bao giờ chia sẻ mã này với bất kỳ ai. Đại diện OmniServices sẽ không bao giờ yêu cầu mã xác minh hoặc mật khẩu của bạn.",
+      "disclaimerText": "Nếu bạn không yêu cầu mã xác minh này, vui lòng bỏ qua email hoặc kiểm tra cài đặt bảo mật tài khoản ngay lập tức."
+   },
+   "verification": {
+      "preview": "Xác minh địa chỉ email OmniServices của bạn",
+      "badge": "XÁC MINH EMAIL",
+      "heading": "Xác minh địa chỉ email",
+      "greeting": "Xin chào {fullName},",
+      "body": "Cảm ơn bạn đã đăng ký OmniServices. Vui lòng xác minh địa chỉ email của bạn để kích hoạt đầy đủ các tính năng của tài khoản.",
+      "ctaButton": "Xác Minh Email",
+      "orText": "Nếu nút trên không hoạt động, hãy sao chép và dán liên kết này vào trình duyệt của bạn:",
+      "tokenLabel": "HOẶC SỬ DỤNG MÃ XÁC MINH",
+      "disclaimerText": "Nếu bạn không tạo tài khoản với OmniServices, bạn có thể yên tâm bỏ qua email này."
+   },
+   "resetPassword": {
+      "preview": "Đặt lại mật khẩu OmniServices của bạn",
+      "badge": "BẢO MẬT TÀI KHOẢN",
+      "heading": "Đặt lại mật khẩu",
+      "greeting": "Xin chào {fullName},",
+      "body": "Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu OmniServices của bạn. Nhấp vào nút bên dưới để chọn mật khẩu mới:",
+      "ctaButton": "Đặt Lại Mật Khẩu",
+      "orText": "Nếu nút trên không hoạt động, hãy sao chép và dán liên kết này vào trình duyệt của bạn:",
+      "tokenLabel": "MÃ ĐẶT LẠI",
+      "expiryNotice": "Cảnh Báo Bảo Mật:",
+      "securityText": "Liên kết đặt lại mật khẩu này sẽ sớm hết hạn. Nếu bạn không gửi yêu cầu này, vui lòng bỏ qua email hoặc liên hệ hỗ trợ ngay lập tức."
+   },
+   "changePasswordOtp": {
+      "preview": "Mã xác minh thay đổi mật khẩu: {otpCode}",
+      "badge": "XÁC MINH THAY ĐỔI MẬT KHẨU",
+      "heading": "Xác Minh Thay Đổi Mật Khẩu",
+      "greeting": "Xin chào {fullName},",
+      "body": "Chúng tôi đã nhận được yêu cầu thay đổi mật khẩu của bạn. Để tiếp tục hành động này, vui lòng sử dụng mã OTP sau.",
+      "otpLabel": "MÃ XÁC MINH MỘT LẦN",
+      "expiryBadge": "Hết hạn sau {minutes} phút",
+      "securityNoticeTitle": "Thông Báo Bảo Mật:",
+      "securityNoticeBody": "Không bao giờ chia sẻ mã này với bất kỳ ai. Đại diện OmniServices sẽ không bao giờ yêu cầu mã xác minh hoặc mật khẩu của bạn. Nếu bạn không yêu cầu thay đổi mật khẩu này, vui lòng bảo mật tài khoản ngay lập tức.",
+      "disclaimerText": "Nếu bạn không yêu cầu thay đổi mật khẩu này, vui lòng bỏ qua email này và xem xét lại cài đặt bảo mật tài khoản."
+   }
+}

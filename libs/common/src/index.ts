@@ -11,6 +11,7 @@ export * from '@common/interceptors';
 export * from '@common/interfaces';
 export * from '@common/logger';
 export * from '@common/redis';
+export * from '@common/cache';
 export * from '@common/rmq';
 export * from '@common/utils';
 export * from '@common/nebula';

@@ -69,7 +69,7 @@ async function bootstrap() {
 
    // Global prefix with exclusions for root probe and health checks
    app.setGlobalPrefix(globalPrefix, {
-      exclude: ['/', 'health', `${globalPrefix}/health`],
+      exclude: ['/', 'health', `${globalPrefix}/health`, 'health/redis', `${globalPrefix}/health/redis`],
    });
 
    // Global filters & interceptors

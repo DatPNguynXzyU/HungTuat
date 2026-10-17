@@ -36,4 +36,13 @@ export class SendChangePasswordOtpEmailDto {
    @IsString({ message: 'Full name must be a string' })
    @IsOptional()
    fullName?: string;
+
+   @ApiProperty({
+      example: 'en',
+      description: 'Preferred recipient language / locale (e.g. en, vi)',
+      required: false,
+   })
+   @IsString({ message: 'Locale must be a string' })
+   @IsOptional()
+   locale?: string;
 }

@@ -55,7 +55,10 @@
          "entryFile": "main",
          "sourceRoot": "apps/notification/src",
          "compilerOptions": {
-            "tsConfigPath": "apps/notification/tsconfig.app.json"
+            "tsConfigPath": "apps/notification/tsconfig.app.json",
+            "assets": [
+               { "include": "i18n/email/*.json", "watchAssets": true }
+            ]
          }
       },
       "post": {

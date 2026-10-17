@@ -1,6 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { COMMON_ERROR_CODES, RedisService, TooManyRequestsException } from '@common';
+import { CacheNamespace, CacheService, COMMON_ERROR_CODES, RedisService, TooManyRequestsException } from '@common';
 import { AUTH_ERROR_CODES } from '@contracts/auth';
+import {
+   AuthRateLimitKeys,
+   buildLegacyRateLimitKey,
+   buildLegacyRateLimitPattern,
+   buildWildcardPattern,
+   buildWindowCounterKey,
+   joinKeySegments,
+   RATE_LIMIT_KEY_PREFIX,
+} from '@auth/constants';
 import { AuthRateLimiter } from '@auth/services/infrastructure/auth-rate-limiter.service';
 import { AUTH_RATE_LIMITER } from '@auth/services/infrastructure/auth-rate-limiter.interface';
 
@@ -195,6 +204,86 @@ describe('AuthRateLimiter', () => {
             60,
             AUTH_ERROR_CODES.CHECK_EMAIL_RATE_LIMIT_EXCEEDED,
          );
+      });
+   });
+
+   describe('with CacheService', () => {
+      let cacheRateLimiter: AuthRateLimiter;
+      const mockCacheService = {
+         incr: jest.fn(),
+         expire: jest.fn(),
+         deleteByPattern: jest.fn(),
+      };
+
+      beforeEach(async () => {
+         jest.clearAllMocks();
+         const module: TestingModule = await Test.createTestingModule({
+            providers: [
+               AuthRateLimiter,
+               {
+                  provide: RedisService,
+                  useValue: mockRedisService,
+               },
+               {
+                  provide: CacheService,
+                  useValue: mockCacheService,
+               },
+            ],
+         }).compile();
+
+         cacheRateLimiter = module.get<AuthRateLimiter>(AuthRateLimiter);
+      });
+
+      it('should delegate to cacheService using CacheNamespace.RATE_LIMIT', async () => {
+         mockCacheService.incr.mockResolvedValue(1);
+         mockCacheService.expire.mockResolvedValue(undefined);
+
+         const result = await cacheRateLimiter.checkRateLimit('login:test@example.com', 5, 60);
+
+         expect(result.allowed).toBe(true);
+         expect(mockCacheService.incr).toHaveBeenCalledWith(
+            CacheNamespace.RATE_LIMIT,
+            expect.stringContaining('login:test@example.com:'),
+         );
+         expect(mockCacheService.expire).toHaveBeenCalledWith(CacheNamespace.RATE_LIMIT, expect.any(String), 60);
+      });
+
+      it('should reset rate limit using cacheService.deleteByPattern', async () => {
+         mockCacheService.deleteByPattern.mockResolvedValue(2);
+         await cacheRateLimiter.reset('login:test@example.com');
+         expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith(
+            CacheNamespace.RATE_LIMIT,
+            'login:test@example.com:*',
+         );
+      });
+   });
+
+   describe('AuthRateLimitKeys helper', () => {
+      it('should verify const helper functions', () => {
+         expect(joinKeySegments('a', 'b', 1)).toBe('a:b:1');
+         expect(buildWildcardPattern('prefix')).toBe('prefix:*');
+         expect(buildWindowCounterKey('test', 99)).toBe('test:99');
+         expect(buildLegacyRateLimitKey('test', 99)).toBe('ratelimit:test:99');
+         expect(buildLegacyRateLimitPattern('test')).toBe('ratelimit:test:*');
+         expect(RATE_LIMIT_KEY_PREFIX.LEGACY_PREFIX).toBe('ratelimit:');
+         expect(RATE_LIMIT_KEY_PREFIX.WILDCARD_PATTERN).toBe('*');
+      });
+
+      it('should build correct sliding window and pattern keys', () => {
+         expect(AuthRateLimitKeys.windowCounter('login:user@example.com', 12345)).toBe('login:user@example.com:12345');
+         expect(AuthRateLimitKeys.pattern('login:user@example.com')).toBe('login:user@example.com:*');
+         expect(AuthRateLimitKeys.legacyWindowCounter('login', 100)).toBe('ratelimit:login:100');
+         expect(AuthRateLimitKeys.legacyPattern('login')).toBe('ratelimit:login:*');
+      });
+
+      it('should build correct endpoint keys', () => {
+         expect(AuthRateLimitKeys.login('user@example.com', '127.0.0.1')).toBe('login:user@example.com:127.0.0.1');
+         expect(AuthRateLimitKeys.sendRegisterOtp('user@example.com')).toBe('otp:register:user@example.com');
+         expect(AuthRateLimitKeys.verifyRegisterOtp('user@example.com')).toBe('otp:verify:user@example.com');
+         expect(AuthRateLimitKeys.changePassword('acc-1')).toBe('password:change:acc-1');
+         expect(AuthRateLimitKeys.verifyChangePasswordOtp('acc-1')).toBe('otp:verify-pwd:acc-1');
+         expect(AuthRateLimitKeys.refreshToken('acc-1')).toBe('refresh:acc-1');
+         expect(AuthRateLimitKeys.checkEmail('user@example.com')).toBe('check-email:user@example.com');
       });
    });
 });

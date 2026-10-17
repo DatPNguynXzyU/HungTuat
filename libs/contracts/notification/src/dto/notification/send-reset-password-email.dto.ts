@@ -33,4 +33,12 @@ export class SendResetPasswordEmailDto {
    @IsString()
    @IsOptional()
    token?: string;
+
+   @ApiPropertyOptional({
+      example: 'en',
+      description: 'Preferred recipient language / locale (e.g. en, vi)',
+   })
+   @IsString()
+   @IsOptional()
+   locale?: string;
 }

@@ -1,139 +1,66 @@
 import React, { type FC } from 'react';
-import { Body, Container, Head, Heading, Hr, Html, Preview, Section, Text } from '@react-email/components';
+import { Heading, Section, Text } from '@react-email/components';
 import { EMAIL_COLORS, EMAIL_FONTS } from '@notification/constants/email-theme';
+import { BaseTranslations, getDefaultTranslations } from '@notification/i18n';
+import { EmailHeader, EmailLayout } from './components';
 
 export interface ChangePasswordOtpEmailProps {
    fullName?: string;
    otpCode?: string;
    expiresInMinutes?: number;
+   translations?: BaseTranslations;
 }
 
 export const ChangePasswordOtpEmail: FC<ChangePasswordOtpEmailProps> = ({
    fullName,
    otpCode = '123456',
    expiresInMinutes = 10,
+   translations,
 }) => {
-   const greeting = fullName ? `Hi ${fullName},` : 'Hello,';
-   const currentYear = new Date().getFullYear();
+   const currentTranslations = translations || getDefaultTranslations();
+   const t = currentTranslations.changePasswordOtp;
+   const common = currentTranslations.common;
+
+   const greeting = fullName ? t.greeting.replace('{fullName}', fullName) : 'Hello,';
+   const preview = t.preview.replace('{otpCode}', otpCode);
+   const expiryBadgeText = t.expiryBadge.replace('{minutes}', expiresInMinutes.toString());
 
    return (
-      <Html>
-         <Head />
-         <Preview>Your password change verification code: {otpCode}</Preview>
-         <Body style={main}>
-            <Container style={container}>
-               {/* Brand Gradient Top Accent */}
-               <div style={accentBar} />
+      <EmailLayout preview={preview} common={common} isSecurityEmail={true}>
+         <EmailHeader badge={t.badge} brandName={common.brandName} />
+         <Section style={content}>
+            <Heading as="h2" style={heading}>
+               {t.heading}
+            </Heading>
 
-               {/* Header / Brand Identity */}
-               <Section style={header}>
-                  <Text style={brandBadge}>PASSWORD CHANGE VERIFICATION</Text>
-                  <Heading style={headerTitle}>OmniServices</Heading>
-               </Section>
+            <Text style={paragraph}>{greeting}</Text>
+            <Text style={paragraph}>{t.body}</Text>
 
-               {/* Main Content */}
-               <Section style={content}>
-                  <Heading as="h2" style={heading}>
-                     Verify Your Password Change
-                  </Heading>
+            {/* OTP Highlight Box */}
+            <Section style={otpCard}>
+               <Text style={otpCodeLabel}>{t.otpLabel}</Text>
+               <Text style={otpCodeValue}>{otpCode}</Text>
+               <div style={badgeContainer}>
+                  <span style={expiryBadge}>{expiryBadgeText}</span>
+               </div>
+            </Section>
 
-                  <Text style={paragraph}>{greeting}</Text>
-                  <Text style={paragraph}>
-                     We received a request to change your password. To proceed with this change, please use the
-                     following One-Time Password (OTP).
-                  </Text>
+            {/* Security Advisory Alert Box */}
+            <Section style={alertBox}>
+               <Text style={alertText}>
+                  <strong style={alertTitle}>{t.securityNoticeTitle}</strong>
+                  <br />
+                  {t.securityNoticeBody}
+               </Text>
+            </Section>
 
-                  {/* OTP Highlight Box */}
-                  <Section style={otpCard}>
-                     <Text style={otpCodeLabel}>ONE-TIME PASSWORD</Text>
-                     <Text style={otpCodeValue}>{otpCode}</Text>
-                     <div style={badgeContainer}>
-                        <span style={expiryBadge}>Expires in {expiresInMinutes} minutes</span>
-                     </div>
-                  </Section>
-
-                  {/* Security Advisory Alert Box */}
-                  <Section style={alertBox}>
-                     <Text style={alertText}>
-                        <strong style={alertTitle}>Security Notice:</strong>
-                        <br />
-                        Never share this code with anyone. OmniServices representatives will never ask you for your
-                        verification code or password. If you did not request this password change, please secure your
-                        account immediately.
-                     </Text>
-                  </Section>
-
-                  <Text style={subText}>
-                     If you did not request this password change, please ignore this email and consider reviewing your
-                     account security settings.
-                  </Text>
-               </Section>
-
-               <Hr style={hr} />
-
-               {/* Footer */}
-               <Section style={footer}>
-                  <Text style={footerBrand}>OmniServices Inc.</Text>
-                  <Text style={footerText}>&copy; {currentYear} OmniServices (zeion.online). All rights reserved.</Text>
-                  <Text style={footerSubText}>
-                     This is an automated security transmission. Please do not reply directly to this email.
-                  </Text>
-               </Section>
-            </Container>
-         </Body>
-      </Html>
+            <Text style={subText}>{t.disclaimerText}</Text>
+         </Section>
+      </EmailLayout>
    );
 };
 
 export default ChangePasswordOtpEmail;
-
-// --- STYLES ---
-
-const main: React.CSSProperties = {
-   backgroundColor: EMAIL_COLORS.bodyBg,
-   fontFamily: EMAIL_FONTS.sans,
-   margin: 0,
-   padding: '24px 0',
-};
-
-const container: React.CSSProperties = {
-   margin: '0 auto',
-   backgroundColor: EMAIL_COLORS.cardBg,
-   borderRadius: '16px',
-   overflow: 'hidden',
-   maxWidth: '560px',
-   border: `1px solid ${EMAIL_COLORS.borderDefault}`,
-   boxShadow: EMAIL_COLORS.shadowCard,
-};
-
-const accentBar: React.CSSProperties = {
-   height: '4px',
-   width: '100%',
-   background: `linear-gradient(90deg, ${EMAIL_COLORS.primary} 0%, ${EMAIL_COLORS.brandAccent} 100%)`,
-};
-
-const header: React.CSSProperties = {
-   padding: '32px 24px 16px 24px',
-   textAlign: 'center',
-   backgroundColor: EMAIL_COLORS.cardBg,
-};
-
-const brandBadge: React.CSSProperties = {
-   fontSize: '11px',
-   fontWeight: '700',
-   letterSpacing: '1.5px',
-   color: EMAIL_COLORS.primary,
-   margin: '0 0 8px 0',
-   textTransform: 'uppercase',
-};
-
-const headerTitle: React.CSSProperties = {
-   color: EMAIL_COLORS.textHeading,
-   fontSize: '26px',
-   fontWeight: '800',
-   letterSpacing: '-0.5px',
-   margin: 0,
-};
 
 const content: React.CSSProperties = {
    padding: '16px 32px 32px 32px',
@@ -228,35 +155,4 @@ const subText: React.CSSProperties = {
    color: EMAIL_COLORS.textMuted,
    margin: '12px 0 0 0',
    textAlign: 'center',
-};
-
-const hr: React.CSSProperties = {
-   borderColor: EMAIL_COLORS.borderSubtle,
-   margin: '0',
-};
-
-const footer: React.CSSProperties = {
-   backgroundColor: EMAIL_COLORS.cardSubtleBg,
-   padding: '24px 32px',
-   textAlign: 'center',
-};
-
-const footerBrand: React.CSSProperties = {
-   fontSize: '13px',
-   fontWeight: '600',
-   color: EMAIL_COLORS.textBody,
-   margin: '0 0 4px 0',
-};
-
-const footerText: React.CSSProperties = {
-   fontSize: '12px',
-   color: EMAIL_COLORS.textMuted,
-   margin: '2px 0',
-};
-
-const footerSubText: React.CSSProperties = {
-   fontSize: '11px',
-   color: EMAIL_COLORS.textLight,
-   margin: '8px 0 0 0',
-   lineHeight: '16px',
 };

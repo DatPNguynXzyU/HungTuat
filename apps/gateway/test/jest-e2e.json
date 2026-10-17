@@ -10,8 +10,6 @@
       "^@/(.*)$": "<rootDir>/../src/$1",
       "^@gateway/(.*)$": "<rootDir>/../src/$1",
       "^@common$": "<rootDir>/../../../libs/common/src",
-      "^@common/(.*)$": "<rootDir>/../../../libs/common/src/$1",
-      "^@app/common$": "<rootDir>/../../../libs/common/src",
-      "^@app/common/(.*)$": "<rootDir>/../../../libs/common/src/$1"
+      "^@common/(.*)$": "<rootDir>/../../../libs/common/src/$1"
    }
 }

@@ -1,0 +1,66 @@
+{
+   "common": {
+      "brandName": "OmniServices",
+      "copyright": "© {year} OmniServices. All rights reserved.",
+      "autoEmailNotice": "This is an automated email, please do not reply directly.",
+      "securityNotice": "This is an automated security transmission. Please do not reply directly to this email.",
+      "support": "Best regards,\nThe OmniServices Team"
+   },
+   "welcome": {
+      "preview": "Welcome to OmniServices, {fullName}!",
+      "badge": "WELCOME ABOARD",
+      "heading": "Welcome aboard, {fullName}!",
+      "body1": "We are thrilled to have you join OmniServices. Your account is now active and ready to use.",
+      "body2": "Explore our platform and start managing your workspace seamlessly.",
+      "ctaButton": "Get Started",
+      "supportText": "If you have any questions, our support team is always here to help.",
+      "signoff": "Best regards,\n**The OmniServices Team**"
+   },
+   "otp": {
+      "preview": "Your OmniServices verification code: {otpCode}",
+      "badge": "SECURITY VERIFICATION",
+      "heading": "Your Verification Code",
+      "greeting": "Hi {fullName},",
+      "body": "Use the following One-Time Password (OTP) to complete your verification. This code is confidential and valid for a single use.",
+      "otpLabel": "ONE-TIME PASSWORD",
+      "expiryBadge": "Expires in {minutes} minutes",
+      "securityNoticeTitle": "Security Notice:",
+      "securityNoticeBody": "Never share this code with anyone. OmniServices representatives will never ask you for your verification code or password.",
+      "disclaimerText": "If you did not request this verification code, please ignore this email or review your account security settings immediately."
+   },
+   "verification": {
+      "preview": "Verify your OmniServices email address",
+      "badge": "EMAIL VERIFICATION",
+      "heading": "Verify your email address",
+      "greeting": "Hi {fullName},",
+      "body": "Thank you for signing up with OmniServices. Please verify your email address to activate your full account features.",
+      "ctaButton": "Verify Email Address",
+      "orText": "If the button above does not work, copy and paste this link into your browser:",
+      "tokenLabel": "OR USE VERIFICATION CODE",
+      "disclaimerText": "If you did not create an account with OmniServices, please ignore this email."
+   },
+   "resetPassword": {
+      "preview": "Reset your OmniServices password",
+      "badge": "ACCOUNT SECURITY",
+      "heading": "Reset your password",
+      "greeting": "Hi {fullName},",
+      "body": "We received a request to reset your OmniServices password. Click the button below to choose a new password:",
+      "ctaButton": "Reset Password",
+      "orText": "If the button above does not work, copy and paste this link into your browser:",
+      "tokenLabel": "RESET CODE",
+      "expiryNotice": "Security Alert:",
+      "securityText": "This password reset link will expire soon. If you did not make this request, please ignore this email or contact support immediately."
+   },
+   "changePasswordOtp": {
+      "preview": "Your password change verification code: {otpCode}",
+      "badge": "PASSWORD CHANGE VERIFICATION",
+      "heading": "Verify Your Password Change",
+      "greeting": "Hi {fullName},",
+      "body": "We received a request to change your password. To proceed with this change, please use the following One-Time Password (OTP).",
+      "otpLabel": "ONE-TIME PASSWORD",
+      "expiryBadge": "Expires in {minutes} minutes",
+      "securityNoticeTitle": "Security Notice:",
+      "securityNoticeBody": "Never share this code with anyone. OmniServices representatives will never ask you for your verification code or password. If you did not request this password change, please secure your account immediately.",
+      "disclaimerText": "If you did not request this password change, please ignore this email and consider reviewing your account security settings."
+   }
+}

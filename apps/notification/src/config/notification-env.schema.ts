@@ -7,6 +7,7 @@ export const notificationEnvSchema = sharedEnvSchema.extend({
    RESEND_API_KEY: z.string().optional(),
    EMAIL_FROM: z.string().default('noreply@zeion.online'),
    EMAIL_FROM_NAME: z.string().default('OmniServices'),
+   APP_URL: z.string().url().default('https://zeion.online'),
    DATABASE_URL: z.string().optional(),
    POSTGRES_USER: z.string().optional(),
    POSTGRES_PASSWORD: z.string().optional(),

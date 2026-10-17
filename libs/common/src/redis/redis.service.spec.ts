@@ -1,4 +1,5 @@
 import { CommonConfigService } from '@common/config/common-config.service';
+import { CacheHealthState } from '@common/constants/health.constant';
 import { RedisService } from '@common/redis/redis.service';
 
 describe('RedisService', () => {
@@ -61,6 +62,34 @@ describe('RedisService', () => {
    it('should handle deleteByPattern gracefully when client is not connected', async () => {
       const count = await service.deleteByPattern('pattern:*');
       expect(count).toBe(0);
+   });
+
+   it('should return down status when client is not initialized in healthCheck', async () => {
+      const health = await service.healthCheck();
+      expect(health.status).toBe(CacheHealthState.DOWN);
+      expect(health.message).toContain('not initialized');
+   });
+
+   it('should return up status when client pings PONG', async () => {
+      service.onModuleInit();
+      const client = service.getClient();
+      if (client) {
+         jest.spyOn(client, 'ping').mockResolvedValueOnce('PONG');
+         const health = await service.healthCheck();
+         expect(health.status).toBe(CacheHealthState.UP);
+         expect(health.latency).toBeDefined();
+      }
+   });
+
+   it('should return down status when ping fails', async () => {
+      service.onModuleInit();
+      const client = service.getClient();
+      if (client) {
+         jest.spyOn(client, 'ping').mockRejectedValueOnce(new Error('Connection refused'));
+         const health = await service.healthCheck();
+         expect(health.status).toBe(CacheHealthState.DOWN);
+         expect(health.message).toBe('Connection refused');
+      }
    });
 
    it('should clean up client on module destroy', async () => {

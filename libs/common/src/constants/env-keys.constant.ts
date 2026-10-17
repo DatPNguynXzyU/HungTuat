@@ -56,6 +56,7 @@ export const ENV_KEYS = {
    RESEND_API_KEY: 'RESEND_API_KEY',
    EMAIL_FROM: 'EMAIL_FROM',
    EMAIL_FROM_NAME: 'EMAIL_FROM_NAME',
+   APP_URL: 'APP_URL',
 
    // Gateway specific
    PORT: 'PORT',

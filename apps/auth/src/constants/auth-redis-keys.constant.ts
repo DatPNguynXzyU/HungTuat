@@ -1,3 +1,5 @@
+import { OTP_TTL, RATE_LIMIT_WINDOW } from '@common';
+
 export const AUTH_REDIS_KEY_PREFIX = {
    REFRESH_TOKEN: 'auth:refresh_token:',
    USER_SESSIONS: 'auth:account_sessions:',
@@ -27,13 +29,13 @@ export const AUTH_REDIS_TTL = {
    AUTH_LOCKOUT: 900, // 15 minutes in seconds
    AUTH_FAILED_ATTEMPTS: 900, // 15 minutes window
    BLOOM_INITIALIZED: 86400 * 30, // 30 days
-   OTP_EXPIRES: 300, // 5 minutes in seconds
-   OTP_COOLDOWN: 60, // 60 seconds
-   OTP_REGISTER: 300, // 5 minutes in seconds
-   OTP_REGISTER_COOLDOWN: 60, // 60 seconds
+   OTP_EXPIRES: OTP_TTL, // 5 minutes in seconds
+   OTP_COOLDOWN: RATE_LIMIT_WINDOW.ONE_MIN, // 60 seconds
+   OTP_REGISTER: OTP_TTL, // 5 minutes in seconds
+   OTP_REGISTER_COOLDOWN: RATE_LIMIT_WINDOW.ONE_MIN, // 60 seconds
    OTP_VERIFICATION_TOKEN: 900, // 15 minutes in seconds
    OTP_CHANGE_PASSWORD_EXPIRES: 600, // 10 minutes in seconds
-   OTP_CHANGE_PASSWORD_COOLDOWN: 60, // 60 seconds
+   OTP_CHANGE_PASSWORD_COOLDOWN: RATE_LIMIT_WINDOW.ONE_MIN, // 60 seconds
    THREAT_METRICS: 86400 * 7, // 7 days in seconds
 } as const;
 

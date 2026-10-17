@@ -25,4 +25,12 @@ export class SendWelcomeEmailDto {
    @IsString()
    @IsOptional()
    actionUrl?: string;
+
+   @ApiPropertyOptional({
+      example: 'en',
+      description: 'Preferred recipient language / locale (e.g. en, vi)',
+   })
+   @IsString()
+   @IsOptional()
+   locale?: string;
 }

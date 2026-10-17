@@ -87,10 +87,13 @@ export class ResendService {
    }
 
    async sendWelcomeEmail(dto: SendWelcomeEmailDto): Promise<SendEmailResult> {
-      const { html, text } = this.templateService.renderWelcomeEmail({
-         fullName: dto.fullName,
-         actionUrl: dto.actionUrl,
-      });
+      const { html, text } = this.templateService.renderWelcomeEmail(
+         {
+            fullName: dto.fullName,
+            actionUrl: dto.actionUrl,
+         },
+         dto.locale,
+      );
 
       return this.sendEmail({
          to: dto.to,
@@ -101,11 +104,14 @@ export class ResendService {
    }
 
    async sendVerificationEmail(dto: SendVerificationEmailDto): Promise<SendEmailResult> {
-      const { html, text } = this.templateService.renderVerificationEmail({
-         fullName: dto.fullName,
-         verificationUrl: dto.verificationUrl,
-         token: dto.token,
-      });
+      const { html, text } = this.templateService.renderVerificationEmail(
+         {
+            fullName: dto.fullName,
+            verificationUrl: dto.verificationUrl,
+            token: dto.token,
+         },
+         dto.locale,
+      );
 
       return this.sendEmail({
          to: dto.to,
@@ -116,11 +122,14 @@ export class ResendService {
    }
 
    async sendResetPasswordEmail(dto: SendResetPasswordEmailDto): Promise<SendEmailResult> {
-      const { html, text } = this.templateService.renderResetPasswordEmail({
-         fullName: dto.fullName,
-         resetUrl: dto.resetUrl,
-         token: dto.token,
-      });
+      const { html, text } = this.templateService.renderResetPasswordEmail(
+         {
+            fullName: dto.fullName,
+            resetUrl: dto.resetUrl,
+            token: dto.token,
+         },
+         dto.locale,
+      );
 
       return this.sendEmail({
          to: dto.to,
@@ -131,11 +140,14 @@ export class ResendService {
    }
 
    async sendOtpEmail(dto: SendOtpEmailDto): Promise<SendEmailResult> {
-      const { html, text } = this.templateService.renderOtpEmail({
-         fullName: dto.fullName,
-         otpCode: dto.otpCode,
-         expiresInMinutes: dto.expiresInMinutes,
-      });
+      const { html, text } = this.templateService.renderOtpEmail(
+         {
+            fullName: dto.fullName,
+            otpCode: dto.otpCode,
+            expiresInMinutes: dto.expiresInMinutes,
+         },
+         dto.locale,
+      );
 
       return this.sendEmail({
          to: dto.to,
@@ -146,11 +158,14 @@ export class ResendService {
    }
 
    async sendChangePasswordOtpEmail(dto: SendChangePasswordOtpEmailDto): Promise<SendEmailResult> {
-      const { html, text } = this.templateService.renderChangePasswordOtpEmail({
-         fullName: dto.fullName,
-         otpCode: dto.otpCode,
-         expiresInMinutes: dto.expiresInMinutes,
-      });
+      const { html, text } = this.templateService.renderChangePasswordOtpEmail(
+         {
+            fullName: dto.fullName,
+            otpCode: dto.otpCode,
+            expiresInMinutes: dto.expiresInMinutes,
+         },
+         dto.locale,
+      );
 
       return this.sendEmail({
          to: dto.to,

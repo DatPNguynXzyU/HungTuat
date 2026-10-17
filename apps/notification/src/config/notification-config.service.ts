@@ -31,6 +31,10 @@ export class NotificationConfigService extends CommonConfigService {
       return name ? `${name} <${from}>` : from;
    }
 
+   get appUrl(): string {
+      return this.configService.get(ENV_KEYS.APP_URL, { infer: true });
+   }
+
    get databaseUrl(): string | undefined {
       return this.configService.get(ENV_KEYS.DATABASE_URL, { infer: true });
    }

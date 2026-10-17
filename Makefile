@@ -49,7 +49,7 @@ start-media:
 
 .PHONY: build
 build:
-	pnpm -r run build
+	pnpm run build
 
 .PHONY: lint
 lint:

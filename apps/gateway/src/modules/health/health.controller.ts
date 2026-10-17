@@ -1,10 +1,21 @@
-import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Optional } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { HEALTH_RESPONSE_MESSAGES, HealthCheckResponseDto, Public, ResponseMessage } from '@common';
+import {
+   CacheHealthState,
+   CacheService,
+   HEALTH_RESPONSE_MESSAGES,
+   HealthCheckResponseDto,
+   HealthStatus,
+   Public,
+   RedisHealthDto,
+   ResponseMessage,
+} from '@common';
 
 @ApiTags('Health')
 @Controller()
 export class HealthController {
+   constructor(@Optional() private readonly cacheService?: CacheService) {}
+
    @Public()
    @Get()
    @HttpCode(HttpStatus.OK)
@@ -20,7 +31,7 @@ export class HealthController {
    @ResponseMessage(HEALTH_RESPONSE_MESSAGES.HEALTH_CHECK_SUCCESS)
    root(): HealthCheckResponseDto {
       return {
-         status: 'ok',
+         status: HealthStatus.OK,
          uptime: process.uptime(),
          timestamp: new Date().toISOString(),
       };
@@ -39,11 +50,36 @@ export class HealthController {
       type: HealthCheckResponseDto,
    })
    @ResponseMessage(HEALTH_RESPONSE_MESSAGES.HEALTH_CHECK_SUCCESS)
-   check(): HealthCheckResponseDto {
+   async check(): Promise<HealthCheckResponseDto> {
+      const redisHealth = this.cacheService ? await this.cacheService.healthCheck() : undefined;
       return {
-         status: 'ok',
+         status: HealthStatus.OK,
          uptime: process.uptime(),
          timestamp: new Date().toISOString(),
+         ...(redisHealth && { redis: redisHealth }),
       };
+   }
+
+   @Public()
+   @Get(['health/redis', 'api/v1/health/redis'])
+   @HttpCode(HttpStatus.OK)
+   @ApiOperation({
+      operationId: 'healthCheckRedis',
+      summary: 'Redis Cache Health Check',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Redis cache connection status and latency',
+      type: RedisHealthDto,
+   })
+   @ResponseMessage(HEALTH_RESPONSE_MESSAGES.HEALTH_CHECK_SUCCESS)
+   async checkRedis(): Promise<RedisHealthDto> {
+      if (!this.cacheService) {
+         return {
+            status: CacheHealthState.DOWN,
+            message: 'CacheService is not available',
+         };
+      }
+      return this.cacheService.healthCheck();
    }
 }
