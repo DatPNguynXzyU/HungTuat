@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { of } from 'rxjs';
 import { SERVICES } from '@common';
-import { USER_PATTERNS } from '@contracts/user';
+import { GenderDto, USER_PATTERNS } from '@contracts/user';
 import type { JwtPayload } from '@common';
 import { UsersService } from '@/modules/users/users.service';
 
@@ -85,14 +85,34 @@ describe('UsersService', () => {
       expect(result).toEqual([{ id: 'u1' }]);
    });
 
-   it('should send update_user_profile message with user context', async () => {
-      mockUserClient.send.mockReturnValue(of({ id: 'u1', displayName: 'New Name' }));
+   it('should send update_username message pattern with user context', async () => {
+      mockUserClient.send.mockReturnValue(of({ id: 'auth-user-1', username: 'new_username' }));
 
-      const result = await service.updateUser('u1', { displayName: 'New Name' }, mockUser);
+      const result = await service.updateUsername('auth-user-1', 'new_username', mockUser);
+      expect(mockUserClient.send).toHaveBeenCalledWith(
+         { cmd: USER_PATTERNS.UPDATE_USERNAME },
+         {
+            data: { userId: 'auth-user-1', username: 'new_username' },
+            user: {
+               userId: mockUser.sub,
+               email: mockUser.email,
+               roles: mockUser.roles,
+               permissions: [],
+               sessionId: mockUser.jti,
+            },
+         },
+      );
+      expect(result).toEqual({ id: 'auth-user-1', username: 'new_username' });
+   });
+
+   it('should update display name via updateDisplayName', async () => {
+      mockUserClient.send.mockReturnValue(of({ id: 'auth-user-1', displayName: 'New Display Name' }));
+
+      const result = await service.updateDisplayName('auth-user-1', 'New Display Name', mockUser);
       expect(mockUserClient.send).toHaveBeenCalledWith(
          { cmd: USER_PATTERNS.UPDATE_USER_PROFILE },
          {
-            data: { id: 'u1', displayName: 'New Name' },
+            data: { userId: 'auth-user-1', id: 'auth-user-1', displayName: 'New Display Name' },
             user: {
                userId: mockUser.sub,
                email: mockUser.email,
@@ -102,17 +122,22 @@ describe('UsersService', () => {
             },
          },
       );
-      expect(result).toEqual({ id: 'u1', displayName: 'New Name' });
+      expect(result).toEqual({ id: 'auth-user-1', displayName: 'New Display Name' });
    });
 
-   it('should update current user profile via updateMyProfile delegating to updateUser', async () => {
-      mockUserClient.send.mockReturnValue(of({ id: 'auth-user-1', displayName: 'Self Name' }));
+   it('should update personal info via updatePersonalInfo', async () => {
+      const dob = '1995-05-20';
+      mockUserClient.send.mockReturnValue(of({ id: 'auth-user-1', dateOfBirth: dob, gender: GenderDto.MALE }));
 
-      const result = await service.updateMyProfile({ displayName: 'Self Name' }, mockUser);
+      const result = await service.updatePersonalInfo(
+         'auth-user-1',
+         { dateOfBirth: dob, gender: GenderDto.MALE },
+         mockUser,
+      );
       expect(mockUserClient.send).toHaveBeenCalledWith(
          { cmd: USER_PATTERNS.UPDATE_USER_PROFILE },
          {
-            data: { id: 'auth-user-1', displayName: 'Self Name' },
+            data: { userId: 'auth-user-1', id: 'auth-user-1', dateOfBirth: dob, gender: GenderDto.MALE },
             user: {
                userId: mockUser.sub,
                email: mockUser.email,
@@ -122,27 +147,7 @@ describe('UsersService', () => {
             },
          },
       );
-      expect(result).toEqual({ id: 'auth-user-1', displayName: 'Self Name' });
-   });
-
-   it('should send upsert_user_profile message via upsertUser', async () => {
-      mockUserClient.send.mockReturnValue(of({ id: 'u1', displayName: 'Upserted Name' }));
-
-      const result = await service.upsertUser('u1', { displayName: 'Upserted Name' }, mockUser);
-      expect(mockUserClient.send).toHaveBeenCalledWith(
-         { cmd: USER_PATTERNS.UPSERT_USER_PROFILE },
-         {
-            data: { id: 'u1', displayName: 'Upserted Name' },
-            user: {
-               userId: mockUser.sub,
-               email: mockUser.email,
-               roles: mockUser.roles,
-               permissions: [],
-               sessionId: mockUser.jti,
-            },
-         },
-      );
-      expect(result).toEqual({ id: 'u1', displayName: 'Upserted Name' });
+      expect(result).toEqual({ id: 'auth-user-1', dateOfBirth: dob, gender: GenderDto.MALE });
    });
 
    it('should send get_date_of_birth message with userId', async () => {

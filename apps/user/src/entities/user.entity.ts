@@ -94,6 +94,7 @@ export class UserEntity implements PrismaUser {
    createdAt: Date;
    updatedAt: Date;
    lastActiveAt: Date | null;
+   lastUsernameChangedAt: Date | null;
 
    profile?: UserProfileEntity | null;
    stats?: UserStatsEntity | null;
@@ -121,6 +122,7 @@ export class UserEntity implements PrismaUser {
       this.createdAt = partial.createdAt || new Date();
       this.updatedAt = partial.updatedAt || new Date();
       this.lastActiveAt = partial.lastActiveAt ?? null;
+      this.lastUsernameChangedAt = partial.lastUsernameChangedAt ?? null;
 
       if (partial.profile) {
          this.profile = new UserProfileEntity(partial.profile);

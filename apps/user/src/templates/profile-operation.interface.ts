@@ -7,6 +7,7 @@ import type { ProfileOperation } from '@user/constants';
  */
 export interface ProfileOperationOptions {
    skipValidation?: boolean;
+   isActorAdmin?: boolean;
 }
 
 /**
@@ -20,6 +21,7 @@ export interface BaseProfileOperationContext {
    accountId?: string;
    existingUser?: UserEntity | null;
    shortCircuited?: boolean;
+   isActorAdmin?: boolean;
 }
 
 /**

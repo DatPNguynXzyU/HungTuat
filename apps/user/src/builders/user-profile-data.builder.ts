@@ -28,6 +28,7 @@ export interface UserProfileDtoSource {
 export class UserProfileDataBuilder implements IBuilder<CreateUserData> {
    private accountId?: string;
    private username?: string | null;
+   private lastUsernameChangedAt?: Date | null;
    private displayName?: string | null;
    private bio?: string | null;
    private avatar?: string | null;
@@ -63,6 +64,16 @@ export class UserProfileDataBuilder implements IBuilder<CreateUserData> {
    withUsername(username?: string | null): this {
       if (username !== undefined) {
          this.username = username ? username.trim().toLowerCase() : null;
+      }
+      return this;
+   }
+
+   /**
+    * Sets lastUsernameChangedAt timestamp.
+    */
+   withLastUsernameChangedAt(date?: Date | null): this {
+      if (date !== undefined) {
+         this.lastUsernameChangedAt = date;
       }
       return this;
    }
@@ -256,6 +267,7 @@ export class UserProfileDataBuilder implements IBuilder<CreateUserData> {
       const updateData: UpdateUserData = {};
 
       if (this.username !== undefined && this.username !== null) updateData.username = this.username;
+      if (this.lastUsernameChangedAt !== undefined) updateData.lastUsernameChangedAt = this.lastUsernameChangedAt;
       if (this.displayName !== undefined && this.displayName !== null) updateData.displayName = this.displayName;
       if (this.bio !== undefined && this.bio !== null) updateData.bio = this.bio;
       if (this.avatar !== undefined && this.avatar !== null) updateData.avatar = this.avatar;

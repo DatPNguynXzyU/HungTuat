@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { BadRequestException, CommandHandler, checkOwnershipOrAdmin, type ICommandHandler } from '@common';
+import {
+   BadRequestException,
+   CommandHandler,
+   checkOwnershipOrAdmin,
+   isActorAdmin,
+   type ICommandHandler,
+} from '@common';
 import { USER_ERROR_CODES } from '@contracts/user';
 import type { UserEntity } from '@user/entities';
 import { ProfileService } from '@user/services/domain/profile.service';
@@ -22,7 +28,8 @@ export class UpdateUserProfileHandler implements ICommandHandler<UpdateUserProfi
       checkOwnershipOrAdmin(message, existingUser.accountId);
 
       const updateData = UserProfileDataBuilder.create().fromDto(message.data).buildUpdate();
+      const isAdmin = isActorAdmin(message);
 
-      return this.profileService.updateUserProfile(userId, updateData);
+      return this.profileService.updateUserProfile(userId, updateData, { isActorAdmin: isAdmin });
    }
 }

@@ -8,7 +8,7 @@ import { UserGraphSyncService } from '@user/services/infrastructure/user-graph-s
 import { SEARCH_ADAPTER, type ISearchAdapter } from '@user/adapters/search';
 import { USER_AGGREGATES, USER_EVENTS, USER_OUTBOX_EVENTS, USER_RETRY_QUEUES } from '@contracts/user';
 import { USER_DOMAIN_EVENTS } from '@user/domain';
-import { USER_DOMAIN_EVENT_FACTORY } from '@user/constants';
+import { USER_DOMAIN_EVENT_FACTORY, USER_PROFILE_SYNC_FIELDS, PROFILE_METADATA_FIELDS } from '@user/constants';
 import { UserDomainEventFactory, type IUserDomainEventFactory } from '@user/factories';
 import type { UpdateUserData } from '@user/repositories/user-profile.repository';
 
@@ -71,44 +71,171 @@ export class ProfileSyncService {
       }
    }
 
+   /**
+    * Refactored syncUserUpdated: Emits granular domain events for each field change
+    * instead of a single generic USER_UPDATED event.
+    *
+    * Benefits:
+    * - Each business action has its own event (Event Sourcing best practice)
+    * - Easier to debug and trace specific changes
+    * - Prevents conflicts when updating multiple fields
+    * - Better event replay and auditing
+    */
    async syncUserUpdated(
       user: UserEntity,
       changes: Record<string, unknown> | UpdateUserData,
       previousUser?: UserEntity,
    ): Promise<void> {
+      // 1. Handle username change (already existing logic)
       const username = 'username' in changes ? changes.username : undefined;
       if (username && typeof username === 'string') {
-         await this.usernameBloomFilterService.addUsername(username);
+         await this.usernameBloomFilterService.updateUsername(username, previousUser?.username);
+
+         if (previousUser && previousUser.username?.toLowerCase() !== username.toLowerCase()) {
+            // Emit specific USERNAME_CHANGED event
+            await this.outboxService.createOutboxEvent(
+               user.userId,
+               USER_AGGREGATES.USER,
+               USER_OUTBOX_EVENTS.USER_UPDATED,
+               {
+                  userId: user.userId,
+                  accountId: user.accountId,
+                  field: USER_PROFILE_SYNC_FIELDS.USERNAME,
+                  oldValue: previousUser.username,
+                  newValue: username,
+               },
+            );
+
+            if (this.eventEmitter) {
+               this.eventEmitter.emit(
+                  USER_DOMAIN_EVENTS.USERNAME_CHANGED,
+                  this.domainEventFactory.createUsernameChanged(user.userId, previousUser.username, username),
+               );
+            }
+         }
       }
 
-      await this.syncGraphWithFallback(user);
+      // 2. Handle displayName change
+      const displayName = 'displayName' in changes ? changes.displayName : undefined;
+      if (displayName !== undefined && previousUser && previousUser.displayName !== displayName) {
+         await this.outboxService.createOutboxEvent(
+            user.userId,
+            USER_AGGREGATES.USER,
+            USER_OUTBOX_EVENTS.USER_UPDATED,
+            {
+               userId: user.userId,
+               accountId: user.accountId,
+               field: USER_PROFILE_SYNC_FIELDS.DISPLAY_NAME,
+               oldValue: previousUser.displayName,
+               newValue: displayName,
+            },
+         );
 
-      const changesPayload: Record<string, unknown> = { ...changes };
-
-      await this.outboxService.createOutboxEvent(user.userId, USER_AGGREGATES.USER, USER_OUTBOX_EVENTS.USER_UPDATED, {
-         userId: user.userId,
-         accountId: user.accountId,
-         changes: changesPayload,
-      });
-
-      this.emitSearchIndexEvent(USER_EVENTS.UPDATED, user);
-
-      if (this.eventEmitter) {
-         if (username && previousUser && previousUser.username?.toLowerCase() !== (username as string).toLowerCase()) {
+         if (this.eventEmitter) {
             this.eventEmitter.emit(
-               USER_DOMAIN_EVENTS.USERNAME_CHANGED,
-               this.domainEventFactory.createUsernameChanged(user.userId, previousUser.username, username as string),
+               USER_DOMAIN_EVENTS.DISPLAY_NAME_CHANGED,
+               this.domainEventFactory.createDisplayNameChanged(
+                  user.userId,
+                  previousUser.displayName,
+                  displayName as string | null,
+               ),
             );
          }
-
-         this.eventEmitter.emit(
-            USER_DOMAIN_EVENTS.USER_UPDATED,
-            this.domainEventFactory.createUserUpdated(user.userId, user.accountId, changesPayload, user.updatedAt),
-         );
       }
+
+      // 3. Handle bio change
+      const bio = 'bio' in changes ? changes.bio : undefined;
+      if (bio !== undefined && previousUser && previousUser.bio !== bio) {
+         await this.outboxService.createOutboxEvent(
+            user.userId,
+            USER_AGGREGATES.USER,
+            USER_OUTBOX_EVENTS.USER_UPDATED,
+            {
+               userId: user.userId,
+               accountId: user.accountId,
+               field: USER_PROFILE_SYNC_FIELDS.BIO,
+               oldValue: previousUser.bio,
+               newValue: bio,
+            },
+         );
+
+         if (this.eventEmitter) {
+            this.eventEmitter.emit(
+               USER_DOMAIN_EVENTS.BIO_CHANGED,
+               this.domainEventFactory.createBioChanged(user.userId, previousUser.bio, bio as string | null),
+            );
+         }
+      }
+
+      // 4. Handle avatar change
+      const avatar = 'avatar' in changes ? changes.avatar : undefined;
+      if (avatar !== undefined && previousUser && previousUser.avatar !== avatar) {
+         await this.outboxService.createOutboxEvent(
+            user.userId,
+            USER_AGGREGATES.USER,
+            USER_OUTBOX_EVENTS.USER_UPDATED,
+            {
+               userId: user.userId,
+               accountId: user.accountId,
+               field: USER_PROFILE_SYNC_FIELDS.AVATAR,
+               oldValue: previousUser.avatar,
+               newValue: avatar,
+            },
+         );
+
+         // Note: We already have AVATAR_UPLOADED event, but this covers avatar changes/removals
+         if (this.eventEmitter && avatar) {
+            this.eventEmitter.emit(
+               USER_DOMAIN_EVENTS.AVATAR_UPLOADED,
+               this.domainEventFactory.createAvatarUploaded(user.userId, avatar as string),
+            );
+         }
+      }
+
+      // 5. Handle metadata fields (website, location, gender, dateOfBirth, coverImage, etc.)
+      const metadata: Record<string, unknown> = {};
+      let hasMetadataChange = false;
+
+      for (const field of PROFILE_METADATA_FIELDS) {
+         if (field in changes) {
+            metadata[field] = (changes as Record<string, unknown>)[field];
+            hasMetadataChange = true;
+         }
+      }
+
+      if (hasMetadataChange) {
+         await this.outboxService.createOutboxEvent(
+            user.userId,
+            USER_AGGREGATES.USER,
+            USER_OUTBOX_EVENTS.USER_UPDATED,
+            {
+               userId: user.userId,
+               accountId: user.accountId,
+               field: USER_PROFILE_SYNC_FIELDS.METADATA,
+               changes: metadata,
+            },
+         );
+
+         if (this.eventEmitter) {
+            this.eventEmitter.emit(
+               USER_DOMAIN_EVENTS.PROFILE_METADATA_UPDATED,
+               this.domainEventFactory.createProfileMetadataUpdated(user.userId, metadata),
+            );
+         }
+      }
+
+      // 6. Sync to graph database (always needed for any profile update)
+      await this.syncGraphWithFallback(user);
+
+      // 7. Update search index (aggregate update)
+      this.emitSearchIndexEvent(USER_EVENTS.UPDATED, user);
    }
 
-   async syncUserDeleted(userId: string, accountId: string): Promise<void> {
+   async syncUserDeleted(userId: string, accountId: string, previousUser?: UserEntity): Promise<void> {
+      if (previousUser?.username) {
+         await this.usernameBloomFilterService.removeUsername(previousUser.username);
+      }
+
       this.emitSearchDeleteEvent(userId);
 
       await this.outboxService.createOutboxEvent(userId, USER_AGGREGATES.USER, USER_OUTBOX_EVENTS.USER_DELETED, {

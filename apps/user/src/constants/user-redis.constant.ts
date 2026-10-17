@@ -1,5 +1,6 @@
 export const USER_REDIS_KEY_PREFIX = {
    BLOOM_USERNAME: 'user:bloom:username',
+   BLOOM_USERNAME_TEMP: 'user:bloom:username:temp',
    BLOOM_INITIALIZED: 'user:bloom:initialized:',
    PROFILE_PROJECTION: 'user:projection:profile:',
    ACTIVITY_PROJECTION: 'user:projection:activity:',
@@ -15,6 +16,14 @@ export const USER_REDIS_TTL = {
 
 export type UserRedisTtl = (typeof USER_REDIS_TTL)[keyof typeof USER_REDIS_TTL];
 
+export const USER_REDIS_FLAGS = {
+   INITIALIZED: '1',
+} as const;
+
+export const BLOOM_FILTER_NAMES = {
+   USERNAME: 'username',
+} as const;
+
 /**
  * Standard key builder utilities for User domain Redis caching.
  * Prevents key collision and eliminates string interpolation duplication.
@@ -27,10 +36,23 @@ export const UserRedisKeys = {
    bloomUsername: (): string => USER_REDIS_KEY_PREFIX.BLOOM_USERNAME,
 
    /**
+    * Redis temporary bitset key for atomic shadow swap during filter rebuilding.
+    * Key: `user:bloom:username:temp`
+    */
+   bloomUsernameTemp: (): string => USER_REDIS_KEY_PREFIX.BLOOM_USERNAME_TEMP,
+
+   /**
+    * Redis key marking whether the username bloom filter has been hydrated from database.
+    * Key: `user:bloom:initialized:username`
+    */
+   bloomUsernameInitialized: (): string => `${USER_REDIS_KEY_PREFIX.BLOOM_INITIALIZED}${BLOOM_FILTER_NAMES.USERNAME}`,
+
+   /**
     * Redis key marking whether a specific user bloom filter has been hydrated.
     * Pattern: `user:bloom:initialized:<filterName>`
     */
-   bloomInitialized: (filterName = 'username'): string => `${USER_REDIS_KEY_PREFIX.BLOOM_INITIALIZED}${filterName}`,
+   bloomInitialized: (filterName: string = BLOOM_FILTER_NAMES.USERNAME): string =>
+      `${USER_REDIS_KEY_PREFIX.BLOOM_INITIALIZED}${filterName}`,
 
    /**
     * Redis key for denormalized user profile read model projection.

@@ -38,6 +38,7 @@ export class UpdateUsernameOperation extends AbstractProfileOperation<
          userId: params.userId,
          username: params.username,
          options: params.options,
+         isActorAdmin: params.options?.isActorAdmin,
       };
    }
 
@@ -59,6 +60,7 @@ export class UpdateUsernameOperation extends AbstractProfileOperation<
          userId: context.userId,
          username: context.username,
          existingUser: context.existingUser ?? undefined,
+         isActorAdmin: context.isActorAdmin,
       });
    }
 
@@ -66,6 +68,7 @@ export class UpdateUsernameOperation extends AbstractProfileOperation<
       const targetUserId = context.existingUser?.userId ?? context.userId;
       const updatedUser = await this.userProfileRepository.update(targetUserId, {
          username: context.username,
+         lastUsernameChangedAt: new Date(),
       });
       context.updatedUser = updatedUser;
       return updatedUser;

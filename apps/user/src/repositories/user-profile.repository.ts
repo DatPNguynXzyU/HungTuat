@@ -227,6 +227,7 @@ export class UserProfileRepository implements IUserProfileRepository {
          where: { userId },
          data: {
             ...(username !== undefined && { username }),
+            ...(data.lastUsernameChangedAt !== undefined && { lastUsernameChangedAt: data.lastUsernameChangedAt }),
             ...(status !== undefined && { status }),
             ...(Object.keys(profileUpdates).length > 0 && {
                profile: {

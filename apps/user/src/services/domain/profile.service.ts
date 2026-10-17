@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { type UserEntity, type Gender } from '@user/entities';
-import type { CreateUserData } from '@user/repositories/user-profile.repository';
+import type { CreateUserData, UpdateUserData } from '@user/repositories/user-profile.repository';
 import type { UserDateOfBirthResponseDto } from '@contracts/user';
 import type { UploadUrlResponseDto } from '@contracts/media';
+import type { ProfileOperationOptions } from '@user/templates';
 import { ProfileQueryService } from '@user/services/domain/profile-query.service';
 import { ProfileLifecycleService } from '@user/services/domain/profile-lifecycle.service';
 import { ProfileAvatarService } from '@user/services/domain/profile-avatar.service';
@@ -62,19 +63,10 @@ export class ProfileService {
 
    async updateUserProfile(
       userId: string,
-      data: {
-         username?: string;
-         displayName?: string;
-         bio?: string;
-         avatar?: string;
-         coverImage?: string;
-         website?: string;
-         location?: string;
-         dateOfBirth?: Date;
-         gender?: Gender;
-      },
+      data: UpdateUserData,
+      options?: ProfileOperationOptions,
    ): Promise<UserEntity> {
-      return this.profileLifecycleService.updateUserProfile(userId, data);
+      return this.profileLifecycleService.updateUserProfile(userId, data, options);
    }
 
    async upsertUserProfile(
@@ -94,8 +86,8 @@ export class ProfileService {
       return this.profileLifecycleService.upsertUserProfile(userIdOrAccountId, data);
    }
 
-   async updateUsername(userId: string, username: string): Promise<UserEntity> {
-      return this.profileLifecycleService.updateUsername(userId, username);
+   async updateUsername(userId: string, username: string, options?: ProfileOperationOptions): Promise<UserEntity> {
+      return this.profileLifecycleService.updateUsername(userId, username, options);
    }
 
    async deleteUser(userId: string): Promise<UserEntity> {

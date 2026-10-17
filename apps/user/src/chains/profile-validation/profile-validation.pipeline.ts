@@ -3,6 +3,7 @@ import { Chain, type IChainHandler } from '@common';
 import type { ProfileValidationContext } from '@user/chains/profile-validation/profile-validation.context';
 import { ProfileIdentityHandler } from '@user/chains/profile-validation/profile-identity.handler';
 import { UsernameFormatHandler } from '@user/chains/profile-validation/username-format.handler';
+import { UsernameCooldownHandler } from '@user/chains/profile-validation/username-cooldown.handler';
 import { ProfileDetailsFormatHandler } from '@user/chains/profile-validation/profile-details-format.handler';
 import { UsernameAvailabilityHandler } from '@user/chains/profile-validation/username-availability.handler';
 
@@ -11,8 +12,9 @@ import { UsernameAvailabilityHandler } from '@user/chains/profile-validation/use
  * Executes steps sequentially:
  * 1. Profile Identity, Ownership & Activation Check
  * 2. Username Syntax & Domain Invariants Validation
- * 3. Profile Content Format Validation (DisplayName, DoB, Bio, Website)
- * 4. Username Availability & Uniqueness Check (Bloom Filter + DB)
+ * 3. Username 30-Day Cooldown Policy Validation
+ * 4. Profile Content Format Validation (DisplayName, DoB, Bio, Website)
+ * 5. Username Availability & Uniqueness Check (Bloom Filter + DB)
  */
 @Injectable()
 export class ProfileValidationPipeline extends Chain<ProfileValidationContext, void> {
@@ -21,6 +23,8 @@ export class ProfileValidationPipeline extends Chain<ProfileValidationContext, v
       handlersOrIdentity?: IChainHandler<ProfileValidationContext, void>[] | ProfileIdentityHandler,
       @Optional()
       usernameFormatHandler?: UsernameFormatHandler,
+      @Optional()
+      usernameCooldownHandler?: UsernameCooldownHandler,
       @Optional()
       detailsFormatHandler?: ProfileDetailsFormatHandler,
       @Optional()
@@ -32,6 +36,7 @@ export class ProfileValidationPipeline extends Chain<ProfileValidationContext, v
          const handlers = [
             handlersOrIdentity,
             usernameFormatHandler,
+            usernameCooldownHandler,
             detailsFormatHandler,
             usernameAvailabilityHandler,
          ].filter((h): h is NonNullable<typeof h> => Boolean(h));

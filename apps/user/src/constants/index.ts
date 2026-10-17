@@ -6,3 +6,4 @@ export * from '@user/constants/follow-validation.constant';
 export * from '@user/constants/user-factory.constant';
 export * from '@user/constants/follow-saga.constant';
 export * from '@user/constants/profile-operation.constant';
+export * from '@user/constants/profile-sync.constant';

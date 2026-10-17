@@ -28,6 +28,7 @@ import {
    UpdateUsernameOperation,
    DeleteProfileOperation,
    RestoreProfileOperation,
+   type ProfileOperationOptions,
 } from '@user/templates';
 
 /**
@@ -102,8 +103,12 @@ export class ProfileLifecycleService {
       return this.createProfileOp.execute(data);
    }
 
-   async updateUserProfile(userId: string, data: UpdateUserData): Promise<UserEntity> {
-      return this.updateProfileOp.execute({ userId, data });
+   async updateUserProfile(
+      userId: string,
+      data: UpdateUserData,
+      options?: ProfileOperationOptions,
+   ): Promise<UserEntity> {
+      return this.updateProfileOp.execute({ userId, data, options });
    }
 
    async upsertUserProfile(userIdOrAccountId: string, data: UpdateUserData): Promise<UserEntity> {
@@ -127,8 +132,8 @@ export class ProfileLifecycleService {
       }
    }
 
-   async updateUsername(userId: string, username: string): Promise<UserEntity> {
-      return this.updateUsernameOp.execute({ userId, username });
+   async updateUsername(userId: string, username: string, options?: ProfileOperationOptions): Promise<UserEntity> {
+      return this.updateUsernameOp.execute({ userId, username, options });
    }
 
    async deleteUser(userId: string): Promise<UserEntity> {

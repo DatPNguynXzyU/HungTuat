@@ -1,7 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { IServiceMessage, SERVICES } from '@common';
-import { CreateUserProfileDto, UpdateUserDto, UserDateOfBirthResponseDto, USER_PATTERNS } from '@contracts/user';
+import {
+   CreateUserProfileDto,
+   UserDateOfBirthResponseDto,
+   USER_PATTERNS,
+   UpdatePersonalInfoDto,
+} from '@contracts/user';
 import { firstValueFrom } from 'rxjs';
 import type { JwtPayload } from '@common/utils/jwt.util';
 
@@ -79,45 +84,69 @@ export class UsersService {
       );
    }
 
-   async updateUser(id: string, updateUserDto: UpdateUserDto, user?: JwtPayload): Promise<unknown> {
-      const message: IServiceMessage<{ id: string } & UpdateUserDto> = {
-         data: { id, ...updateUserDto },
-         user: user
-            ? {
-                 userId: user.sub,
-                 email: user.email,
-                 roles: user.roles || [],
-                 permissions: [],
-                 sessionId: user.jti,
-              }
-            : undefined,
+   private buildUserContext(user?: JwtPayload) {
+      return user
+         ? {
+              userId: user.sub,
+              email: user.email,
+              roles: user.roles || [],
+              permissions: [],
+              sessionId: user.jti,
+           }
+         : undefined;
+   }
+
+   async updateUsername(userId: string, username: string, user: JwtPayload): Promise<unknown> {
+      const message: IServiceMessage<{ userId: string; username: string }> = {
+         data: { userId, username },
+         user: this.buildUserContext(user),
       };
 
       return firstValueFrom(
-         this.userClient.send<unknown, IServiceMessage<{ id: string } & UpdateUserDto>>(
-            { cmd: USER_PATTERNS.UPDATE_USER_PROFILE },
+         this.userClient.send<unknown, IServiceMessage<{ userId: string; username: string }>>(
+            { cmd: USER_PATTERNS.UPDATE_USERNAME },
             message,
          ),
       );
    }
 
-   async upsertUser(id: string, updateUserDto: UpdateUserDto, user?: JwtPayload): Promise<unknown> {
-      const message: IServiceMessage<{ id: string } & UpdateUserDto> = {
-         data: { id, ...updateUserDto },
-         user: user
-            ? {
-                 userId: user.sub,
-                 email: user.email,
-                 roles: user.roles || [],
-                 permissions: [],
-                 sessionId: user.jti,
-              }
-            : undefined,
+   async updateDisplayName(userId: string, displayName: string, user: JwtPayload): Promise<unknown> {
+      return this.updatePartialProfile(userId, { displayName }, user);
+   }
+
+   async updateBio(userId: string, bio: string | undefined, user: JwtPayload): Promise<unknown> {
+      return this.updatePartialProfile(userId, { bio }, user);
+   }
+
+   async updatePersonalInfo(userId: string, dto: UpdatePersonalInfoDto, user: JwtPayload): Promise<unknown> {
+      return this.updatePartialProfile(userId, { dateOfBirth: dto.dateOfBirth, gender: dto.gender }, user);
+   }
+
+   async updateLocation(userId: string, location: string | undefined, user: JwtPayload): Promise<unknown> {
+      return this.updatePartialProfile(userId, { location }, user);
+   }
+
+   async updateWebsite(userId: string, website: string | undefined, user: JwtPayload): Promise<unknown> {
+      return this.updatePartialProfile(userId, { website }, user);
+   }
+
+   async updateCoverImage(userId: string, coverImage: string, user: JwtPayload): Promise<unknown> {
+      return this.updatePartialProfile(userId, { coverImage }, user);
+   }
+
+   private async updatePartialProfile(
+      userId: string,
+      fields: Record<string, unknown>,
+      user: JwtPayload,
+   ): Promise<unknown> {
+      const message: IServiceMessage<{ userId: string; id: string } & Record<string, unknown>> = {
+         data: { userId, id: userId, ...fields },
+         user: this.buildUserContext(user),
       };
 
       return firstValueFrom(
-         this.userClient.send<unknown, IServiceMessage<{ id: string } & UpdateUserDto>>(
-            { cmd: USER_PATTERNS.UPSERT_USER_PROFILE },
+         this.userClient.send<unknown, IServiceMessage<{ userId: string; id: string } & Record<string, unknown>>>(
+            { cmd: USER_PATTERNS.UPDATE_USER_PROFILE },
             message,
          ),
       );
@@ -125,10 +154,6 @@ export class UsersService {
 
    async getMyProfile(user: JwtPayload): Promise<unknown> {
       return this.getUserById(user.sub, user);
-   }
-
-   async updateMyProfile(updateUserDto: UpdateUserDto, user: JwtPayload): Promise<unknown> {
-      return this.updateUser(user.sub, updateUserDto, user);
    }
 
    async searchUsers(query: string, limit = 10, cursor?: string, user?: JwtPayload): Promise<unknown> {

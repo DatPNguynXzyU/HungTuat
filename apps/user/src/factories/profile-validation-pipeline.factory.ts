@@ -4,6 +4,7 @@ import {
    ProfileValidationPipeline,
    ProfileIdentityHandler,
    UsernameFormatHandler,
+   UsernameCooldownHandler,
    ProfileDetailsFormatHandler,
    UsernameAvailabilityHandler,
    type ProfileValidationContext,
@@ -35,6 +36,10 @@ export class ProfileValidationPipelineFactory implements IProfileValidationPipel
       return new UsernameFormatHandler();
    }
 
+   createUsernameCooldownHandler(): UsernameCooldownHandler {
+      return new UsernameCooldownHandler();
+   }
+
    createDetailsFormatHandler(): ProfileDetailsFormatHandler {
       return new ProfileDetailsFormatHandler();
    }
@@ -51,6 +56,7 @@ export class ProfileValidationPipelineFactory implements IProfileValidationPipel
       const handlers: IChainHandler<ProfileValidationContext, void>[] = [
          this.createIdentityHandler(),
          this.createUsernameFormatHandler(),
+         this.createUsernameCooldownHandler(),
          this.createDetailsFormatHandler(),
          this.createUsernameAvailabilityHandler(),
       ];

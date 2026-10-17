@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, type JwtPayload } from '@common';
+import { GenderDto } from '@contracts/user';
 import { UsersController } from '@/modules/users/users.controller';
 import { UsersService } from '@/modules/users/users.service';
 
@@ -10,8 +11,13 @@ describe('UsersController', () => {
       createProfile: jest.fn(),
       getAllUsers: jest.fn(),
       getUserById: jest.fn(),
-      updateUser: jest.fn(),
-      updateMyProfile: jest.fn(),
+      updateUsername: jest.fn(),
+      updateDisplayName: jest.fn(),
+      updateBio: jest.fn(),
+      updatePersonalInfo: jest.fn(),
+      updateLocation: jest.fn(),
+      updateWebsite: jest.fn(),
+      updateCoverImage: jest.fn(),
       getMyProfile: jest.fn(),
       getDateOfBirth: jest.fn(),
       searchUsers: jest.fn(),
@@ -90,12 +96,12 @@ describe('UsersController', () => {
       expect(result).toEqual({ id: 'u1' });
    });
 
-   it('should update user with user context', async () => {
-      mockUsersService.updateUser.mockResolvedValue({ id: 'u1', displayName: 'Updated' });
+   it('should update username via updateMyUsername', async () => {
+      mockUsersService.updateUsername.mockResolvedValue({ id: 'u1', username: 'new_john' });
 
-      const result = await controller.updateUser('u1', { displayName: 'Updated' }, mockUser);
-      expect(mockUsersService.updateUser).toHaveBeenCalledWith('u1', { displayName: 'Updated' }, mockUser);
-      expect(result).toEqual({ id: 'u1', displayName: 'Updated' });
+      const result = await controller.updateMyUsername({ username: 'new_john' }, mockUser);
+      expect(mockUsersService.updateUsername).toHaveBeenCalledWith(mockUser.sub, 'new_john', mockUser);
+      expect(result).toEqual({ id: 'u1', username: 'new_john' });
    });
 
    it('should get current user profile via getMyProfile', async () => {
@@ -110,19 +116,32 @@ describe('UsersController', () => {
       expect(result).toEqual({ id: 'u1', displayName: 'My Name', username: 'myusername' });
    });
 
-   it('should update current user profile via updateMyProfile', async () => {
-      mockUsersService.updateMyProfile.mockResolvedValue({
+   it('should update display name via updateMyDisplayName', async () => {
+      mockUsersService.updateDisplayName.mockResolvedValue({
          id: 'u1',
-         displayName: 'My Name',
-         username: 'myusername',
+         displayName: 'New Display Name',
       });
 
-      const result = await controller.updateMyProfile({ displayName: 'My Name', username: 'myusername' }, mockUser);
-      expect(mockUsersService.updateMyProfile).toHaveBeenCalledWith(
-         { displayName: 'My Name', username: 'myusername' },
+      const result = await controller.updateMyDisplayName({ displayName: 'New Display Name' }, mockUser);
+      expect(mockUsersService.updateDisplayName).toHaveBeenCalledWith(mockUser.sub, 'New Display Name', mockUser);
+      expect(result).toEqual({ id: 'u1', displayName: 'New Display Name' });
+   });
+
+   it('should update personal info via updateMyPersonalInfo', async () => {
+      const dob = '1995-05-20';
+      mockUsersService.updatePersonalInfo.mockResolvedValue({
+         id: 'u1',
+         dateOfBirth: dob,
+         gender: GenderDto.MALE,
+      });
+
+      const result = await controller.updateMyPersonalInfo({ dateOfBirth: dob, gender: GenderDto.MALE }, mockUser);
+      expect(mockUsersService.updatePersonalInfo).toHaveBeenCalledWith(
+         mockUser.sub,
+         { dateOfBirth: dob, gender: GenderDto.MALE },
          mockUser,
       );
-      expect(result).toEqual({ id: 'u1', displayName: 'My Name', username: 'myusername' });
+      expect(result).toEqual({ id: 'u1', dateOfBirth: dob, gender: GenderDto.MALE });
    });
 
    it('should get current user date of birth via getMyDateOfBirth', async () => {

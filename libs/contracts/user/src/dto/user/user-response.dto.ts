@@ -203,6 +203,13 @@ export class UserResponseDto {
    lastActiveAt?: Date | string | null;
 
    @ApiPropertyOptional({
+      description: 'Timestamp when username was last changed (used for 30-day cooldown enforcement)',
+      example: '2026-09-18T00:00:00.000Z',
+      nullable: true,
+   })
+   lastUsernameChangedAt?: Date | string | null;
+
+   @ApiPropertyOptional({
       description: 'User profile details (bio, avatar, display name, etc.)',
       type: () => UserProfileDto,
       nullable: true,

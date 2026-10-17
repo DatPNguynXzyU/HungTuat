@@ -6,6 +6,9 @@ import {
    UserDeletedEvent,
    UserRestoredEvent,
    UsernameChangedEvent,
+   DisplayNameChangedEvent,
+   BioChangedEvent,
+   ProfileMetadataUpdatedEvent,
    UserFollowedEvent,
    UserUnfollowedEvent,
    FollowRequestAcceptedEvent,
@@ -57,6 +60,32 @@ export class UserDomainEventFactory implements IUserDomainEventFactory {
       changedAt?: Date,
    ): UsernameChangedEvent {
       return new UsernameChangedEvent(userId, oldUsername, newUsername, changedAt);
+   }
+
+   static createDisplayNameChanged(
+      userId: string,
+      oldDisplayName: string | null,
+      newDisplayName: string | null,
+      changedAt?: Date,
+   ): DisplayNameChangedEvent {
+      return new DisplayNameChangedEvent(userId, oldDisplayName, newDisplayName, changedAt);
+   }
+
+   static createBioChanged(
+      userId: string,
+      oldBio: string | null,
+      newBio: string | null,
+      changedAt?: Date,
+   ): BioChangedEvent {
+      return new BioChangedEvent(userId, oldBio, newBio, changedAt);
+   }
+
+   static createProfileMetadataUpdated(
+      userId: string,
+      metadata: Record<string, unknown>,
+      updatedAt?: Date,
+   ): ProfileMetadataUpdatedEvent {
+      return new ProfileMetadataUpdatedEvent(userId, metadata, updatedAt);
    }
 
    static createUserFollowed(
@@ -131,6 +160,27 @@ export class UserDomainEventFactory implements IUserDomainEventFactory {
       changedAt?: Date,
    ): UsernameChangedEvent {
       return UserDomainEventFactory.createUsernameChanged(userId, oldUsername, newUsername, changedAt);
+   }
+
+   createDisplayNameChanged(
+      userId: string,
+      oldDisplayName: string | null,
+      newDisplayName: string | null,
+      changedAt?: Date,
+   ): DisplayNameChangedEvent {
+      return UserDomainEventFactory.createDisplayNameChanged(userId, oldDisplayName, newDisplayName, changedAt);
+   }
+
+   createBioChanged(userId: string, oldBio: string | null, newBio: string | null, changedAt?: Date): BioChangedEvent {
+      return UserDomainEventFactory.createBioChanged(userId, oldBio, newBio, changedAt);
+   }
+
+   createProfileMetadataUpdated(
+      userId: string,
+      metadata: Record<string, unknown>,
+      updatedAt?: Date,
+   ): ProfileMetadataUpdatedEvent {
+      return UserDomainEventFactory.createProfileMetadataUpdated(userId, metadata, updatedAt);
    }
 
    createUserFollowed(

@@ -35,6 +35,7 @@ export class UserEntityBuilder implements IBuilder<UserEntity> {
    private createdAt: Date = new Date();
    private updatedAt: Date = new Date();
    private lastActiveAt: Date | null = null;
+   private lastUsernameChangedAt: Date | null = null;
 
    private profile: UserProfileEntity | null = null;
    private stats: UserStatsEntity | null = null;
@@ -81,6 +82,14 @@ export class UserEntityBuilder implements IBuilder<UserEntity> {
     */
    withUsername(username?: string | null): this {
       this.username = username ?? null;
+      return this;
+   }
+
+   /**
+    * Sets the last username changed date.
+    */
+   withLastUsernameChangedAt(date?: Date | null): this {
+      this.lastUsernameChangedAt = date ?? null;
       return this;
    }
 
@@ -272,6 +281,7 @@ export class UserEntityBuilder implements IBuilder<UserEntity> {
       if (input.createdAt !== undefined) this.createdAt = input.createdAt;
       if (input.updatedAt !== undefined) this.updatedAt = input.updatedAt;
       if (input.lastActiveAt !== undefined) this.lastActiveAt = input.lastActiveAt;
+      if (input.lastUsernameChangedAt !== undefined) this.lastUsernameChangedAt = input.lastUsernameChangedAt;
 
       if (input.profile !== undefined) {
          this.withProfile(input.profile);
@@ -314,6 +324,7 @@ export class UserEntityBuilder implements IBuilder<UserEntity> {
          createdAt: user.createdAt,
          updatedAt: user.updatedAt,
          lastActiveAt: user.lastActiveAt,
+         lastUsernameChangedAt: user.lastUsernameChangedAt,
          profile: user.profile,
          stats: user.stats,
          settings: user.settings,
@@ -338,6 +349,7 @@ export class UserEntityBuilder implements IBuilder<UserEntity> {
          createdAt: this.createdAt,
          updatedAt: this.updatedAt,
          lastActiveAt: this.lastActiveAt,
+         lastUsernameChangedAt: this.lastUsernameChangedAt,
          profile: this.profile,
          stats: this.stats,
          settings: this.settings,

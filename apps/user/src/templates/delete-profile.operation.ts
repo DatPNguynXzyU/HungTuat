@@ -54,6 +54,6 @@ export class DeleteProfileOperation extends AbstractProfileOperation<
    protected async syncInfrastructure(context: DeleteProfileContext, _result: UserEntity): Promise<void> {
       const targetUserId = context.existingUser?.userId ?? context.userId;
       const accountId = context.existingUser?.accountId ?? context.accountId ?? '';
-      await this.profileSyncService.syncUserDeleted(targetUserId, accountId);
+      await this.profileSyncService.syncUserDeleted(targetUserId, accountId, context.existingUser ?? undefined);
    }
 }

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CommandHandler, checkOwnershipOrAdmin, type ICommandHandler } from '@common';
+import { CommandHandler, checkOwnershipOrAdmin, isActorAdmin, type ICommandHandler } from '@common';
 import type { UserEntity } from '@user/entities';
 import { ProfileService } from '@user/services/domain/profile.service';
 import { UpdateUsernameCommand } from '@user/commands/profile/update-username.command';
@@ -15,6 +15,7 @@ export class UpdateUsernameHandler implements ICommandHandler<UpdateUsernameComm
       if (user) {
          checkOwnershipOrAdmin(message, user.accountId);
       }
-      return this.profileService.updateUsername(user.userId, message.data.username);
+      const isAdmin = isActorAdmin(message);
+      return this.profileService.updateUsername(user.userId, message.data.username, { isActorAdmin: isAdmin });
    }
 }

@@ -5,6 +5,9 @@ import type {
    UserDeletedEvent,
    UserRestoredEvent,
    UsernameChangedEvent,
+   DisplayNameChangedEvent,
+   BioChangedEvent,
+   ProfileMetadataUpdatedEvent,
    UserFollowedEvent,
    UserUnfollowedEvent,
    FollowRequestAcceptedEvent,
@@ -40,6 +43,21 @@ export interface IUserDomainEventFactory {
       newUsername: string,
       changedAt?: Date,
    ): UsernameChangedEvent;
+
+   createDisplayNameChanged(
+      userId: string,
+      oldDisplayName: string | null,
+      newDisplayName: string | null,
+      changedAt?: Date,
+   ): DisplayNameChangedEvent;
+
+   createBioChanged(userId: string, oldBio: string | null, newBio: string | null, changedAt?: Date): BioChangedEvent;
+
+   createProfileMetadataUpdated(
+      userId: string,
+      metadata: Record<string, unknown>,
+      updatedAt?: Date,
+   ): ProfileMetadataUpdatedEvent;
 
    createUserFollowed(
       followId: string,

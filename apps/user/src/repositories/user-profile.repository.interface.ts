@@ -19,6 +19,7 @@ export interface CreateUserData {
 
 export interface UpdateUserData {
    username?: string;
+   lastUsernameChangedAt?: Date | null;
    displayName?: string;
    bio?: string;
    avatar?: string;

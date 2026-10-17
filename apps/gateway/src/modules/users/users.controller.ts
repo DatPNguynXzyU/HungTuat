@@ -35,7 +35,13 @@ import {
    AvatarSignatureResponseDto,
    CheckUsernameResponseDto,
    CreateUserProfileDto,
-   UpdateUserDto,
+   UpdateBioDto,
+   UpdateCoverImageDto,
+   UpdateDisplayNameDto,
+   UpdateLocationDto,
+   UpdatePersonalInfoDto,
+   UpdateUsernameDto,
+   UpdateWebsiteDto,
    USER_ERROR_CODES,
    USER_ERROR_REASONS,
    USER_RESPONSE_MESSAGES,
@@ -280,23 +286,26 @@ export class UsersController {
       return this.usersService.getDateOfBirth(userId);
    }
 
-   @Patch('me')
+   @Patch('me/username')
    @ApiCookieAuth()
    @ApiBearerAuth()
    @ApiOperation({
-      operationId: 'updateMyProfile',
-      summary: 'Update current authenticated user profile (displayName, username, gender, dateOfBirth, bio, etc.)',
+      operationId: 'updateMyUsername',
+      summary: 'Update username with 30-day modification cooldown',
+      description:
+         'Updates unique handle/username for the authenticated user. Enforces a 30-day cooldown between username changes. Administrators bypass cooldown.',
    })
    @ApiResponse({
       status: HttpStatus.OK,
-      description: 'User profile updated successfully.',
+      description: 'Username updated successfully.',
       type: UserResponseDto,
    })
    @ApiErrorResponses([
       {
          status: HttpStatus.BAD_REQUEST,
-         description: 'Validation failed for updated fields',
-         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED],
+         description: 'Invalid username format or 30-day modification cooldown active',
+         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED, USER_ERROR_CODES.USERNAME_CHANGE_COOLDOWN],
+         exampleParams: { daysRemaining: 24, hoursRemaining: 5, nextAvailableDate: '2026-11-15T00:00:00.000Z' },
       },
       {
          status: HttpStatus.UNAUTHORIZED,
@@ -315,9 +324,219 @@ export class UsersController {
          exampleParams: { username: 'new_username' },
       },
    ])
-   @ResponseMessage(USER_RESPONSE_MESSAGES.UPDATE_PROFILE_SUCCESS)
-   async updateMyProfile(@Body() updateUserDto: UpdateUserDto, @CurrentUser() user: JwtPayload): Promise<unknown> {
-      return this.usersService.updateMyProfile(updateUserDto, user);
+   @ResponseMessage(USER_RESPONSE_MESSAGES.UPDATE_USERNAME_SUCCESS)
+   async updateMyUsername(@Body() dto: UpdateUsernameDto, @CurrentUser() user: JwtPayload): Promise<unknown> {
+      return this.usersService.updateUsername(user.sub, dto.username, user);
+   }
+
+   @Patch('me/display-name')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({
+      operationId: 'updateMyDisplayName',
+      summary: 'Update public display name',
+      description: 'Updates the public profile display name for the authenticated user (2-50 characters).',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Display name updated successfully.',
+      type: UserResponseDto,
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failed for display name',
+         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+      },
+   ])
+   @ResponseMessage(USER_RESPONSE_MESSAGES.UPDATE_DISPLAY_NAME_SUCCESS)
+   async updateMyDisplayName(@Body() dto: UpdateDisplayNameDto, @CurrentUser() user: JwtPayload): Promise<unknown> {
+      return this.usersService.updateDisplayName(user.sub, dto.displayName, user);
+   }
+
+   @Patch('me/bio')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({
+      operationId: 'updateMyBio',
+      summary: 'Update biography description',
+      description: 'Updates the public bio for the authenticated user (maximum 500 characters).',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Biography updated successfully.',
+      type: UserResponseDto,
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failed for biography',
+         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+      },
+   ])
+   @ResponseMessage(USER_RESPONSE_MESSAGES.UPDATE_BIO_SUCCESS)
+   async updateMyBio(@Body() dto: UpdateBioDto, @CurrentUser() user: JwtPayload): Promise<unknown> {
+      return this.usersService.updateBio(user.sub, dto.bio, user);
+   }
+
+   @Patch('me/personal-info')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({
+      operationId: 'updateMyPersonalInfo',
+      summary: 'Update personal demographic info (date of birth and gender)',
+      description: 'Updates date of birth and gender together for the authenticated user.',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Personal information updated successfully.',
+      type: UserResponseDto,
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failed for date of birth or gender',
+         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+      },
+   ])
+   @ResponseMessage(USER_RESPONSE_MESSAGES.UPDATE_PERSONAL_INFO_SUCCESS)
+   async updateMyPersonalInfo(@Body() dto: UpdatePersonalInfoDto, @CurrentUser() user: JwtPayload): Promise<unknown> {
+      return this.usersService.updatePersonalInfo(user.sub, dto, user);
+   }
+
+   @Patch('me/location')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({
+      operationId: 'updateMyLocation',
+      summary: 'Update location address',
+      description: 'Updates the location string for the authenticated user (maximum 100 characters).',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Location updated successfully.',
+      type: UserResponseDto,
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failed for location',
+         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+      },
+   ])
+   @ResponseMessage(USER_RESPONSE_MESSAGES.UPDATE_LOCATION_SUCCESS)
+   async updateMyLocation(@Body() dto: UpdateLocationDto, @CurrentUser() user: JwtPayload): Promise<unknown> {
+      return this.usersService.updateLocation(user.sub, dto.location, user);
+   }
+
+   @Patch('me/website')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({
+      operationId: 'updateMyWebsite',
+      summary: 'Update personal or blog website URL',
+      description: 'Updates the website URL for the authenticated user (valid URL up to 255 characters).',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Website URL updated successfully.',
+      type: UserResponseDto,
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failed for website URL',
+         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+      },
+   ])
+   @ResponseMessage(USER_RESPONSE_MESSAGES.UPDATE_WEBSITE_SUCCESS)
+   async updateMyWebsite(@Body() dto: UpdateWebsiteDto, @CurrentUser() user: JwtPayload): Promise<unknown> {
+      return this.usersService.updateWebsite(user.sub, dto.website, user);
+   }
+
+   @Patch('me/cover-image')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({
+      operationId: 'updateMyCoverImage',
+      summary: 'Update profile cover banner image URL',
+      description: 'Updates the cover banner image URL for the authenticated user.',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Cover image updated successfully.',
+      type: UserResponseDto,
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failed for cover image URL',
+         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Unauthorized access or invalid token',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.NOT_FOUND,
+         description: 'User profile not found',
+         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
+      },
+   ])
+   @ResponseMessage(USER_RESPONSE_MESSAGES.UPDATE_COVER_IMAGE_SUCCESS)
+   async updateMyCoverImage(@Body() dto: UpdateCoverImageDto, @CurrentUser() user: JwtPayload): Promise<unknown> {
+      return this.usersService.updateCoverImage(user.sub, dto.coverImage, user);
    }
 
    @Post('me/avatar')
@@ -497,55 +716,5 @@ export class UsersController {
    @ResponseMessage(USER_RESPONSE_MESSAGES.GET_DETAIL_SUCCESS)
    async getUserById(@Param('id') id: string, @CurrentUser() user: JwtPayload): Promise<unknown> {
       return this.usersService.getUserById(id, user);
-   }
-
-   @Patch(':id')
-   @ApiCookieAuth()
-   @ApiBearerAuth()
-   @ApiOperation({
-      operationId: 'updateUser',
-      summary: 'Update user profile by ID',
-   })
-   @ApiParam({ name: 'id', description: 'User UUID identifier', example: '550e8400-e29b-41d4-a716-446655440000' })
-   @ApiResponse({
-      status: HttpStatus.OK,
-      description: 'User updated successfully.',
-      type: UserResponseDto,
-   })
-   @ApiErrorResponses([
-      {
-         status: HttpStatus.BAD_REQUEST,
-         description: 'Validation failed or invalid user ID',
-         errorCodes: [COMMON_ERROR_CODES.VALIDATION_FAILED, COMMON_ERROR_CODES.INVALID_REQUEST],
-      },
-      {
-         status: HttpStatus.UNAUTHORIZED,
-         description: 'Unauthorized access or invalid token',
-         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
-      },
-      {
-         status: HttpStatus.FORBIDDEN,
-         description: 'Forbidden if the user is not the owner or administrator',
-         errorCodes: [COMMON_ERROR_CODES.FORBIDDEN, COMMON_ERROR_CODES.NOT_OWNER_OR_ADMIN],
-      },
-      {
-         status: HttpStatus.NOT_FOUND,
-         description: 'User profile not found',
-         errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
-      },
-      {
-         status: HttpStatus.CONFLICT,
-         description: 'New username is already taken by another user',
-         errorCodes: [USER_ERROR_CODES.USERNAME_ALREADY_TAKEN],
-         exampleParams: { username: 'new_username' },
-      },
-   ])
-   @ResponseMessage(USER_RESPONSE_MESSAGES.UPDATE_SUCCESS)
-   async updateUser(
-      @Param('id') id: string,
-      @Body() updateUserDto: UpdateUserDto,
-      @CurrentUser() user: JwtPayload,
-   ): Promise<unknown> {
-      return this.usersService.updateUser(id, updateUserDto, user);
    }
 }
