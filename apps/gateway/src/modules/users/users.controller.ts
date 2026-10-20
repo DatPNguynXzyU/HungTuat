@@ -2,6 +2,7 @@ import {
    Body,
    Controller,
    Get,
+   HttpCode,
    HttpStatus,
    Param,
    Patch,
@@ -63,9 +64,12 @@ export class UsersController {
 
    @Public()
    @Get('check-username')
+   @HttpCode(HttpStatus.OK)
    @ApiOperation({
       operationId: 'checkUsername',
-      summary: 'Check if a username is available using fast Bloom Filter',
+      summary: 'Check if a username is available using fast Bloom Filter [gRPC]',
+      description:
+         'Verifies username availability via high-performance internal gRPC communication with User microservice.',
    })
    @ApiQuery({ name: 'username', required: true, description: 'Username to verify availability', example: 'john_doe' })
    @ApiResponse({

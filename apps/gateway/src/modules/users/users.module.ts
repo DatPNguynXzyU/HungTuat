@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 import { RmqModule, SERVICES } from '@common';
+import { USER_V1_GRPC_CLIENT, USER_V1_GRPC_PACKAGE_NAME, getUserProtoPath } from '@contracts/user';
+import { HEALTH_GRPC_PACKAGE_NAME, getHealthProtoPath } from '@contracts/health';
+import { GatewayConfigModule, GatewayConfigService } from '@/config';
 import { UsersController } from '@/modules/users/users.controller';
 import { UsersService } from '@/modules/users/users.service';
 
@@ -8,6 +12,21 @@ import { UsersService } from '@/modules/users/users.service';
       RmqModule.register({
          name: SERVICES.USER_SERVICE,
       }),
+      ClientsModule.registerAsync([
+         {
+            name: USER_V1_GRPC_CLIENT,
+            imports: [GatewayConfigModule],
+            inject: [GatewayConfigService],
+            useFactory: (configService: GatewayConfigService) => ({
+               transport: Transport.GRPC,
+               options: {
+                  package: [USER_V1_GRPC_PACKAGE_NAME, HEALTH_GRPC_PACKAGE_NAME],
+                  protoPath: [getUserProtoPath(), getHealthProtoPath()],
+                  url: configService.userGrpcUrl,
+               },
+            }),
+         },
+      ]),
    ],
    controllers: [UsersController],
    providers: [UsersService],

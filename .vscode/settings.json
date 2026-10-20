@@ -48,6 +48,15 @@
    "[json]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode"
    },
+   "[proto]": {
+      "editor.tabSize": 2
+   },
+   "[proto3]": {
+      "editor.tabSize": 2
+   },
+   "[protobuf]": {
+      "editor.tabSize": 2
+   },
    "cSpell.words": [
       "amqp",
       "codegrab",

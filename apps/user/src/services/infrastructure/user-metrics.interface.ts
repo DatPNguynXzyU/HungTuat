@@ -6,10 +6,11 @@ import {
    UserMetricSearchOperation,
    UserMetricStatus,
 } from '@user/constants';
+import type { IGrpcMetricsCollector } from '@common';
 
 export const USER_METRICS_SERVICE = Symbol('USER_METRICS_SERVICE');
 
-export interface IUserMetricsService {
+export interface IUserMetricsService extends IGrpcMetricsCollector {
    readonly contentType: string;
    getMetrics(): Promise<string>;
 

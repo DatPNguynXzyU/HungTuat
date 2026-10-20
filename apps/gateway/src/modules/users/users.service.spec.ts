@@ -1,7 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { of } from 'rxjs';
-import { SERVICES } from '@common';
-import { GenderDto, USER_PATTERNS } from '@contracts/user';
+import { of, throwError } from 'rxjs';
+import { GrpcStatus, SERVICES } from '@common';
+import {
+   GenderDto,
+   USER_ERROR_CODES,
+   USER_ERROR_REASONS,
+   USER_PATTERNS,
+   USER_V1_GRPC_CLIENT,
+   USER_V1_GRPC_SERVICE_NAME,
+} from '@contracts/user';
 import type { JwtPayload } from '@common';
 import { UsersService } from '@/modules/users/users.service';
 
@@ -9,6 +16,12 @@ describe('UsersService', () => {
    let service: UsersService;
    const mockUserClient = {
       send: jest.fn(),
+   };
+   const mockUserGrpcService = {
+      checkUsername: jest.fn(),
+   };
+   const mockUserGrpcClient = {
+      getService: jest.fn().mockReturnValue(mockUserGrpcService),
    };
    const mockUser: JwtPayload = {
       sub: 'auth-user-1',
@@ -27,22 +40,41 @@ describe('UsersService', () => {
                provide: SERVICES.USER_SERVICE,
                useValue: mockUserClient,
             },
+            {
+               provide: USER_V1_GRPC_CLIENT,
+               useValue: mockUserGrpcClient,
+            },
          ],
       }).compile();
 
       service = module.get<UsersService>(UsersService);
+      service.onModuleInit();
    });
 
    it('should be defined', () => {
       expect(service).toBeDefined();
    });
 
-   it('should send check_username message pattern', async () => {
-      mockUserClient.send.mockReturnValue(of({ available: true, username: 'john_doe' }));
+   it('should check username availability via gRPC client', async () => {
+      mockUserGrpcService.checkUsername.mockReturnValue(of({ available: true, username: 'john_doe' }));
 
       const result = await service.checkUsername('john_doe');
-      expect(mockUserClient.send).toHaveBeenCalledWith({ cmd: USER_PATTERNS.CHECK_USERNAME }, { username: 'john_doe' });
+      expect(mockUserGrpcClient.getService).toHaveBeenCalledWith(USER_V1_GRPC_SERVICE_NAME);
+      expect(mockUserGrpcService.checkUsername).toHaveBeenCalledWith({ username: 'john_doe' }, expect.anything());
       expect(result).toEqual({ available: true, username: 'john_doe' });
+   });
+
+   it('should map and handle gRPC errors when checking username', async () => {
+      const serializedError = {
+         message: JSON.stringify({
+            errorCode: USER_ERROR_CODES.INVALID_USERNAME_FORMAT,
+            params: { username: 'invalid_user', reason: USER_ERROR_REASONS.INVALID_FORMAT },
+         }),
+         code: GrpcStatus.INVALID_ARGUMENT,
+      };
+      mockUserGrpcService.checkUsername.mockReturnValue(throwError(() => serializedError));
+
+      await expect(service.checkUsername('invalid_user')).rejects.toThrow();
    });
 
    it('should send get_user_by_id message with user context', async () => {

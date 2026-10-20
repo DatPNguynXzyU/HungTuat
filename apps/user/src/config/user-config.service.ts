@@ -17,6 +17,14 @@ export class UserConfigService extends CommonConfigService {
       return this.configService.get(USER_ENV_KEYS.PORT, { infer: true });
    }
 
+   get grpcPort(): number {
+      return this.configService.get(USER_ENV_KEYS.GRPC_PORT, { infer: true });
+   }
+
+   get grpcUrl(): string {
+      return `0.0.0.0:${this.grpcPort}`;
+   }
+
    get database() {
       return {
          url: this.databaseUrl,

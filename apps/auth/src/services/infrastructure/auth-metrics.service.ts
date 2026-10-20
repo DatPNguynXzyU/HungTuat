@@ -39,6 +39,8 @@ export class AuthMetricsService implements IAuthMetricsService {
    private readonly loginDurationHistogram: Histogram<string>;
    private readonly passwordHashHistogram: Histogram<string>;
    private readonly otpOperationHistogram: Histogram<string>;
+   private readonly grpcRequestsCounter: Counter<string>;
+   private readonly grpcDurationHistogram: Histogram<string>;
 
    constructor(@Optional() customRegistry?: Registry) {
       this.registry = customRegistry || new Registry();
@@ -134,6 +136,21 @@ export class AuthMetricsService implements IAuthMetricsService {
          buckets: AUTH_METRICS_BUCKETS.OTP_OPERATION,
          registers: [this.registry],
       });
+
+      this.grpcRequestsCounter = new Counter({
+         name: AUTH_METRICS_NAMES.GRPC_REQUESTS,
+         help: AUTH_METRICS_HELP.GRPC_REQUESTS,
+         labelNames: [AUTH_METRICS_LABELS.SERVICE, AUTH_METRICS_LABELS.METHOD, AUTH_METRICS_LABELS.STATUS],
+         registers: [this.registry],
+      });
+
+      this.grpcDurationHistogram = new Histogram({
+         name: AUTH_METRICS_NAMES.GRPC_REQUEST_DURATION,
+         help: AUTH_METRICS_HELP.GRPC_REQUEST_DURATION,
+         labelNames: [AUTH_METRICS_LABELS.SERVICE, AUTH_METRICS_LABELS.METHOD, AUTH_METRICS_LABELS.STATUS],
+         buckets: AUTH_METRICS_BUCKETS.GRPC_REQUEST_DURATION,
+         registers: [this.registry],
+      });
    }
 
    get contentType(): string {
@@ -218,6 +235,22 @@ export class AuthMetricsService implements IAuthMetricsService {
             [AUTH_METRICS_LABELS.OPERATION]: operation,
          },
          durationSeconds,
+      );
+   }
+
+   recordGrpcCall(params: { service: string; method: string; status: string; durationSeconds: number }): void {
+      this.grpcRequestsCounter.inc({
+         [AUTH_METRICS_LABELS.SERVICE]: params.service,
+         [AUTH_METRICS_LABELS.METHOD]: params.method,
+         [AUTH_METRICS_LABELS.STATUS]: params.status,
+      });
+      this.grpcDurationHistogram.observe(
+         {
+            [AUTH_METRICS_LABELS.SERVICE]: params.service,
+            [AUTH_METRICS_LABELS.METHOD]: params.method,
+            [AUTH_METRICS_LABELS.STATUS]: params.status,
+         },
+         params.durationSeconds,
       );
    }
 

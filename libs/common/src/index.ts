@@ -19,3 +19,4 @@ export * from '@common/types';
 export * from '@common/domain';
 export * from '@common/patterns';
 export * from '@common/queues';
+export * from '@common/grpc-health';

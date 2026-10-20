@@ -6,6 +6,7 @@ export const AUTH_ENV_KEYS = {
    ARGON2_SECRET: 'ARGON2_SECRET',
    ARGON2_SALT: 'ARGON2_SALT',
    PORT: 'PORT',
+   GRPC_PORT: 'GRPC_PORT',
 } as const;
 
 export type AuthEnvKey = (typeof AUTH_ENV_KEYS)[keyof typeof AUTH_ENV_KEYS];
@@ -23,6 +24,7 @@ export const authEnvSchema = sharedEnvSchema.extend({
    ARGON2_SECRET: z.string().default('default-argon2-secret-key'),
    ARGON2_SALT: z.string().default('default-argon2-salt-key'),
    PORT: z.coerce.number().int().positive().default(3001),
+   GRPC_PORT: z.coerce.number().int().positive().default(50051),
 });
 
 export type AuthEnvConfig = z.infer<typeof authEnvSchema>;

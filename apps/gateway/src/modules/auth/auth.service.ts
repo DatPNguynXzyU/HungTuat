@@ -1,8 +1,17 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { IDeviceInfo, SERVICES } from '@common';
+import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
+import { ClientProxy, type ClientGrpc } from '@nestjs/microservices';
+import { createGrpcMetadata, handleGrpcError, IDeviceInfo, SERVICE_NAMES, SERVICES } from '@common';
+import {
+   HEALTH_GRPC_SERVICE_NAME,
+   ServingStatus,
+   type IHealthCheckResponse,
+   type IHealthGrpcService,
+} from '@contracts/health';
 import {
    AUTH_PATTERNS,
+   AUTH_V1_GRPC_CLIENT,
+   AUTH_V1_GRPC_SERVICE_NAME,
+   type IAuthV1GrpcService,
    ChangePasswordDto,
    ChangePasswordResponseDto,
    IAuditLogListResult,
@@ -29,21 +38,42 @@ export type ValidateTokenResponse = IValidateTokenResult;
 export type RevokeTokenResponse = IRevokeTokenResult;
 
 @Injectable()
-export class AuthService {
-   constructor(@Inject(SERVICES.AUTH_SERVICE) private readonly authClient: ClientProxy) {}
+export class AuthService implements OnModuleInit {
+   private authGrpcService!: IAuthV1GrpcService;
+
+   constructor(
+      @Inject(SERVICES.AUTH_SERVICE) private readonly authClient: ClientProxy,
+      @Inject(AUTH_V1_GRPC_CLIENT) private readonly authGrpcClient: ClientGrpc,
+   ) {}
+
+   onModuleInit(): void {
+      this.authGrpcService = this.authGrpcClient.getService<IAuthV1GrpcService>(AUTH_V1_GRPC_SERVICE_NAME);
+   }
+
+   async checkEmail(email: string, correlationId?: string): Promise<{ available: boolean; email: string }> {
+      try {
+         const metadata = createGrpcMetadata({
+            correlationId,
+            callerService: SERVICE_NAMES.GATEWAY,
+         });
+         return await firstValueFrom(this.authGrpcService.checkEmail({ email }, metadata));
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async checkGrpcHealth(): Promise<IHealthCheckResponse> {
+      try {
+         const healthService = this.authGrpcClient.getService<IHealthGrpcService>(HEALTH_GRPC_SERVICE_NAME);
+         return await firstValueFrom(healthService.check({ service: AUTH_V1_GRPC_SERVICE_NAME }));
+      } catch {
+         return { status: ServingStatus.NOT_SERVING };
+      }
+   }
 
    async getJwks(): Promise<IJwksResponse> {
       return firstValueFrom(
          this.authClient.send<IJwksResponse, Record<string, never>>({ cmd: AUTH_PATTERNS.GET_JWKS }, {}),
-      );
-   }
-
-   async checkEmail(email: string): Promise<{ available: boolean; email: string }> {
-      return firstValueFrom(
-         this.authClient.send<{ available: boolean; email: string }, { email: string }>(
-            { cmd: AUTH_PATTERNS.CHECK_EMAIL },
-            { email },
-         ),
       );
    }
 

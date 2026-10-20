@@ -1,7 +1,23 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { COMMAND_BUS, CommandBus, RedisModule, RmqModule, SERVICES, type ICommandHandler } from '@common';
+import {
+   COMMAND_BUS,
+   CommandBus,
+   DatabaseHealthIndicator,
+   GRPC_METRICS_COLLECTOR,
+   GrpcHealthModule,
+   GrpcLoggingInterceptor,
+   GrpcMetricsInterceptor,
+   HEALTH_INDICATOR_NAMES,
+   RedisHealthIndicator,
+   RedisModule,
+   RedisService,
+   RmqModule,
+   SERVICES,
+   type ICommandHandler,
+} from '@common';
+import { PrismaService } from '@auth/prisma';
 import { AuthController } from '@auth/auth.controller';
 import { AuthConfigModule } from '@auth/config';
 import { AuthLoggerModule } from '@auth/logger';
@@ -9,7 +25,7 @@ import { OutboxModule } from '@auth/outbox';
 import { PrismaModule } from '@auth/prisma';
 import { UnitOfWorkModule } from '@auth/unit-of-work';
 import { AUTH_COMMAND_HANDLERS } from '@auth/commands';
-import { NOTIFICATION_ADAPTER, RabbitMqNotificationAdapter } from '@auth/adapters';
+import { NOTIFICATION_ADAPTER, RabbitMqNotificationAdapter, AuthGrpcController } from '@auth/adapters';
 import {
    ACCOUNT_REPOSITORY,
    AccountRepository,
@@ -90,13 +106,21 @@ import {
       AuthLoggerModule,
       PrismaModule,
       RedisModule,
+      GrpcHealthModule.registerAsync({
+         imports: [PrismaModule, RedisModule],
+         inject: [PrismaService, RedisService],
+         useFactory: (prisma: PrismaService, redisService: RedisService) => [
+            DatabaseHealthIndicator.fromPrisma(prisma, HEALTH_INDICATOR_NAMES.DATABASE),
+            new RedisHealthIndicator(redisService, HEALTH_INDICATOR_NAMES.REDIS),
+         ],
+      }),
       OutboxModule,
       UnitOfWorkModule,
       RmqModule.register({
          name: SERVICES.NOTIFICATION_SERVICE,
       }),
    ],
-   controllers: [AuthController, AuthMetricsController],
+   controllers: [AuthController, AuthMetricsController, AuthGrpcController],
    providers: [
       // Domain Event Handlers
       UserRegisteredEventHandler,
@@ -157,6 +181,12 @@ import {
          provide: AUTH_METRICS_SERVICE,
          useExisting: AuthMetricsService,
       },
+      {
+         provide: GRPC_METRICS_COLLECTOR,
+         useExisting: AUTH_METRICS_SERVICE,
+      },
+      GrpcLoggingInterceptor,
+      GrpcMetricsInterceptor,
       PasswordHasherService,
       {
          provide: PASSWORD_HASHER,

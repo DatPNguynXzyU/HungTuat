@@ -9,6 +9,8 @@
       "lint": "eslint \"src/**/*.ts\" --fix"
    },
    "dependencies": {
+      "@contracts/health": "workspace:*",
+      "@grpc/grpc-js": "^1.14.6",
       "@nebula-contrib/nebula-nodejs": "^3.0.3",
       "@nestjs/common": "^11.0.1",
       "@nestjs/config": "^4.0.4",

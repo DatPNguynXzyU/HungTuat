@@ -1,26 +1,56 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { IServiceMessage, SERVICES } from '@common';
+import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
+import { ClientProxy, type ClientGrpc } from '@nestjs/microservices';
+import { createGrpcMetadata, handleGrpcError, IServiceMessage, SERVICE_NAMES, SERVICES } from '@common';
+import {
+   HEALTH_GRPC_SERVICE_NAME,
+   ServingStatus,
+   type IHealthCheckResponse,
+   type IHealthGrpcService,
+} from '@contracts/health';
 import {
    CreateUserProfileDto,
    UserDateOfBirthResponseDto,
    USER_PATTERNS,
    UpdatePersonalInfoDto,
+   USER_V1_GRPC_CLIENT,
+   USER_V1_GRPC_SERVICE_NAME,
+   type IUserV1GrpcService,
 } from '@contracts/user';
 import { firstValueFrom } from 'rxjs';
 import type { JwtPayload } from '@common/utils/jwt.util';
 
 @Injectable()
-export class UsersService {
-   constructor(@Inject(SERVICES.USER_SERVICE) private readonly userClient: ClientProxy) {}
+export class UsersService implements OnModuleInit {
+   private userGrpcService!: IUserV1GrpcService;
 
-   async checkUsername(username: string): Promise<{ available: boolean; username: string }> {
-      return firstValueFrom(
-         this.userClient.send<{ available: boolean; username: string }, { username: string }>(
-            { cmd: USER_PATTERNS.CHECK_USERNAME },
-            { username },
-         ),
-      );
+   constructor(
+      @Inject(SERVICES.USER_SERVICE) private readonly userClient: ClientProxy,
+      @Inject(USER_V1_GRPC_CLIENT) private readonly userGrpcClient: ClientGrpc,
+   ) {}
+
+   onModuleInit(): void {
+      this.userGrpcService = this.userGrpcClient.getService<IUserV1GrpcService>(USER_V1_GRPC_SERVICE_NAME);
+   }
+
+   async checkUsername(username: string, correlationId?: string): Promise<{ available: boolean; username: string }> {
+      try {
+         const metadata = createGrpcMetadata({
+            correlationId,
+            callerService: SERVICE_NAMES.GATEWAY,
+         });
+         return await firstValueFrom(this.userGrpcService.checkUsername({ username }, metadata));
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async checkGrpcHealth(): Promise<IHealthCheckResponse> {
+      try {
+         const healthService = this.userGrpcClient.getService<IHealthGrpcService>(HEALTH_GRPC_SERVICE_NAME);
+         return await firstValueFrom(healthService.check({ service: USER_V1_GRPC_SERVICE_NAME }));
+      } catch {
+         return { status: ServingStatus.NOT_SERVING };
+      }
    }
 
    async createProfile(createUserProfileDto: CreateUserProfileDto, user: JwtPayload): Promise<unknown> {

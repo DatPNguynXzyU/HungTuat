@@ -26,3 +26,10 @@
    - Every API endpoint that can throw exceptions must be documented with `@ApiErrorResponse` or `@ApiErrorResponses` from `@common`.
    - Multi-step workflows (OTP registration, password change, etc.) must define explicit `operationId` and OpenAPI 3.0 `links`.
    - For detailed rules and code examples, see [swagger-openapi-guidelines.md](.agent/rules/swagger-openapi-guidelines.md).
+
+6. **gRPC & Proto File Versioning Strategy**:
+   - All `.proto` files must be organized under version subdirectories (e.g. `proto/v1/auth.proto`).
+   - Package declarations must explicitly include the version (`package auth.v1;`).
+   - Constants must be dynamically composed using domain and version tokens (`buildGrpcPackageName(domain, version)`). Do not hardcode package name strings.
+   - For detailed rules and evolution lifecycle, see [grpc-proto-versioning-guidelines.md](.agents/rules/grpc-proto-versioning-guidelines.md).
+

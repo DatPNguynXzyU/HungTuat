@@ -58,7 +58,9 @@
          "@contracts/media": ["libs/contracts/media/src"],
          "@contracts/media/*": ["libs/contracts/media/src/*"],
          "@contracts/post": ["libs/contracts/post/src"],
-         "@contracts/post/*": ["libs/contracts/post/src/*"]
+         "@contracts/post/*": ["libs/contracts/post/src/*"],
+         "@contracts/health": ["libs/contracts/health/src"],
+         "@contracts/health/*": ["libs/contracts/health/src/*"]
       },
       "jsx": "react-jsx"
    }

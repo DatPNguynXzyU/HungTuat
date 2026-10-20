@@ -11,6 +11,8 @@ export const USER_METRICS_NAMES = {
    GRAPH_SYNC_DURATION: 'user_graph_sync_duration_seconds',
    TOTAL_USERS: 'user_total_users',
    TOTAL_FOLLOWS: 'user_total_follows',
+   GRPC_REQUESTS: 'user_grpc_requests_total',
+   GRPC_REQUEST_DURATION: 'user_grpc_request_duration_seconds',
 } as const;
 
 export const USER_METRICS_HELP = {
@@ -24,17 +26,22 @@ export const USER_METRICS_HELP = {
    GRAPH_SYNC_DURATION: 'Duration of graph sync operations in seconds',
    TOTAL_USERS: 'Current total count of registered users in system',
    TOTAL_FOLLOWS: 'Current total count of active follow relationships',
+   GRPC_REQUESTS: 'Total number of gRPC requests handled',
+   GRPC_REQUEST_DURATION: 'Duration of gRPC request handling in seconds',
 } as const;
 
 export const USER_METRICS_LABELS = {
    STATUS: 'status',
    OPERATION: 'operation',
+   SERVICE: 'service',
+   METHOD: 'method',
 } as const;
 
 export const USER_METRICS_BUCKETS: {
    readonly MEDIA_DURATION: number[];
    readonly SEARCH_DURATION: number[];
    readonly GRAPH_SYNC_DURATION: number[];
+   readonly GRPC_REQUEST_DURATION: number[];
 } = {
    // Media operations: 50ms to 10s (network upload & signatures)
    MEDIA_DURATION: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
@@ -44,6 +51,9 @@ export const USER_METRICS_BUCKETS: {
 
    // Graph sync operations: 10ms to 2s (Nebula Graph write & queue)
    GRAPH_SYNC_DURATION: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2],
+
+   // gRPC request duration: 5ms to 5s
+   GRPC_REQUEST_DURATION: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
 };
 
 export const USER_METRICS_STATUS = {

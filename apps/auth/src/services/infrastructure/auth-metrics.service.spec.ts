@@ -170,6 +170,23 @@ describe('AuthMetricsService', () => {
             `${AUTH_METRICS_NAMES.OTP_OPERATION_DURATION}_count{${AUTH_METRICS_LABELS.OPERATION}="${AUTH_METRICS_OTP_OPERATIONS.VERIFY}"} 1`,
          );
       });
+
+      it('should record gRPC metrics properly', async () => {
+         service.recordGrpcCall({
+            service: 'AuthGrpcController',
+            method: 'checkEmail',
+            status: 'OK',
+            durationSeconds: 0.042,
+         });
+
+         const metrics = await service.getMetrics();
+         expect(metrics).toContain(
+            `${AUTH_METRICS_NAMES.GRPC_REQUESTS}{${AUTH_METRICS_LABELS.SERVICE}="AuthGrpcController",${AUTH_METRICS_LABELS.METHOD}="checkEmail",${AUTH_METRICS_LABELS.STATUS}="OK"} 1`,
+         );
+         expect(metrics).toContain(
+            `${AUTH_METRICS_NAMES.GRPC_REQUEST_DURATION}_count{${AUTH_METRICS_LABELS.SERVICE}="AuthGrpcController",${AUTH_METRICS_LABELS.METHOD}="checkEmail",${AUTH_METRICS_LABELS.STATUS}="OK"} 1`,
+         );
+      });
    });
 
    describe('Utilities', () => {

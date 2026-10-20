@@ -19,7 +19,10 @@
          "entryFile": "main",
          "sourceRoot": "apps/auth/src",
          "compilerOptions": {
-            "tsConfigPath": "apps/auth/tsconfig.app.json"
+            "tsConfigPath": "apps/auth/tsconfig.app.json",
+            "assets": [
+               { "include": "**/*.proto", "watchAssets": true }
+            ]
          }
       },
       "user": {
@@ -28,7 +31,10 @@
          "entryFile": "main",
          "sourceRoot": "apps/user/src",
          "compilerOptions": {
-            "tsConfigPath": "apps/user/tsconfig.app.json"
+            "tsConfigPath": "apps/user/tsconfig.app.json",
+            "assets": [
+               { "include": "**/*.proto", "watchAssets": true }
+            ]
          }
       },
       "common": {
@@ -85,7 +91,10 @@
          "entryFile": "index",
          "sourceRoot": "libs/contracts/auth/src",
          "compilerOptions": {
-            "tsConfigPath": "libs/contracts/auth/tsconfig.lib.json"
+            "tsConfigPath": "libs/contracts/auth/tsconfig.lib.json",
+            "assets": [
+               { "include": "**/*.proto", "watchAssets": true }
+            ]
          }
       },
       "contracts-user": {
@@ -94,7 +103,10 @@
          "entryFile": "index",
          "sourceRoot": "libs/contracts/user/src",
          "compilerOptions": {
-            "tsConfigPath": "libs/contracts/user/tsconfig.lib.json"
+            "tsConfigPath": "libs/contracts/user/tsconfig.lib.json",
+            "assets": [
+               { "include": "**/*.proto", "watchAssets": true }
+            ]
          }
       },
       "contracts-notification": {
@@ -140,6 +152,18 @@
          "sourceRoot": "libs/contracts/post/src",
          "compilerOptions": {
             "tsConfigPath": "libs/contracts/post/tsconfig.lib.json"
+         }
+      },
+      "contracts-health": {
+         "type": "library",
+         "root": "libs/contracts/health",
+         "entryFile": "index",
+         "sourceRoot": "libs/contracts/health/src",
+         "compilerOptions": {
+            "tsConfigPath": "libs/contracts/health/tsconfig.lib.json",
+            "assets": [
+               { "include": "**/*.proto", "watchAssets": true }
+            ]
          }
       }
    }

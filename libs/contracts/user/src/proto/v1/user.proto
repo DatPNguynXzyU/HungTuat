@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package user.v1;
+
+service UserService {
+  rpc CheckUsername (CheckUsernameRequest) returns (CheckUsernameResponse);
+}
+
+message CheckUsernameRequest {
+  string username = 1;
+}
+
+message CheckUsernameResponse {
+  bool available = 1;
+  string username = 2;
+}

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CacheHealthState, HealthStatus } from '@common/constants/health.constant';
+import { ServingStatus } from '@contracts/health';
 
 export class RedisHealthDto {
    @ApiProperty({
@@ -47,4 +48,27 @@ export class HealthCheckResponseDto {
       type: RedisHealthDto,
    })
    redis?: RedisHealthDto;
+}
+
+export class GrpcServiceHealthDto {
+   @ApiProperty({
+      description: 'Service serving status',
+      enum: ServingStatus,
+      example: ServingStatus.SERVING,
+   })
+   status!: ServingStatus;
+}
+
+export class GrpcHealthResponseDto {
+   @ApiProperty({
+      description: 'Auth gRPC microservice health status',
+      type: GrpcServiceHealthDto,
+   })
+   auth!: GrpcServiceHealthDto;
+
+   @ApiProperty({
+      description: 'User gRPC microservice health status',
+      type: GrpcServiceHealthDto,
+   })
+   user!: GrpcServiceHealthDto;
 }

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package auth.v1;
+
+service AuthService {
+  rpc CheckEmail (CheckEmailRequest) returns (CheckEmailResponse);
+}
+
+message CheckEmailRequest {
+  string email = 1;
+}
+
+message CheckEmailResponse {
+  bool available = 1;
+  string email = 2;
+}

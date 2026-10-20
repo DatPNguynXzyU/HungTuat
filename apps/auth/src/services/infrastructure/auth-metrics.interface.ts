@@ -7,6 +7,7 @@ import {
    AuthMetricTokenOperation,
    AuthMetricTokenType,
 } from '@auth/constants';
+import type { IGrpcMetricsCollector } from '@common';
 
 export const AUTH_METRICS_SERVICE = Symbol('AUTH_METRICS_SERVICE');
 
@@ -17,7 +18,7 @@ export type OtpType = AuthMetricOtpType;
 export type SessionOperation = AuthMetricSessionOperation;
 export type TokenGenerationType = AuthMetricTokenType;
 
-export interface IAuthMetricsService {
+export interface IAuthMetricsService extends IGrpcMetricsCollector {
    readonly contentType: string;
    getMetrics(): Promise<string>;
 

@@ -3,6 +3,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
    CacheHealthState,
    CacheService,
+   GrpcHealthResponseDto,
    HEALTH_RESPONSE_MESSAGES,
    HealthCheckResponseDto,
    HealthStatus,
@@ -10,11 +11,18 @@ import {
    RedisHealthDto,
    ResponseMessage,
 } from '@common';
+import { ServingStatus } from '@contracts/health';
+import { AuthService } from '@/modules/auth/auth.service';
+import { UsersService } from '@/modules/users/users.service';
 
 @ApiTags('Health')
 @Controller()
 export class HealthController {
-   constructor(@Optional() private readonly cacheService?: CacheService) {}
+   constructor(
+      @Optional() private readonly cacheService?: CacheService,
+      @Optional() private readonly authService?: AuthService,
+      @Optional() private readonly usersService?: UsersService,
+   ) {}
 
    @Public()
    @Get()
@@ -81,5 +89,33 @@ export class HealthController {
          };
       }
       return this.cacheService.healthCheck();
+   }
+
+   @Public()
+   @Get(['health/grpc', 'api/v1/health/grpc'])
+   @HttpCode(HttpStatus.OK)
+   @ApiOperation({
+      operationId: 'healthCheckGrpc',
+      summary: 'gRPC Microservices Health Check',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Downstream gRPC microservices health status',
+      type: GrpcHealthResponseDto,
+   })
+   @ResponseMessage(HEALTH_RESPONSE_MESSAGES.HEALTH_CHECK_SUCCESS)
+   async checkGrpc(): Promise<GrpcHealthResponseDto> {
+      const [authResult, userResult] = await Promise.allSettled([
+         this.authService ? this.authService.checkGrpcHealth() : Promise.resolve({ status: ServingStatus.UNKNOWN }),
+         this.usersService ? this.usersService.checkGrpcHealth() : Promise.resolve({ status: ServingStatus.UNKNOWN }),
+      ]);
+
+      const authStatus = authResult.status === 'fulfilled' ? authResult.value.status : ServingStatus.NOT_SERVING;
+      const userStatus = userResult.status === 'fulfilled' ? userResult.value.status : ServingStatus.NOT_SERVING;
+
+      return {
+         auth: { status: authStatus },
+         user: { status: userStatus },
+      };
    }
 }

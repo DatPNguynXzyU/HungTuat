@@ -3,6 +3,7 @@ import { sharedEnvSchema } from '@common';
 
 export const USER_ENV_KEYS = {
    PORT: 'PORT',
+   GRPC_PORT: 'GRPC_PORT',
    SERVICE_NAME: 'SERVICE_NAME',
    POSTGRES_USER: 'POSTGRES_USER',
    POSTGRES_PASSWORD: 'POSTGRES_PASSWORD',
@@ -20,6 +21,7 @@ export type UserEnvKey = (typeof USER_ENV_KEYS)[keyof typeof USER_ENV_KEYS];
 
 export const userEnvSchema = sharedEnvSchema.extend({
    PORT: z.coerce.number().int().positive().default(3002),
+   GRPC_PORT: z.coerce.number().int().positive().default(50052),
    SERVICE_NAME: z.string().default('user-service'),
    POSTGRES_USER: z.string().default('postgres'),
    POSTGRES_PASSWORD: z.string().default('postgres'),

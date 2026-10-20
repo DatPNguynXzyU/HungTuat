@@ -30,6 +30,8 @@ export class UserMetricsService implements IUserMetricsService {
    private readonly mediaDurationHistogram: Histogram<string>;
    private readonly searchDurationHistogram: Histogram<string>;
    private readonly graphSyncDurationHistogram: Histogram<string>;
+   private readonly grpcRequestsCounter: Counter<string>;
+   private readonly grpcDurationHistogram: Histogram<string>;
 
    // Gauges
    private readonly totalUsersGauge: Gauge<string>;
@@ -114,6 +116,21 @@ export class UserMetricsService implements IUserMetricsService {
          help: USER_METRICS_HELP.TOTAL_FOLLOWS,
          registers: [this.registry],
       });
+
+      this.grpcRequestsCounter = new Counter({
+         name: USER_METRICS_NAMES.GRPC_REQUESTS,
+         help: USER_METRICS_HELP.GRPC_REQUESTS,
+         labelNames: [USER_METRICS_LABELS.SERVICE, USER_METRICS_LABELS.METHOD, USER_METRICS_LABELS.STATUS],
+         registers: [this.registry],
+      });
+
+      this.grpcDurationHistogram = new Histogram({
+         name: USER_METRICS_NAMES.GRPC_REQUEST_DURATION,
+         help: USER_METRICS_HELP.GRPC_REQUEST_DURATION,
+         labelNames: [USER_METRICS_LABELS.SERVICE, USER_METRICS_LABELS.METHOD, USER_METRICS_LABELS.STATUS],
+         buckets: USER_METRICS_BUCKETS.GRPC_REQUEST_DURATION,
+         registers: [this.registry],
+      });
    }
 
    get contentType(): string {
@@ -180,6 +197,22 @@ export class UserMetricsService implements IUserMetricsService {
 
    setTotalFollows(count: number): void {
       this.totalFollowsGauge.set(count);
+   }
+
+   recordGrpcCall(params: { service: string; method: string; status: string; durationSeconds: number }): void {
+      this.grpcRequestsCounter.inc({
+         [USER_METRICS_LABELS.SERVICE]: params.service,
+         [USER_METRICS_LABELS.METHOD]: params.method,
+         [USER_METRICS_LABELS.STATUS]: params.status,
+      });
+      this.grpcDurationHistogram.observe(
+         {
+            [USER_METRICS_LABELS.SERVICE]: params.service,
+            [USER_METRICS_LABELS.METHOD]: params.method,
+            [USER_METRICS_LABELS.STATUS]: params.status,
+         },
+         params.durationSeconds,
+      );
    }
 
    // Utility methods

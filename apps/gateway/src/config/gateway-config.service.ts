@@ -80,4 +80,12 @@ export class GatewayConfigService extends CommonConfigService {
          longLimit: this.configService.get(ENV_KEYS.THROTTLE_LONG_LIMIT, { infer: true }),
       };
    }
+
+   get authGrpcUrl(): string {
+      return this.configService.get(ENV_KEYS.AUTH_GRPC_URL, { infer: true }) || 'localhost:50051';
+   }
+
+   get userGrpcUrl(): string {
+      return this.configService.get(ENV_KEYS.USER_GRPC_URL, { infer: true }) || 'localhost:50052';
+   }
 }

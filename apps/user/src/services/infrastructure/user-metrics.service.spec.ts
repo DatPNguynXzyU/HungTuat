@@ -133,6 +133,24 @@ describe('UserMetricsService', () => {
          expect(duration).toBeGreaterThanOrEqual(0);
       });
 
+      it('should record gRPC metrics properly', async () => {
+         service.recordGrpcCall({
+            service: 'UserGrpcController',
+            method: 'checkUsername',
+            // TODO: Chú ý không hardcode 'OK' như này
+            status: 'OK',
+            durationSeconds: 0.025,
+         });
+
+         const metrics = await service.getMetrics();
+         expect(metrics).toContain(
+            `${USER_METRICS_NAMES.GRPC_REQUESTS}{${USER_METRICS_LABELS.SERVICE}="UserGrpcController",${USER_METRICS_LABELS.METHOD}="checkUsername",${USER_METRICS_LABELS.STATUS}="OK"} 1`,
+         );
+         expect(metrics).toContain(
+            `${USER_METRICS_NAMES.GRPC_REQUEST_DURATION}_count{${USER_METRICS_LABELS.SERVICE}="UserGrpcController",${USER_METRICS_LABELS.METHOD}="checkUsername",${USER_METRICS_LABELS.STATUS}="OK"} 1`,
+         );
+      });
+
       it('should reset metrics without throwing', () => {
          expect(() => service.reset()).not.toThrow();
       });

@@ -206,7 +206,9 @@ export class AuthController {
    @HttpCode(HttpStatus.OK)
    @ApiOperation({
       operationId: 'checkEmail',
-      summary: 'Check if an email is available for registration using fast Bloom Filter',
+      summary: 'Check if an email is available for registration using fast Bloom Filter [gRPC]',
+      description:
+         'Verifies email availability via high-performance internal gRPC communication with Auth microservice.',
    })
    @ApiQuery({
       name: 'email',

@@ -52,4 +52,12 @@ export class AuthConfigService extends CommonConfigService {
    get port(): number {
       return this.configService.get(AUTH_ENV_KEYS.PORT, { infer: true });
    }
+
+   get grpcPort(): number {
+      return this.configService.get(AUTH_ENV_KEYS.GRPC_PORT, { infer: true });
+   }
+
+   get grpcUrl(): string {
+      return `0.0.0.0:${this.grpcPort}`;
+   }
 }

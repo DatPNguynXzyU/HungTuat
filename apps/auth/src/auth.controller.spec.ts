@@ -536,16 +536,6 @@ describe('AuthController', () => {
       expect(jwks.keys[0].alg).toBe('RS256');
    });
 
-   it('should handle checkEmail message pattern', async () => {
-      const mockContext = {
-         getChannelRef: jest.fn(),
-         getMessage: jest.fn(),
-      } as unknown as RmqContext;
-
-      const checkRes = await authController.checkEmail({ email: 'newemail@example.com' }, mockContext);
-      expect(checkRes).toEqual({ available: true, email: 'newemail@example.com' });
-   });
-
    it('should handle sendRegisterOtp and verifyRegisterOtp message pattern', async () => {
       const mockContext = {
          getChannelRef: jest.fn(),

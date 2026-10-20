@@ -14,7 +14,6 @@ import {
 } from '@contracts/auth';
 import type { IServiceMessage } from '@common';
 import {
-   CheckEmailCommand,
    GetEmailCommand,
    GetJwksCommand,
    GetRolePermissionsCommand,
@@ -59,18 +58,6 @@ export class AuthController {
    async getJwks(@Ctx() context: RmqContext) {
       try {
          const result = await this.commandBus.execute(new GetJwksCommand());
-         this.rmqService.ack(context);
-         return result;
-      } catch (error) {
-         this.rmqService.ack(context);
-         throw error;
-      }
-   }
-
-   @MessagePattern({ cmd: AUTH_PATTERNS.CHECK_EMAIL })
-   async checkEmail(@Payload() data: { email: string }, @Ctx() context: RmqContext) {
-      try {
-         const result = await this.commandBus.execute(new CheckEmailCommand(data.email));
          this.rmqService.ack(context);
          return result;
       } catch (error) {

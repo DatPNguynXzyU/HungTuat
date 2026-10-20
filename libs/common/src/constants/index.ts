@@ -4,3 +4,4 @@ export * from '@common/constants/redis.constant';
 export * from '@common/constants/health.constant';
 export * from '@common/constants/env-keys.constant';
 export * from '@common/constants/jwt.constant';
+export * from '@common/constants/services.constant';

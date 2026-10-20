@@ -1,10 +1,25 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { AppLogger, CommandBus, NebulaModule, RedisModule, RmqModule, type ICommandHandler } from '@common';
+import {
+   AppLogger,
+   CommandBus,
+   DatabaseHealthIndicator,
+   GRPC_METRICS_COLLECTOR,
+   GrpcHealthModule,
+   GrpcLoggingInterceptor,
+   GrpcMetricsInterceptor,
+   HEALTH_INDICATOR_NAMES,
+   NebulaModule,
+   RedisHealthIndicator,
+   RedisModule,
+   RedisService,
+   RmqModule,
+   type ICommandHandler,
+} from '@common';
 import { UserConfigModule } from '@user/config';
 import { UserLoggerModule } from '@user/logger';
-import { PrismaModule } from '@user/prisma';
+import { PrismaModule, PrismaService } from '@user/prisma';
 import { OutboxModule } from '@user/outbox';
 import { UnitOfWorkModule } from '@user/unit-of-work';
 import { UserAdaptersModule } from '@user/adapters';
@@ -31,6 +46,7 @@ import { UserCqrsModule } from '@user/cqrs';
 import { USER_COMMAND_HANDLERS, UserCommandsModule } from '@user/commands';
 import { UserController } from '@user/user.controller';
 import { UserMetricsController } from '@user/user-metrics.controller';
+import { UserGrpcController } from '@user/adapters/grpc';
 import {
    UserCoreService,
    ProfileService,
@@ -89,6 +105,14 @@ import {
       UserLoggerModule,
       PrismaModule,
       RedisModule,
+      GrpcHealthModule.registerAsync({
+         imports: [PrismaModule, RedisModule],
+         inject: [PrismaService, RedisService],
+         useFactory: (prisma: PrismaService, redisService: RedisService) => [
+            DatabaseHealthIndicator.fromPrisma(prisma, HEALTH_INDICATOR_NAMES.DATABASE),
+            new RedisHealthIndicator(redisService, HEALTH_INDICATOR_NAMES.REDIS),
+         ],
+      }),
       OutboxModule,
       UnitOfWorkModule,
       NebulaModule.forRoot({ space: 'social_graph' }),
@@ -101,7 +125,7 @@ import {
       UserCqrsModule,
       UserCommandsModule,
    ],
-   controllers: [UserController, UserMetricsController],
+   controllers: [UserController, UserMetricsController, UserGrpcController],
    providers: [
       // Domain Services
       UserCoreService,
@@ -158,6 +182,12 @@ import {
       ProfileOperationFactory,
 
       // Infrastructure Services
+      GrpcLoggingInterceptor,
+      GrpcMetricsInterceptor,
+      {
+         provide: GRPC_METRICS_COLLECTOR,
+         useExisting: USER_METRICS_SERVICE,
+      },
       UsernameBloomFilterService,
       UserResolverService,
       ProfileSyncService,

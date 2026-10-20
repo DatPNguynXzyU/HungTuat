@@ -13,6 +13,8 @@ export const AUTH_METRICS_NAMES = {
    LOGIN_DURATION: 'auth_login_duration_seconds',
    PASSWORD_HASH_DURATION: 'auth_password_hash_duration_seconds',
    OTP_OPERATION_DURATION: 'auth_otp_operation_duration_seconds',
+   GRPC_REQUESTS: 'auth_grpc_requests_total',
+   GRPC_REQUEST_DURATION: 'auth_grpc_request_duration_seconds',
 } as const;
 
 export const AUTH_METRICS_HELP = {
@@ -28,6 +30,8 @@ export const AUTH_METRICS_HELP = {
    LOGIN_DURATION: 'Duration of login operations',
    PASSWORD_HASH_DURATION: 'Duration of password hashing operations',
    OTP_OPERATION_DURATION: 'Duration of OTP operations',
+   GRPC_REQUESTS: 'Total number of gRPC requests handled',
+   GRPC_REQUEST_DURATION: 'Duration of gRPC request handling in seconds',
 } as const;
 
 export const AUTH_METRICS_LABELS = {
@@ -35,6 +39,8 @@ export const AUTH_METRICS_LABELS = {
    REASON: 'reason',
    OPERATION: 'operation',
    TYPE: 'type',
+   SERVICE: 'service',
+   METHOD: 'method',
 } as const;
 
 export const AUTH_METRICS_BUCKETS: {
@@ -42,6 +48,7 @@ export const AUTH_METRICS_BUCKETS: {
    readonly LOGIN_DURATION: number[];
    readonly PASSWORD_HASH: number[];
    readonly OTP_OPERATION: number[];
+   readonly GRPC_REQUEST_DURATION: number[];
 } = {
    // Token generation: 1ms to 1s (typically < 50ms for JWT signing)
    TOKEN_GENERATION: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
@@ -54,6 +61,9 @@ export const AUTH_METRICS_BUCKETS: {
 
    // OTP operations: 100ms to 5s (includes email sending)
    OTP_OPERATION: [0.1, 0.5, 1, 2, 5],
+
+   // gRPC request duration: 5ms to 5s
+   GRPC_REQUEST_DURATION: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
 };
 
 export const AUTH_METRICS_STATUS = {
