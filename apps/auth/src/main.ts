@@ -3,7 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AllRpcExceptionsFilter, RmqService, SERVICES, TracingInterceptor } from '@common';
-import { AUTH_V1_GRPC_PACKAGE_NAME, getAuthProtoPath } from '@contracts/auth';
+import { AUTH_V1_GRPC_PACKAGE_NAME, getAuthProtoLoaderOptions, getAuthProtoPath } from '@contracts/auth';
 import { HEALTH_GRPC_PACKAGE_NAME, getHealthProtoPath } from '@contracts/health';
 import { AuthModule } from '@auth/auth.module';
 import { AuthConfigService } from '@auth/config';
@@ -34,6 +34,7 @@ async function bootstrap() {
             package: [AUTH_V1_GRPC_PACKAGE_NAME, HEALTH_GRPC_PACKAGE_NAME],
             protoPath: [getAuthProtoPath(), getHealthProtoPath()],
             url: configService.grpcUrl,
+            loader: getAuthProtoLoaderOptions(),
          },
       },
       {

@@ -62,4 +62,4 @@ export interface IRevokeSessionResult {
    revokedCount?: number;
 }
 
-export type { IJsonWebKey, IJwksResponse, IDeviceInfo } from '@common';
+export { CLIENT_TYPES, type ClientType, type IJsonWebKey, type IJwksResponse, type IDeviceInfo } from '@common';

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package auth.v1;
+
+message DeviceInfoProto {
+  string deviceType = 1;
+  string deviceName = 2;
+  string browser = 3;
+  string os = 4;
+  string userAgent = 5;
+  string ipAddress = 6;
+  string city = 7;
+  string region = 8;
+  string country = 9;
+  string countryCode = 10;
+  string deviceId = 11;
+  string clientType = 12;
+  string appVersion = 13;
+}

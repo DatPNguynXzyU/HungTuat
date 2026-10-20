@@ -1,4 +1,5 @@
 import { validate } from 'class-validator';
+import { CLIENT_TYPES, type ClientType } from '@common';
 import { LoginDto } from '@contracts/auth/dto/auth/login.dto';
 
 describe('LoginDto', () => {
@@ -55,7 +56,7 @@ describe('LoginDto', () => {
    });
 
    it('should accept valid clientType values', async () => {
-      const clientTypes: Array<'web' | 'mobile' | 'desktop'> = ['web', 'mobile', 'desktop'];
+      const clientTypes: ClientType[] = Object.values(CLIENT_TYPES);
 
       for (const type of clientTypes) {
          const dto = new LoginDto();

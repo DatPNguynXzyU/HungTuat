@@ -1,6 +1,6 @@
 import { UAParser } from 'ua-parser-js';
 import geoip from 'geoip-lite';
-import { IDeviceInfo } from '@common/interfaces/device.interface';
+import { CLIENT_TYPES, type ClientType, type IDeviceInfo } from '@common/interfaces/device.interface';
 
 export interface DeviceHeaders {
    userAgent?: string;
@@ -111,12 +111,13 @@ export class DeviceDetectorUtil {
       return mobilePatterns.some((pattern) => pattern.test(ua));
    }
 
-   private static parseClientType(clientType?: string): 'web' | 'mobile' | 'desktop' | undefined {
+   private static parseClientType(clientType?: string): ClientType | undefined {
       if (!clientType) return undefined;
 
       const normalized = clientType.toLowerCase().trim();
-      if (normalized === 'web' || normalized === 'mobile' || normalized === 'desktop') {
-         return normalized;
+      const validTypes: readonly string[] = Object.values(CLIENT_TYPES);
+      if (validTypes.includes(normalized)) {
+         return normalized as ClientType;
       }
 
       return undefined;

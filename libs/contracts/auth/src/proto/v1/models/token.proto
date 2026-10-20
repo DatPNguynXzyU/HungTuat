@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package auth.v1;
+
+message AuthTokensProto {
+  string accessToken = 1;
+  string refreshToken = 2;
+  string tokenType = 3;
+  int32 expiresIn = 4;
+}

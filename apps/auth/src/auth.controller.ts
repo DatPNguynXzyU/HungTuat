@@ -5,7 +5,6 @@ import {
    AUTH_PATTERNS,
    ChangePasswordDto,
    CreateAuditLogDto,
-   LoginDto,
    QueryAuditLogDto,
    RegisterDto,
    SendRegisterOtpDto,
@@ -17,9 +16,7 @@ import {
    GetEmailCommand,
    GetJwksCommand,
    GetRolePermissionsCommand,
-   LoginCommand,
    LogoutAllCommand,
-   RefreshTokenCommand,
    RegisterCommand,
    RevokeAllAccountTokensCommand,
    RevokeTokenCommand,
@@ -100,30 +97,6 @@ export class AuthController {
    async register(@Payload() data: RegisterDto & { deviceInfo?: IDeviceInfo }, @Ctx() context: RmqContext) {
       try {
          const result = await this.commandBus.execute(new RegisterCommand(data, data.deviceInfo));
-         this.rmqService.ack(context);
-         return result;
-      } catch (error) {
-         this.rmqService.ack(context);
-         throw error;
-      }
-   }
-
-   @MessagePattern({ cmd: AUTH_PATTERNS.LOGIN })
-   async login(@Payload() data: LoginDto & { deviceInfo?: IDeviceInfo }, @Ctx() context: RmqContext) {
-      try {
-         const result = await this.commandBus.execute(new LoginCommand(data, data.deviceInfo));
-         this.rmqService.ack(context);
-         return result;
-      } catch (error) {
-         this.rmqService.ack(context);
-         throw error;
-      }
-   }
-
-   @MessagePattern({ cmd: AUTH_PATTERNS.REFRESH_TOKEN })
-   async refreshToken(@Payload() data: { refreshToken: string; deviceInfo?: IDeviceInfo }, @Ctx() context: RmqContext) {
-      try {
-         const result = await this.commandBus.execute(new RefreshTokenCommand(data.refreshToken, data.deviceInfo));
          this.rmqService.ack(context);
          return result;
       } catch (error) {

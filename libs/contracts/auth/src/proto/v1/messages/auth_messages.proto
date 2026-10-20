@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package auth.v1;
+
+import "models/device.proto";
+import "models/user.proto";
+import "models/token.proto";
+
+message CheckEmailRequest {
+  string email = 1;
+}
+
+message CheckEmailResponse {
+  bool available = 1;
+  string email = 2;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+  string ip = 3;
+  string deviceId = 4;
+  string clientType = 5;
+  string appVersion = 6;
+  DeviceInfoProto deviceInfo = 7;
+}
+
+message LoginResponse {
+  AuthUserProto user = 1;
+  string accessToken = 2;
+  string refreshToken = 3;
+  AuthTokensProto tokens = 4;
+}
+
+message RefreshTokenRequest {
+  string refreshToken = 1;
+  DeviceInfoProto deviceInfo = 2;
+}
+
+message RefreshTokenResponse {
+  AuthUserProto user = 1;
+  string accessToken = 2;
+  string refreshToken = 3;
+  AuthTokensProto tokens = 4;
+}

@@ -559,7 +559,7 @@ describe('AuthController', () => {
       expect(verifyRes.verificationToken).toBeDefined();
    });
 
-   it('should register and login a user successfully', async () => {
+   it('should register a user successfully', async () => {
       const mockContext = {
          getChannelRef: jest.fn(),
          getMessage: jest.fn(),
@@ -576,29 +576,6 @@ describe('AuthController', () => {
       expect(registerRes.user.email).toBe('test@example.com');
       expect(registerRes.accessToken).toBeDefined();
       expect(registerRes.refreshToken).toBeDefined();
-
-      const loginRes = await authController.login({ email: 'test@example.com', password: 'Password123!' }, mockContext);
-
-      expect(loginRes.user.email).toBe('test@example.com');
-      expect(loginRes.accessToken).toBeDefined();
-      expect(loginRes.refreshToken).toBeDefined();
-   });
-
-   it('should handle refreshToken message', async () => {
-      const mockContext = {
-         getChannelRef: jest.fn(),
-         getMessage: jest.fn(),
-      } as unknown as RmqContext;
-
-      const registerRes = await authController.register(
-         { email: 'refresh@example.com', password: 'Password123!', confirmPassword: 'Password123!' },
-         mockContext,
-      );
-
-      const refreshRes = await authController.refreshToken({ refreshToken: registerRes.refreshToken }, mockContext);
-
-      expect(refreshRes.accessToken).toBeDefined();
-      expect(refreshRes.refreshToken).toBeDefined();
    });
 
    it('should handle getSessions message', async () => {

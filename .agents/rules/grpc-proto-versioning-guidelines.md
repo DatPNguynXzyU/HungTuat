@@ -32,15 +32,23 @@ This document defines the architectural strategy, versioning lifecycle, and mand
 
 ## 2. Standard Directory Layout
 
-Every contracts library (`libs/contracts/<domain>`) follows this canonical structure:
+Every contracts library (`libs/contracts/<domain>`) follows this canonical structure adhering to Google Protobuf & Uber Proto style guide separation:
 
 ```text
 libs/contracts/<domain>/
 ├── src/
 │   ├── proto/
 │   │   ├── v1/
-│   │   │   └── <domain>.proto          <-- Active v1 proto definition (Single Source of Truth)
+│   │   │   ├── models/                 <-- Shared domain entities (device.proto, user.proto, token.proto)
+│   │   │   │   ├── device.proto
+│   │   │   │   ├── user.proto
+│   │   │   │   └── token.proto
+│   │   │   ├── messages/               <-- RPC request & response transport messages importing models
+│   │   │   │   └── <domain>_messages.proto
+│   │   │   └── <domain>.proto          <-- Main service definition importing messages (Single Source of Truth)
 │   │   └── v2/                         <-- Only created when v2 breaking changes actually occur!
+│   │       ├── models/
+│   │       ├── messages/
 │   │       └── <domain>.proto
 │   ├── grpc/
 │   │   ├── v1/
@@ -49,8 +57,8 @@ libs/contracts/<domain>/
 │   │   │   └── <domain>-v2-grpc.interface.ts
 │   │   └── <domain>-grpc.interface.ts  <-- Re-exports current version interfaces
 │   ├── constants/
-│   │   ├── grpc.constant.ts            <-- Dynamic package builder & path resolver
-│   │   └── grpc.constant.spec.ts       <-- Verifies proto declaration matches constants
+│   │   ├── grpc.constant.ts            <-- Dynamic package builder, path resolver & proto loader options
+│   │   └── grpc.constant.spec.ts       <-- Verifies proto declaration matches constants & loader resolution
 │   └── index.ts                        <-- Public contract exports
 ```
 
@@ -60,30 +68,69 @@ libs/contracts/<domain>/
 
 ### 3.1. Syntax and Package Declaration
 
-All proto files must use `syntax = "proto3";` and explicit dot-notated packages:
+All proto files must use `syntax = "proto3";` and explicit dot-notated packages (e.g. `package auth.v1;`).
 
-```protobuf
-syntax = "proto3";
+### 3.2. Modular Decomposition (Models, Messages & Service)
 
-package auth.v1;
+To prevent merge conflicts and unmaintainable 1,000+ line contracts as gRPC endpoints scale, contracts must be cleanly separated into three modular layers:
 
-service AuthService {
-  rpc CheckEmail (CheckEmailRequest) returns (CheckEmailResponse);
-}
+1. **Domain Models (`proto/v1/models/*.proto`)**:
+   - Encapsulate reusable domain entities (e.g. `DeviceInfoProto`, `AuthUserProto`, `AuthTokensProto`).
+   - Have no RPC service or request/response dependencies.
+   ```protobuf
+   syntax = "proto3";
+   package auth.v1;
 
-message CheckEmailRequest {
-  string email = 1;
-}
+   message DeviceInfoProto {
+     string deviceType = 1;
+     string deviceName = 2;
+     // ...
+   }
+   ```
 
-message CheckEmailResponse {
-  bool available = 1;
-  string email = 2;
-}
-```
+2. **RPC Messages (`proto/v1/messages/*_messages.proto`)**:
+   - Encapsulate operation-specific request and response payloads (e.g. `CheckEmailRequest`, `LoginRequest`).
+   - Import required entities from `models/`.
+   ```protobuf
+   syntax = "proto3";
+   package auth.v1;
+
+   import "models/device.proto";
+   import "models/user.proto";
+   import "models/token.proto";
+
+   message LoginRequest {
+     string email = 1;
+     string password = 2;
+     DeviceInfoProto deviceInfo = 7;
+   }
+
+   message LoginResponse {
+     AuthUserProto user = 1;
+     string accessToken = 2;
+     string refreshToken = 3;
+     AuthTokensProto tokens = 4;
+   }
+   ```
+
+3. **Service Definition (`proto/v1/<domain>.proto`)**:
+   - Thin entry point declaring ONLY the gRPC `service` and RPC methods.
+   - Imports transport definitions from `messages/`.
+   ```protobuf
+   syntax = "proto3";
+   package auth.v1;
+
+   import "messages/auth_messages.proto";
+
+   service AuthService {
+     rpc CheckEmail (CheckEmailRequest) returns (CheckEmailResponse);
+     rpc Login (LoginRequest) returns (LoginResponse);
+   }
+   ```
 
 ---
 
-## 4. TypeScript Constants & Path Resolver Standards
+## 4. TypeScript Constants, Path Resolver & Loader Options Standards
 
 In `libs/contracts/<domain>/src/constants/grpc.constant.ts`:
 
@@ -116,6 +163,7 @@ export const AUTH_V1_GRPC_CLIENT = 'AUTH_V1_GRPC_CLIENT';
 
 export const AUTH_V1_GRPC_METHODS = {
    CHECK_EMAIL: 'CheckEmail',
+   LOGIN: 'Login',
 } as const;
 
 export type AuthV1GrpcMethod = (typeof AUTH_V1_GRPC_METHODS)[keyof typeof AUTH_V1_GRPC_METHODS];
@@ -141,6 +189,31 @@ export function getAuthProtoPath(version: ProtoVersion = DEFAULT_PROTO_VERSION):
 
    return candidates[0];
 }
+
+/**
+ * Returns the resolved directory path to the proto folder for the specified version (defaults to v1),
+ * supporting both runtime dist and source locations for loader.includeDirs.
+ */
+export function getAuthProtoDir(version: ProtoVersion = DEFAULT_PROTO_VERSION): string {
+   const protoPath = getAuthProtoPath(version);
+   return path.dirname(protoPath);
+}
+
+/**
+ * Returns standard proto loader options configured with includeDirs for modular proto resolution.
+ */
+export function getAuthProtoLoaderOptions(
+   version: ProtoVersion = DEFAULT_PROTO_VERSION,
+) {
+   return {
+      keepCase: true,
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
+      includeDirs: [getAuthProtoDir(version)],
+   };
+}
 ```
 
 ---
@@ -149,7 +222,7 @@ export function getAuthProtoPath(version: ProtoVersion = DEFAULT_PROTO_VERSION):
 
 ### 5.1. Microservice Server (`apps/<app>/src/main.ts`)
 
-Connect microservice with versioned package name and path resolver:
+Connect microservice with versioned package name, path resolver, and modular loader options:
 
 ```typescript
 app.connectMicroservice<MicroserviceOptions>(
@@ -159,6 +232,7 @@ app.connectMicroservice<MicroserviceOptions>(
          package: AUTH_V1_GRPC_PACKAGE_NAME, // 'auth.v1'
          protoPath: getAuthProtoPath(), // resolves to v1/auth.proto
          url: configService.grpcUrl,
+         loader: getAuthProtoLoaderOptions(), // enables includeDirs resolution for modular proto imports
       },
    },
    {
@@ -198,6 +272,10 @@ ClientsModule.registerAsync([
             package: AUTH_V1_GRPC_PACKAGE_NAME, // 'auth.v1'
             protoPath: getAuthProtoPath(), // resolves to v1/auth.proto
             url: configService.authGrpcUrl,
+            loader: getAuthProtoLoaderOptions(),
+            channelOptions: createGrpcRetryChannelOptions({
+               serviceNames: [AUTH_V1_GRPC_PACKAGE_NAME],
+            }),
          },
       }),
    },

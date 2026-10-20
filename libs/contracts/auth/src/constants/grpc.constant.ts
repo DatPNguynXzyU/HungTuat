@@ -26,6 +26,8 @@ export const AUTH_V1_GRPC_CLIENT = 'AUTH_V1_GRPC_CLIENT';
 
 export const AUTH_V1_GRPC_METHODS = {
    CHECK_EMAIL: 'CheckEmail',
+   LOGIN: 'Login',
+   REFRESH_TOKEN: 'RefreshToken',
 } as const;
 
 export type AuthV1GrpcMethod = (typeof AUTH_V1_GRPC_METHODS)[keyof typeof AUTH_V1_GRPC_METHODS];
@@ -50,4 +52,44 @@ export function getAuthProtoPath(version: ProtoVersion = DEFAULT_PROTO_VERSION):
    }
 
    return candidates[0];
+}
+
+/**
+ * Proto loader options interface matching @grpc/proto-loader configuration
+ */
+export interface AuthProtoLoaderOptions {
+   keepCase?: boolean;
+   alternateCommentMode?: boolean;
+   longs?: (value: unknown) => unknown;
+   enums?: (value: unknown) => unknown;
+   bytes?: (value: unknown) => unknown;
+   defaults?: boolean;
+   arrays?: boolean;
+   objects?: boolean;
+   oneofs?: boolean;
+   json?: boolean;
+   includeDirs?: string[];
+}
+
+/**
+ * Returns the resolved directory path to the proto folder for the specified version (defaults to v1),
+ * supporting both runtime dist and source locations for loader.includeDirs.
+ */
+export function getAuthProtoDir(version: ProtoVersion = DEFAULT_PROTO_VERSION): string {
+   const protoPath = getAuthProtoPath(version);
+   return path.dirname(protoPath);
+}
+
+/**
+ * Returns standard proto loader options configured with includeDirs for modular proto resolution.
+ */
+export function getAuthProtoLoaderOptions(version: ProtoVersion = DEFAULT_PROTO_VERSION): AuthProtoLoaderOptions {
+   return {
+      keepCase: true,
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
+      includeDirs: [getAuthProtoDir(version)],
+   };
 }

@@ -2,15 +2,10 @@ syntax = "proto3";
 
 package auth.v1;
 
+import "messages/auth_messages.proto";
+
 service AuthService {
   rpc CheckEmail (CheckEmailRequest) returns (CheckEmailResponse);
-}
-
-message CheckEmailRequest {
-  string email = 1;
-}
-
-message CheckEmailResponse {
-  bool available = 1;
-  string email = 2;
+  rpc Login (LoginRequest) returns (LoginResponse);
+  rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse);
 }

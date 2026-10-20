@@ -99,9 +99,9 @@ describe('Gateway AuthController', () => {
       it('should return availability status for valid email', async () => {
          mockAuthService.checkEmail.mockResolvedValue({ available: true, email: 'user@example.com' });
 
-         const res = await controller.checkEmail('user@example.com');
+         const res = await controller.checkEmail('user@example.com', 'test-corr-id');
 
-         expect(mockAuthService.checkEmail).toHaveBeenCalledWith('user@example.com');
+         expect(mockAuthService.checkEmail).toHaveBeenCalledWith('user@example.com', 'test-corr-id');
          expect(res).toEqual({ available: true, email: 'user@example.com' });
       });
 
@@ -281,7 +281,7 @@ describe('Gateway AuthController', () => {
             refreshToken: 'mock-refresh-token',
          });
 
-         const res = await controller.login(mockRequest, loginDto, mockResponse);
+         const res = await controller.login(mockRequest, loginDto, mockResponse, 'test-corr-id');
 
          expect(mockAuthService.login).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -289,6 +289,7 @@ describe('Gateway AuthController', () => {
                ip: '203.0.113.195',
             }),
             expect.any(Object),
+            'test-corr-id',
          );
 
          // Verify cookies
@@ -336,7 +337,11 @@ describe('Gateway AuthController', () => {
 
          const res = await controller.refreshToken(mockRequest, mockResponse, {});
 
-         expect(mockAuthService.refreshToken).toHaveBeenCalledWith('valid-refresh-token', expect.any(Object));
+         expect(mockAuthService.refreshToken).toHaveBeenCalledWith(
+            'valid-refresh-token',
+            expect.any(Object),
+            undefined,
+         );
          expect(mockCookie).toHaveBeenCalledWith(
             AUTH_COOKIES.ACCESS_TOKEN,
             'new-access-token',
@@ -378,7 +383,11 @@ describe('Gateway AuthController', () => {
 
          const res = await controller.refreshToken(mockRequest, mockResponse, {}, 'header-refresh-token');
 
-         expect(mockAuthService.refreshToken).toHaveBeenCalledWith('header-refresh-token', expect.any(Object));
+         expect(mockAuthService.refreshToken).toHaveBeenCalledWith(
+            'header-refresh-token',
+            expect.any(Object),
+            undefined,
+         );
          expect(res.tokens).toBeDefined();
          expect(res.tokens.accessToken).toBe('new-access-token');
       });
@@ -402,7 +411,7 @@ describe('Gateway AuthController', () => {
 
          const res = await controller.refreshToken(mockRequest, mockResponse, { refreshToken: 'body-refresh-token' });
 
-         expect(mockAuthService.refreshToken).toHaveBeenCalledWith('body-refresh-token', expect.any(Object));
+         expect(mockAuthService.refreshToken).toHaveBeenCalledWith('body-refresh-token', expect.any(Object), undefined);
          expect(res.tokens).toBeDefined();
       });
 

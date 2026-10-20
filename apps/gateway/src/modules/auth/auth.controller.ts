@@ -28,6 +28,7 @@ import {
    ApiErrorResponses,
    BadRequestException,
    COMMON_ERROR_CODES,
+   CorrelationId,
    CurrentAccount,
    CurrentUser,
    DeviceDetectorUtil,
@@ -210,6 +211,12 @@ export class AuthController {
       description:
          'Verifies email availability via high-performance internal gRPC communication with Auth microservice.',
    })
+   @ApiHeader({
+      name: 'X-Correlation-Id',
+      required: false,
+      description: 'Correlation ID for distributed tracing across services',
+      example: 'c1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
+   })
    @ApiQuery({
       name: 'email',
       required: true,
@@ -228,13 +235,16 @@ export class AuthController {
       exampleParams: { reason: AUTH_ERROR_REASONS.EMAIL_REQUIRED },
    })
    @ResponseMessage(AUTH_RESPONSE_MESSAGES.CHECK_EMAIL_SUCCESS)
-   async checkEmail(@Query('email') email: string): Promise<CheckEmailResponseDto> {
+   async checkEmail(
+      @Query('email') email: string,
+      @CorrelationId() correlationId?: string,
+   ): Promise<CheckEmailResponseDto> {
       if (!email || !email.trim()) {
          throw new BadRequestException(AUTH_ERROR_CODES.INVALID_EMAIL_FORMAT, {
             params: { reason: AUTH_ERROR_REASONS.EMAIL_REQUIRED },
          });
       }
-      return this.authService.checkEmail(email);
+      return this.authService.checkEmail(email, correlationId);
    }
 
    @Public()
@@ -399,6 +409,12 @@ export class AuthController {
          'User login. Returns tokens in both response body (for mobile/API clients) and HttpOnly cookies (for web browsers)',
    })
    @ApiHeader({
+      name: 'X-Correlation-Id',
+      required: false,
+      description: 'Correlation ID for distributed tracing across services',
+      example: 'c1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
+   })
+   @ApiHeader({
       name: 'X-Client-Type',
       required: false,
       description: 'Client type identifier (e.g., ios, android, web)',
@@ -445,6 +461,7 @@ export class AuthController {
       @Req() req: Request,
       @Body() loginDto: LoginDto,
       @Res({ passthrough: true }) res: Response,
+      @CorrelationId() correlationId?: string,
    ): Promise<AuthResponseDto> {
       const deviceInfo = this.extractDeviceInfo(req);
       const result = await this.authService.login(
@@ -453,6 +470,7 @@ export class AuthController {
             ip: loginDto.ip || deviceInfo.ipAddress,
          },
          deviceInfo,
+         correlationId,
       );
 
       this.setAuthCookies(res, {
@@ -508,6 +526,7 @@ export class AuthController {
       @Res({ passthrough: true }) res: Response,
       @Body() body: RefreshTokenRequestDto,
       @Headers('x-refresh-token') headerRefreshToken?: string,
+      @CorrelationId() correlationId?: string,
    ): Promise<AuthResponseDto> {
       const cookies = req.cookies as Record<string, string> | undefined;
       const token =
@@ -523,7 +542,7 @@ export class AuthController {
       }
 
       const deviceInfo = this.extractDeviceInfo(req);
-      const result = await this.authService.refreshToken(token, deviceInfo);
+      const result = await this.authService.refreshToken(token, deviceInfo, correlationId);
 
       this.setAuthCookies(res, {
          accessToken: result.accessToken,

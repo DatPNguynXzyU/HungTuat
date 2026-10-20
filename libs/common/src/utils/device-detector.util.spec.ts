@@ -1,4 +1,5 @@
 import { DeviceDetectorUtil } from '@common/utils/device-detector.util';
+import { CLIENT_TYPES, type ClientType } from '@common/interfaces/device.interface';
 
 describe('DeviceDetectorUtil', () => {
    describe('parse', () => {
@@ -94,14 +95,14 @@ describe('DeviceDetectorUtil', () => {
       });
 
       it('should normalize valid client types', () => {
-         const testCases: Array<{ input: string; expected: 'web' | 'mobile' | 'desktop' }> = [
-            { input: 'web', expected: 'web' },
-            { input: 'Web', expected: 'web' },
-            { input: 'WEB', expected: 'web' },
-            { input: 'mobile', expected: 'mobile' },
-            { input: 'Mobile', expected: 'mobile' },
-            { input: 'desktop', expected: 'desktop' },
-            { input: 'Desktop', expected: 'desktop' },
+         const testCases: Array<{ input: string; expected: ClientType }> = [
+            { input: 'web', expected: CLIENT_TYPES.WEB },
+            { input: 'Web', expected: CLIENT_TYPES.WEB },
+            { input: 'WEB', expected: CLIENT_TYPES.WEB },
+            { input: 'mobile', expected: CLIENT_TYPES.MOBILE },
+            { input: 'Mobile', expected: CLIENT_TYPES.MOBILE },
+            { input: 'desktop', expected: CLIENT_TYPES.DESKTOP },
+            { input: 'Desktop', expected: CLIENT_TYPES.DESKTOP },
          ];
 
          testCases.forEach(({ input, expected }) => {

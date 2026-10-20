@@ -21,6 +21,9 @@ import {
    AUTH_V1_GRPC_CLIENT,
    AUTH_V1_GRPC_SERVICE_NAME,
    type IAuthV1GrpcService,
+   type IDeviceInfoProto,
+   type ILoginResponse,
+   type IRefreshTokenResponse,
    ChangePasswordDto,
    ChangePasswordResponseDto,
    IAuditLogListResult,
@@ -130,22 +133,107 @@ export class AuthService implements OnModuleInit {
       );
    }
 
-   async login(loginDto: LoginDto, deviceInfo?: IDeviceInfo): Promise<IAuthResult> {
-      return firstValueFrom(
-         this.authClient.send<IAuthResult, LoginDto & { deviceInfo?: IDeviceInfo }>(
-            { cmd: AUTH_PATTERNS.LOGIN },
-            { ...loginDto, deviceInfo },
-         ),
-      );
+   private toProtoDeviceInfo(deviceInfo?: IDeviceInfo): IDeviceInfoProto | undefined {
+      if (!deviceInfo) {
+         return undefined;
+      }
+      return {
+         deviceType: deviceInfo.deviceType,
+         deviceName: deviceInfo.deviceName,
+         browser: deviceInfo.browser,
+         os: deviceInfo.os,
+         userAgent: deviceInfo.userAgent,
+         ipAddress: deviceInfo.ipAddress,
+         city: deviceInfo.city,
+         region: deviceInfo.region,
+         country: deviceInfo.country,
+         countryCode: deviceInfo.countryCode,
+         deviceId: deviceInfo.deviceId,
+         clientType: deviceInfo.clientType,
+         appVersion: deviceInfo.appVersion,
+      };
    }
 
-   async refreshToken(refreshToken: string, deviceInfo?: IDeviceInfo): Promise<IAuthResult> {
-      return firstValueFrom(
-         this.authClient.send<IAuthResult, { refreshToken: string; deviceInfo?: IDeviceInfo }>(
-            { cmd: AUTH_PATTERNS.REFRESH_TOKEN },
-            { refreshToken, deviceInfo },
-         ),
-      );
+   private mapGrpcAuthResponse(response: ILoginResponse | IRefreshTokenResponse): IAuthResult {
+      return {
+         user: {
+            id: response.user.id,
+            email: response.user.email,
+            roles: response.user.roles || [],
+            status: response.user.status || undefined,
+            isEmailVerified: response.user.isEmailVerified,
+            lastLoginAt: response.user.lastLoginAt ? response.user.lastLoginAt : null,
+            createdAt: response.user.createdAt,
+            updatedAt: response.user.updatedAt || undefined,
+         },
+         accessToken: response.accessToken,
+         refreshToken: response.refreshToken,
+         tokens: response.tokens
+            ? {
+                 accessToken: response.tokens.accessToken,
+                 refreshToken: response.tokens.refreshToken,
+                 tokenType: response.tokens.tokenType as 'Bearer',
+                 expiresIn: response.tokens.expiresIn,
+              }
+            : undefined,
+      };
+   }
+
+   async login(loginDto: LoginDto, deviceInfo?: IDeviceInfo, correlationId?: string): Promise<IAuthResult> {
+      try {
+         const metadata = createGrpcMetadata({
+            correlationId,
+            callerService: SERVICE_NAMES.GATEWAY,
+         });
+         const response = await this.authGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() =>
+                  this.authGrpcService.login(
+                     {
+                        email: loginDto.email,
+                        password: loginDto.password,
+                        ip: loginDto.ip,
+                        deviceId: loginDto.deviceId,
+                        clientType: loginDto.clientType,
+                        appVersion: loginDto.appVersion,
+                        deviceInfo: this.toProtoDeviceInfo(deviceInfo),
+                     },
+                     metadata,
+                  ),
+               ).pipe(withGrpcRetry(this.authGrpcRetryPolicy)),
+            );
+         });
+
+         return this.mapGrpcAuthResponse(response);
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async refreshToken(refreshToken: string, deviceInfo?: IDeviceInfo, correlationId?: string): Promise<IAuthResult> {
+      try {
+         const metadata = createGrpcMetadata({
+            correlationId,
+            callerService: SERVICE_NAMES.GATEWAY,
+         });
+         const response = await this.authGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() =>
+                  this.authGrpcService.refreshToken(
+                     {
+                        refreshToken,
+                        deviceInfo: this.toProtoDeviceInfo(deviceInfo),
+                     },
+                     metadata,
+                  ),
+               ).pipe(withGrpcRetry(this.authGrpcRetryPolicy)),
+            );
+         });
+
+         return this.mapGrpcAuthResponse(response);
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
    }
 
    async getSessions(userId: string, currentJti?: string): Promise<IUserSessionInfo[]> {

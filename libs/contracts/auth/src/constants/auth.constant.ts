@@ -10,8 +10,6 @@ export const USER_STATUS = {
 
 export const AUTH_PATTERNS = {
    REGISTER: 'auth.register',
-   LOGIN: 'auth.login',
-   REFRESH_TOKEN: 'auth.refresh_token',
    REVOKE_TOKEN: 'auth.revoke_token',
    REVOKE_ALL_USER_TOKENS: 'auth.revoke_all_user_tokens',
    LOGOUT_ALL: 'auth.logout_all',

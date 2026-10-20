@@ -1,4 +1,5 @@
 import { validate } from 'class-validator';
+import type { ClientType } from '@common';
 import { RegisterDto } from '@contracts/auth/dto/auth/register.dto';
 
 describe('RegisterDto', () => {
@@ -85,7 +86,7 @@ describe('RegisterDto', () => {
       dto.email = 'valid@example.com';
       dto.password = 'password123';
       dto.confirmPassword = 'password123';
-      dto.clientType = 'unknown' as 'web' | 'mobile' | 'desktop';
+      dto.clientType = 'unknown' as ClientType;
 
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);

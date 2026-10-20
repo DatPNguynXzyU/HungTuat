@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEmail, IsNotEmpty, IsOptional, IsString, IsEnum } from 'class-validator';
+import { CLIENT_TYPES, type ClientType } from '@common';
 
 export class LoginDto {
    @ApiProperty({
@@ -29,13 +30,13 @@ export class LoginDto {
    deviceId?: string;
 
    @ApiPropertyOptional({
-      example: 'mobile',
+      example: CLIENT_TYPES.MOBILE,
       description: 'Client type',
-      enum: ['web', 'mobile', 'desktop'],
+      enum: Object.values(CLIENT_TYPES),
    })
    @IsOptional()
-   @IsEnum(['web', 'mobile', 'desktop'])
-   clientType?: 'web' | 'mobile' | 'desktop';
+   @IsEnum(CLIENT_TYPES)
+   clientType?: ClientType;
 
    @ApiPropertyOptional({
       example: '1.0.0',

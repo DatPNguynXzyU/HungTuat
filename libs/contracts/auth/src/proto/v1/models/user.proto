@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package auth.v1;
+
+message AuthUserProto {
+  string id = 1;
+  string email = 2;
+  repeated string roles = 3;
+  string status = 4;
+  bool isEmailVerified = 5;
+  string lastLoginAt = 6;
+  string createdAt = 7;
+  string updatedAt = 8;
+}

@@ -10,7 +10,7 @@ import { TRACING_ATTRIBUTES } from '@common/tracing/tracing.constants';
  * Express request interface enriched with explicit authentication
  * and tracing identifiers (userId, requestId, correlationId).
  */
-interface AuthenticatedRequest extends Request {
+interface AuthenticatedRequest extends Omit<Request, 'route'> {
    /**
     * Authenticated user session or decoded JWT token payload
     */

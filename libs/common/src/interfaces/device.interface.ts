@@ -1,3 +1,11 @@
+export const CLIENT_TYPES = {
+   WEB: 'web',
+   MOBILE: 'mobile',
+   DESKTOP: 'desktop',
+} as const;
+
+export type ClientType = (typeof CLIENT_TYPES)[keyof typeof CLIENT_TYPES];
+
 export interface IDeviceInfo {
    deviceType?: string;
    deviceName?: string;
@@ -10,6 +18,6 @@ export interface IDeviceInfo {
    country?: string;
    countryCode?: string;
    deviceId?: string;
-   clientType?: 'web' | 'mobile' | 'desktop';
+   clientType?: ClientType;
    appVersion?: string;
 }

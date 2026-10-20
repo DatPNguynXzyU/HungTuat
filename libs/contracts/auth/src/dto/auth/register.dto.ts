@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength, IsOptional, IsEnum } from 'class-validator';
-import { Match } from '@common';
+import { CLIENT_TYPES, type ClientType, Match } from '@common';
 
 export class RegisterDto {
    @ApiProperty({
@@ -46,13 +46,13 @@ export class RegisterDto {
    deviceId?: string;
 
    @ApiPropertyOptional({
-      example: 'mobile',
+      example: CLIENT_TYPES.MOBILE,
       description: 'Client type',
-      enum: ['web', 'mobile', 'desktop'],
+      enum: Object.values(CLIENT_TYPES),
    })
    @IsOptional()
-   @IsEnum(['web', 'mobile', 'desktop'])
-   clientType?: 'web' | 'mobile' | 'desktop';
+   @IsEnum(CLIENT_TYPES)
+   clientType?: ClientType;
 
    @ApiPropertyOptional({
       example: '1.0.0',
