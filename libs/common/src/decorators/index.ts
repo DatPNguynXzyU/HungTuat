@@ -12,3 +12,5 @@ export * from '@common/decorators/match.decorator';
 export * from '@common/decorators/api-error-response.decorator';
 export * from '@common/decorators/correlation-id.decorator';
 export * from '@common/decorators/grpc-trace.decorator';
+export * from '@common/decorators/circuit-breaker.decorator';
+export * from '@common/decorators/grpc-retry.decorator';

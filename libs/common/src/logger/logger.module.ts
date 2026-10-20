@@ -3,6 +3,7 @@ import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
 import { ReqId } from 'pino-http';
+import { isSpanContextValid, trace } from '@opentelemetry/api';
 import { AppConfigModule, AppConfigService } from '@common/config';
 import { CORRELATION_ID_HEADER, REQUEST_ID_HEADER } from '@common/logger/logger.constants';
 import { AppLogger } from '@common/logger/logger.service';
@@ -53,9 +54,29 @@ interface ExtendedError extends Error {
                      service: serviceName,
                      env: nodeEnv,
                   },
+                  mixin: () => {
+                     const span = trace.getActiveSpan();
+                     if (span) {
+                        const spanContext = span.spanContext();
+                        if (isSpanContextValid(spanContext)) {
+                           return {
+                              traceId: spanContext.traceId,
+                              spanId: spanContext.spanId,
+                              traceFlags: spanContext.traceFlags,
+                           };
+                        }
+                     }
+                     return {};
+                  },
                   genReqId: (req: IncomingMessage, res: ServerResponse) => {
+                     const activeSpan = trace.getActiveSpan();
+                     const activeTraceId =
+                        activeSpan && isSpanContextValid(activeSpan.spanContext())
+                           ? activeSpan.spanContext().traceId
+                           : undefined;
                      const incomingId = req.headers[CORRELATION_ID_HEADER] || req.headers[REQUEST_ID_HEADER];
-                     const traceId = (Array.isArray(incomingId) ? incomingId[0] : incomingId) || randomUUID();
+                     const traceId =
+                        (Array.isArray(incomingId) ? incomingId[0] : incomingId) || activeTraceId || randomUUID();
                      res.setHeader(CORRELATION_ID_HEADER, traceId);
                      res.setHeader(REQUEST_ID_HEADER, traceId);
                      return traceId;
@@ -63,12 +84,24 @@ interface ExtendedError extends Error {
                   customProps: (req: IncomingMessage) => {
                      const extendedReq = req as ExtendedRequest;
                      const incomingId = req.headers[CORRELATION_ID_HEADER] || req.headers[REQUEST_ID_HEADER];
-                     const correlationId = (Array.isArray(incomingId) ? incomingId[0] : incomingId) || extendedReq.id;
+                     const activeSpan = trace.getActiveSpan();
+                     const activeTraceId =
+                        activeSpan && isSpanContextValid(activeSpan.spanContext())
+                           ? activeSpan.spanContext().traceId
+                           : undefined;
+                     const activeSpanId =
+                        activeSpan && isSpanContextValid(activeSpan.spanContext())
+                           ? activeSpan.spanContext().spanId
+                           : undefined;
+                     const correlationId =
+                        (Array.isArray(incomingId) ? incomingId[0] : incomingId) || activeTraceId || extendedReq.id;
                      const userId =
                         extendedReq.user?.userId || extendedReq.user?.id || extendedReq.user?.sub || extendedReq.userId;
 
                      return {
                         correlationId,
+                        ...(activeTraceId ? { traceId: activeTraceId } : {}),
+                        ...(activeSpanId ? { spanId: activeSpanId } : {}),
                         ...(userId ? { userId } : {}),
                         ...(extendedReq.action ? { action: extendedReq.action } : {}),
                      };

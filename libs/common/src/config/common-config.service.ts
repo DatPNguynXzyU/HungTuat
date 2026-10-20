@@ -37,6 +37,14 @@ export class CommonConfigService {
       return this.configService.get(ENV_KEYS.LOG_LEVEL, { infer: true });
    }
 
+   get otelEnabled(): boolean {
+      return this.configService.get(ENV_KEYS.OTEL_ENABLED, { infer: true });
+   }
+
+   get otelExporterOtlpEndpoint(): string {
+      return this.configService.get(ENV_KEYS.OTEL_EXPORTER_OTLP_ENDPOINT, { infer: true });
+   }
+
    get jwtPublicKeyPath(): string | undefined {
       return this.configService.get(ENV_KEYS.JWT_PUBLIC_KEY_PATH, { infer: true });
    }

@@ -1,6 +1,7 @@
+import '@notification/tracing';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
-import { AllRpcExceptionsFilter, RmqService, SERVICES } from '@common';
+import { AllRpcExceptionsFilter, RmqService, SERVICES, TracingInterceptor } from '@common';
 import { NotificationModule } from '@notification/notification.module';
 
 async function bootstrap() {
@@ -17,6 +18,7 @@ async function bootstrap() {
 
    app.useLogger(logger);
    app.useGlobalFilters(new AllRpcExceptionsFilter());
+   app.useGlobalInterceptors(new TracingInterceptor());
    await app.listen();
    logger.log('Notification Microservice is listening on RabbitMQ queue: NOTIFICATION_SERVICE');
 }

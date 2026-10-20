@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { Metadata, status as GrpcStatus } from '@grpc/grpc-js';
 import { ArgumentsHost, HttpStatus } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
+import { context as otelContext, propagation } from '@opentelemetry/api';
 import { AppException } from '@common/exceptions/app.exception';
 import { CORRELATION_ID_HEADER, REQUEST_ID_HEADER, SENSITIVE_LOG_KEYS } from '@common/logger/logger.constants';
 import type { IGrpcTraceContext } from '@common/interceptors/grpc-trace.storage';
@@ -132,6 +133,15 @@ export function createGrpcMetadata(context?: {
    const metadata = new Metadata();
    const correlationId = context?.correlationId || randomUUID();
    metadata.set(CORRELATION_ID_HEADER, correlationId);
+
+   // Inject W3C trace context (traceparent, tracestate) into gRPC metadata
+   const traceCarrier: Record<string, string> = {};
+   propagation.inject(otelContext.active(), traceCarrier);
+   for (const [k, v] of Object.entries(traceCarrier)) {
+      if (typeof v === 'string') {
+         metadata.set(k.toLowerCase(), v);
+      }
+   }
 
    if (context?.requestId) {
       metadata.set(REQUEST_ID_HEADER, context.requestId);

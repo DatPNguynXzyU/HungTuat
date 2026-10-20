@@ -1,6 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { of, throwError } from 'rxjs';
-import { GrpcStatus, SERVICES } from '@common';
+import {
+   CircuitBreakerOpenException,
+   CircuitBreakerRegistry,
+   FixedBackoffStrategy,
+   GrpcStatus,
+   RetryPolicyRegistry,
+   SERVICES,
+   ServiceUnavailableException,
+} from '@common';
 import {
    GenderDto,
    USER_ERROR_CODES,
@@ -31,6 +39,12 @@ describe('UsersService', () => {
    };
 
    beforeEach(async () => {
+      CircuitBreakerRegistry.clear();
+      RetryPolicyRegistry.clear();
+      RetryPolicyRegistry.getOrCreate(USER_V1_GRPC_SERVICE_NAME, {
+         maxAttempts: 3,
+         backoff: new FixedBackoffStrategy(1),
+      });
       jest.clearAllMocks();
 
       const module: TestingModule = await Test.createTestingModule({
@@ -64,6 +78,21 @@ describe('UsersService', () => {
       expect(result).toEqual({ available: true, username: 'john_doe' });
    });
 
+   it('should transparently retry and succeed on transient gRPC error', async () => {
+      let callCount = 0;
+      mockUserGrpcService.checkUsername.mockImplementation(() => {
+         callCount++;
+         if (callCount === 1) {
+            return throwError(() => ({ code: GrpcStatus.UNAVAILABLE, message: 'connection refused' }));
+         }
+         return of({ available: true, username: 'retry_user' });
+      });
+
+      const result = await service.checkUsername('retry_user');
+      expect(result).toEqual({ available: true, username: 'retry_user' });
+      expect(callCount).toBe(2);
+   });
+
    it('should map and handle gRPC errors when checking username', async () => {
       const serializedError = {
          message: JSON.stringify({
@@ -75,6 +104,23 @@ describe('UsersService', () => {
       mockUserGrpcService.checkUsername.mockReturnValue(throwError(() => serializedError));
 
       await expect(service.checkUsername('invalid_user')).rejects.toThrow();
+   });
+
+   it('should trip circuit breaker and fail fast when User microservice is unavailable', async () => {
+      const unavailableError = {
+         code: GrpcStatus.UNAVAILABLE,
+         message: '14 UNAVAILABLE: connection refused',
+      };
+      mockUserGrpcService.checkUsername.mockReturnValue(throwError(() => unavailableError));
+
+      for (let i = 0; i < 5; i++) {
+         await expect(service.checkUsername('john_doe')).rejects.toThrow(ServiceUnavailableException);
+      }
+
+      // 6th call should immediately short-circuit without calling gRPC
+      const callCountBefore = mockUserGrpcService.checkUsername.mock.calls.length;
+      await expect(service.checkUsername('john_doe')).rejects.toThrow(CircuitBreakerOpenException);
+      expect(mockUserGrpcService.checkUsername.mock.calls.length).toBe(callCountBefore);
    });
 
    it('should send get_user_by_id message with user context', async () => {

@@ -1,7 +1,8 @@
+import '@user/tracing';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
-import { AllRpcExceptionsFilter, RmqService, SERVICES } from '@common';
+import { AllRpcExceptionsFilter, RmqService, SERVICES, TracingInterceptor } from '@common';
 import { USER_V1_GRPC_PACKAGE_NAME, getUserProtoPath } from '@contracts/user';
 import { HEALTH_GRPC_PACKAGE_NAME, getHealthProtoPath } from '@contracts/health';
 import { UserModule } from '@user/user.module';
@@ -18,6 +19,7 @@ async function bootstrap() {
    app.useLogger(logger);
 
    app.useGlobalFilters(new AllRpcExceptionsFilter());
+   app.useGlobalInterceptors(new TracingInterceptor());
 
    // Connect RabbitMQ microservice
    app.connectMicroservice(rmqService.getOptions(SERVICES.USER_SERVICE), {

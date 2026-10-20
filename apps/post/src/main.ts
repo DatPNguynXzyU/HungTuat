@@ -1,6 +1,7 @@
+import '@post/tracing';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
-import { AllRpcExceptionsFilter, RmqService, SERVICES } from '@common';
+import { AllRpcExceptionsFilter, RmqService, SERVICES, TracingInterceptor } from '@common';
 import { PostModule } from '@post/post.module';
 
 async function bootstrap() {
@@ -14,6 +15,7 @@ async function bootstrap() {
 
    app.useLogger(logger);
    app.useGlobalFilters(new AllRpcExceptionsFilter());
+   app.useGlobalInterceptors(new TracingInterceptor());
    await app.listen();
    logger.log('Post Microservice is listening on RabbitMQ queue: POST_SERVICE');
 }

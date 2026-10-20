@@ -1,4 +1,5 @@
 export * from '@common/config/shared-env.schema';
+export * from '@common/config/tracing-env.schema';
 export * from '@common/config/common-config.service';
 export * from '@common/config/common-config.module';
 

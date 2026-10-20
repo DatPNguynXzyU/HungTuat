@@ -45,6 +45,19 @@ services:
       networks:
          - omni-network
 
+   jaeger:
+      image: jaegertracing/all-in-one:latest
+      container_name: omni-services-jaeger
+      restart: unless-stopped
+      environment:
+         - COLLECTOR_OTLP_ENABLED=true
+      ports:
+         - '${JAEGER_UI_PORT:-16686}:16686'
+         - '${OTEL_EXPORTER_OTLP_PORT:-4318}:4318'
+         - '4317:4317'
+      networks:
+         - omni-network
+
 volumes:
    redis_data:
       driver: local

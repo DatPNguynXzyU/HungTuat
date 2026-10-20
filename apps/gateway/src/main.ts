@@ -1,10 +1,17 @@
+import '@/tracing';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
-import { AllExceptionsFilter, ErrorResponseDto, TimeoutInterceptor, TransformInterceptor } from '@common';
+import {
+   AllExceptionsFilter,
+   ErrorResponseDto,
+   TimeoutInterceptor,
+   TracingInterceptor,
+   TransformInterceptor,
+} from '@common';
 import { GatewayConfigService } from '@/config';
 import { GatewayModule } from '@/gateway.module';
 
@@ -82,7 +89,11 @@ async function bootstrap() {
 
    // Global filters & interceptors
    app.useGlobalFilters(new AllExceptionsFilter());
-   app.useGlobalInterceptors(new TimeoutInterceptor(15000), new TransformInterceptor(reflector));
+   app.useGlobalInterceptors(
+      new TracingInterceptor(),
+      new TimeoutInterceptor(15000),
+      new TransformInterceptor(reflector),
+   );
 
    // Global pipes
    app.useGlobalPipes(

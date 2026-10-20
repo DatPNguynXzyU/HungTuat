@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { RmqModule, SERVICES } from '@common';
+import { createGrpcRetryChannelOptions, RmqModule, SERVICES } from '@common';
 import { USER_V1_GRPC_CLIENT, USER_V1_GRPC_PACKAGE_NAME, getUserProtoPath } from '@contracts/user';
 import { HEALTH_GRPC_PACKAGE_NAME, getHealthProtoPath } from '@contracts/health';
 import { GatewayConfigModule, GatewayConfigService } from '@/config';
@@ -23,6 +23,9 @@ import { UsersService } from '@/modules/users/users.service';
                   package: [USER_V1_GRPC_PACKAGE_NAME, HEALTH_GRPC_PACKAGE_NAME],
                   protoPath: [getUserProtoPath(), getHealthProtoPath()],
                   url: configService.userGrpcUrl,
+                  channelOptions: createGrpcRetryChannelOptions({
+                     serviceNames: [USER_V1_GRPC_PACKAGE_NAME],
+                  }),
                },
             }),
          },

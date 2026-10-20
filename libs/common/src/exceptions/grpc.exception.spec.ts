@@ -4,6 +4,8 @@ import {
    ConflictException,
    ForbiddenException,
    NotFoundException,
+   ServiceUnavailableException,
+   TimeoutException,
    TooManyRequestsException,
    UnauthorizedException,
 } from '@common/exceptions/http.exceptions';
@@ -92,6 +94,29 @@ describe('handleGrpcError', () => {
       };
 
       expect(() => handleGrpcError(error)).toThrow(UnauthorizedException);
+   });
+
+   it('should rethrow existing AppException instances directly without mutation', () => {
+      const appEx = new BadRequestException(COMMON_ERROR_CODES.INVALID_REQUEST);
+      expect(() => handleGrpcError(appEx)).toThrow(appEx);
+   });
+
+   it('should map fallback gRPC status code UNAVAILABLE to ServiceUnavailableException', () => {
+      const error = {
+         code: GrpcStatus.UNAVAILABLE,
+         message: '14 UNAVAILABLE: connection refused',
+      };
+
+      expect(() => handleGrpcError(error)).toThrow(ServiceUnavailableException);
+   });
+
+   it('should map fallback gRPC status code DEADLINE_EXCEEDED to TimeoutException', () => {
+      const error = {
+         code: GrpcStatus.DEADLINE_EXCEEDED,
+         message: '4 DEADLINE_EXCEEDED: deadline exceeded after 3000ms',
+      };
+
+      expect(() => handleGrpcError(error)).toThrow(TimeoutException);
    });
 
    it('should rethrow non-grpc or unparsable errors', () => {

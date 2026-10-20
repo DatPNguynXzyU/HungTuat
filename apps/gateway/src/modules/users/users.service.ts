@@ -1,6 +1,15 @@
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
 import { ClientProxy, type ClientGrpc } from '@nestjs/microservices';
-import { createGrpcMetadata, handleGrpcError, IServiceMessage, SERVICE_NAMES, SERVICES } from '@common';
+import {
+   CircuitBreakerRegistry,
+   createGrpcMetadata,
+   handleGrpcError,
+   IServiceMessage,
+   RetryPolicyRegistry,
+   SERVICE_NAMES,
+   SERVICES,
+   withGrpcRetry,
+} from '@common';
 import {
    HEALTH_GRPC_SERVICE_NAME,
    ServingStatus,
@@ -16,12 +25,23 @@ import {
    USER_V1_GRPC_SERVICE_NAME,
    type IUserV1GrpcService,
 } from '@contracts/user';
-import { firstValueFrom } from 'rxjs';
+import { defer, firstValueFrom } from 'rxjs';
 import type { JwtPayload } from '@common/utils/jwt.util';
 
 @Injectable()
 export class UsersService implements OnModuleInit {
    private userGrpcService!: IUserV1GrpcService;
+   private readonly userGrpcBreaker = CircuitBreakerRegistry.getOrCreate(USER_V1_GRPC_SERVICE_NAME, {
+      timeout: 3000,
+      failureThreshold: 5,
+      resetTimeout: 10000,
+   });
+   private readonly userGrpcRetryPolicy = RetryPolicyRegistry.getOrCreate(USER_V1_GRPC_SERVICE_NAME, {
+      maxAttempts: 3,
+      initialDelayMs: 100,
+      multiplier: 2,
+      maxDelayMs: 2000,
+   });
 
    constructor(
       @Inject(SERVICES.USER_SERVICE) private readonly userClient: ClientProxy,
@@ -38,7 +58,13 @@ export class UsersService implements OnModuleInit {
             correlationId,
             callerService: SERVICE_NAMES.GATEWAY,
          });
-         return await firstValueFrom(this.userGrpcService.checkUsername({ username }, metadata));
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.userGrpcService.checkUsername({ username }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+         });
       } catch (error: unknown) {
          return handleGrpcError(error);
       }

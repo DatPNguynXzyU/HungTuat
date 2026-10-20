@@ -1,6 +1,7 @@
+import '@search/tracing';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
-import { AllRpcExceptionsFilter, RmqService, SERVICES } from '@common';
+import { AllRpcExceptionsFilter, RmqService, SERVICES, TracingInterceptor } from '@common';
 import { SearchModule } from '@search/search.module';
 import { SearchConfigService } from '@search/config';
 
@@ -13,6 +14,7 @@ async function bootstrap() {
 
    const rmqService = app.get(RmqService);
    app.useGlobalFilters(new AllRpcExceptionsFilter());
+   app.useGlobalInterceptors(new TracingInterceptor());
 
    app.connectMicroservice(rmqService.getOptions(SERVICES.SEARCH_SERVICE), {
       inheritAppConfig: true,

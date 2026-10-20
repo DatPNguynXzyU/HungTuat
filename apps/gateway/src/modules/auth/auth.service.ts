@@ -1,6 +1,15 @@
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
 import { ClientProxy, type ClientGrpc } from '@nestjs/microservices';
-import { createGrpcMetadata, handleGrpcError, IDeviceInfo, SERVICE_NAMES, SERVICES } from '@common';
+import {
+   CircuitBreakerRegistry,
+   createGrpcMetadata,
+   handleGrpcError,
+   IDeviceInfo,
+   RetryPolicyRegistry,
+   SERVICE_NAMES,
+   SERVICES,
+   withGrpcRetry,
+} from '@common';
 import {
    HEALTH_GRPC_SERVICE_NAME,
    ServingStatus,
@@ -31,7 +40,7 @@ import {
    VerifyRegisterOtpDto,
    VerifyRegisterOtpResponseDto,
 } from '@contracts/auth';
-import { firstValueFrom } from 'rxjs';
+import { defer, firstValueFrom } from 'rxjs';
 
 export type AuthResponseData = IAuthResult;
 export type ValidateTokenResponse = IValidateTokenResult;
@@ -40,6 +49,17 @@ export type RevokeTokenResponse = IRevokeTokenResult;
 @Injectable()
 export class AuthService implements OnModuleInit {
    private authGrpcService!: IAuthV1GrpcService;
+   private readonly authGrpcBreaker = CircuitBreakerRegistry.getOrCreate(AUTH_V1_GRPC_SERVICE_NAME, {
+      timeout: 3000,
+      failureThreshold: 5,
+      resetTimeout: 10000,
+   });
+   private readonly authGrpcRetryPolicy = RetryPolicyRegistry.getOrCreate(AUTH_V1_GRPC_SERVICE_NAME, {
+      maxAttempts: 3,
+      initialDelayMs: 100,
+      multiplier: 2,
+      maxDelayMs: 2000,
+   });
 
    constructor(
       @Inject(SERVICES.AUTH_SERVICE) private readonly authClient: ClientProxy,
@@ -56,7 +76,13 @@ export class AuthService implements OnModuleInit {
             correlationId,
             callerService: SERVICE_NAMES.GATEWAY,
          });
-         return await firstValueFrom(this.authGrpcService.checkEmail({ email }, metadata));
+         return await this.authGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.authGrpcService.checkEmail({ email }, metadata)).pipe(
+                  withGrpcRetry(this.authGrpcRetryPolicy),
+               ),
+            );
+         });
       } catch (error: unknown) {
          return handleGrpcError(error);
       }

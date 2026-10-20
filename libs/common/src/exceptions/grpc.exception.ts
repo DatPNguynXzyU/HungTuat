@@ -1,17 +1,27 @@
 import { status as GrpcStatus } from '@grpc/grpc-js';
 import { HttpStatus } from '@nestjs/common';
+import { AppException } from '@common/exceptions/app.exception';
 import {
    BadRequestException,
    ConflictException,
    ForbiddenException,
    InternalServerException,
    NotFoundException,
+   ServiceUnavailableException,
+   TimeoutException,
    TooManyRequestsException,
    UnauthorizedException,
 } from '@common/exceptions/http.exceptions';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
 
 export { GrpcStatus };
+
+export const GRPC_STATUS_KEYWORDS = {
+   UNAVAILABLE: 'UNAVAILABLE',
+   DEADLINE_EXCEEDED: 'DEADLINE_EXCEEDED',
+} as const;
+
+export type GrpcStatusKeyword = (typeof GRPC_STATUS_KEYWORDS)[keyof typeof GRPC_STATUS_KEYWORDS];
 
 export interface IGrpcSerializedError {
    errorCode?: string;
@@ -27,6 +37,10 @@ export interface IGrpcSerializedError {
  * preserving i18n translation keys (errorCode) and interpolation parameters (params).
  */
 export const handleGrpcError = (error: unknown): never => {
+   if (error instanceof AppException) {
+      throw error;
+   }
+
    if (typeof error === 'object' && error !== null && 'message' in error) {
       const rawMessage = (error as { message: unknown; code?: number }).message;
       const grpcCode = (error as { code?: number }).code;
@@ -53,6 +67,10 @@ export const handleGrpcError = (error: unknown): never => {
                      throw new ConflictException(errorCode, { params });
                   case HttpStatus.TOO_MANY_REQUESTS:
                      throw new TooManyRequestsException(errorCode, { params });
+                  case HttpStatus.REQUEST_TIMEOUT:
+                     throw new TimeoutException(errorCode, { params });
+                  case HttpStatus.SERVICE_UNAVAILABLE:
+                     throw new ServiceUnavailableException(errorCode, { params });
                   default:
                      throw new InternalServerException(errorCode, { params });
                }
@@ -72,12 +90,33 @@ export const handleGrpcError = (error: unknown): never => {
                   throw new TooManyRequestsException(errorCode, { params });
                case GrpcStatus.UNAUTHENTICATED:
                   throw new UnauthorizedException(errorCode, { params });
+               case GrpcStatus.DEADLINE_EXCEEDED:
+                  throw new TimeoutException(errorCode || COMMON_ERROR_CODES.TIMEOUT, { params });
+               case GrpcStatus.UNAVAILABLE:
+                  throw new ServiceUnavailableException(errorCode || COMMON_ERROR_CODES.SERVICE_UNAVAILABLE, {
+                     params,
+                  });
                default:
                   throw new BadRequestException(errorCode, { params });
             }
          } catch (e) {
             if (e instanceof Error && e.name.endsWith('Exception')) {
                throw e;
+            }
+
+            // Unparsed raw gRPC errors (e.g. connection refused, network timeout)
+            if (grpcCode === GrpcStatus.UNAVAILABLE || rawMessage.includes(GRPC_STATUS_KEYWORDS.UNAVAILABLE)) {
+               throw new ServiceUnavailableException(COMMON_ERROR_CODES.SERVICE_UNAVAILABLE, {
+                  params: { details: rawMessage },
+               });
+            }
+            if (
+               grpcCode === GrpcStatus.DEADLINE_EXCEEDED ||
+               rawMessage.includes(GRPC_STATUS_KEYWORDS.DEADLINE_EXCEEDED)
+            ) {
+               throw new TimeoutException(COMMON_ERROR_CODES.TIMEOUT, {
+                  params: { details: rawMessage },
+               });
             }
          }
       }
