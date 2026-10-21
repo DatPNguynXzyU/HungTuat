@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package supplier.v1;
+
+import "messages/supplier_messages.proto";
+
+service SupplierService {
+  rpc GetSupplierById (GetSupplierByIdRequest) returns (GetSupplierByIdResponse);
+  rpc GetSuppliersByIds (GetSuppliersByIdsRequest) returns (GetSuppliersByIdsResponse);
+  rpc ListSuppliers (ListSuppliersRequest) returns (ListSuppliersResponse);
+  rpc RegisterSupplier (RegisterSupplierRequest) returns (RegisterSupplierResponse);
+  rpc UpdateSupplier (UpdateSupplierRequest) returns (UpdateSupplierResponse);
+  rpc VerifySupplier (VerifySupplierRequest) returns (VerifySupplierResponse);
+}

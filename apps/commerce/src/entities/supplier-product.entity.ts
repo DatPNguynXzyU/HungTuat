@@ -1,4 +1,4 @@
-import type { SupplierEntity } from '@commerce/entities/supplier.entity';
+import type { SupplierItemDto } from '@contracts/supplier';
 import type { IngredientEntity } from '@commerce/entities/ingredient.entity';
 import { CurrencyEnum } from '@contracts/commerce';
 
@@ -20,7 +20,7 @@ export interface SupplierProductEntity {
    deletedAt?: Date | null;
    createdAt: Date;
    updatedAt: Date;
-   supplier?: SupplierEntity;
+   supplier?: SupplierItemDto;
    ingredient?: IngredientEntity;
 }
 

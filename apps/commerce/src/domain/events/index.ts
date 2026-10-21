@@ -7,14 +7,6 @@ export class IngredientCreatedEvent {
    ) {}
 }
 
-export class SupplierRegisteredEvent {
-   constructor(
-      public readonly supplierId: string,
-      public readonly supplierName: string,
-      public readonly supplierCode: string,
-   ) {}
-}
-
 export class ProductOfferCreatedEvent {
    constructor(
       public readonly productId: string,

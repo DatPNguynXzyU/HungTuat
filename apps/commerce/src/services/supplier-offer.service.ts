@@ -8,26 +8,26 @@ import {
    INGREDIENT_STATUS,
    SUPPLIER_STATUS,
    type CreateProductOfferDto,
-   type RegisterSupplierDto,
 } from '@contracts/commerce';
 import {
    INGREDIENT_REPOSITORY,
    SUPPLIER_PRODUCT_REPOSITORY,
-   SUPPLIER_REPOSITORY,
    type IIngredientRepository,
    type ISupplierProductRepository,
-   type ISupplierRepository,
 } from '@commerce/repositories';
-import { Money, Sku, Slug } from '@commerce/domain/value-objects';
-import { ProductOfferCreatedEvent, ProductStockUpdatedEvent, SupplierRegisteredEvent } from '@commerce/domain/events';
-import type { SupplierEntity } from '@commerce/entities/supplier.entity';
+import {
+   SUPPLIER_ADAPTER,
+   type ISupplierAdapter,
+} from '@commerce/adapters/supplier';
+import { Money, Sku } from '@commerce/domain/value-objects';
+import { ProductOfferCreatedEvent, ProductStockUpdatedEvent } from '@commerce/domain/events';
 import type { SupplierProductEntity } from '@commerce/entities/supplier-product.entity';
 
 @Injectable()
 export class SupplierOfferService {
    constructor(
-      @Inject(SUPPLIER_REPOSITORY)
-      private readonly supplierRepository: ISupplierRepository,
+      @Inject(SUPPLIER_ADAPTER)
+      private readonly supplierAdapter: ISupplierAdapter,
       @Inject(INGREDIENT_REPOSITORY)
       private readonly ingredientRepository: IIngredientRepository,
       @Inject(SUPPLIER_PRODUCT_REPOSITORY)
@@ -52,12 +52,23 @@ export class SupplierOfferService {
       }
 
       const offers = await this.supplierProductRepository.findByIngredientId(ingredientId, inStockOnly);
+      const supplierIds = [...new Set(offers.map((o) => o.supplierId))];
+      const suppliersMap = await this.supplierAdapter.getSuppliersByIds(supplierIds);
+
+      const activeOffers: SupplierProductEntity[] = [];
+      for (const offer of offers) {
+         const supplier = suppliersMap.get(offer.supplierId);
+         if (supplier && supplier.supplierStatus === SUPPLIER_STATUS.ACTIVE) {
+            offer.supplier = supplier;
+            activeOffers.push(offer);
+         }
+      }
 
       return {
          ingredientId: ingredient.ingredientId,
          ingredientName: ingredient.ingredientName,
-         offers,
-         totalOffers: offers.length,
+         offers: activeOffers,
+         totalOffers: activeOffers.length,
       };
    }
 
@@ -68,43 +79,17 @@ export class SupplierOfferService {
             params: { productId },
          });
       }
+
+      const supplier = await this.supplierAdapter.getSupplierById(product.supplierId);
+      if (supplier) {
+         product.supplier = supplier;
+      }
+
       return product;
    }
 
-   async registerSupplier(dto: RegisterSupplierDto): Promise<SupplierEntity> {
-      const cleanCode = dto.supplierCode.trim().toUpperCase();
-      const existingByCode = await this.supplierRepository.findByCode(cleanCode);
-      if (existingByCode) {
-         throw new ConflictException(COMMERCE_ERROR_CODES.SUPPLIER_ALREADY_EXISTS, {
-            params: { code: cleanCode },
-         });
-      }
-
-      const generatedSlug = new Slug(dto.supplierName).value;
-
-      const created = await this.supplierRepository.create({
-         supplierName: dto.supplierName.trim(),
-         supplierSlug: generatedSlug,
-         supplierCode: cleanCode,
-         contactEmail: dto.contactEmail?.trim(),
-         contactPhone: dto.contactPhone?.trim(),
-         address: dto.address?.trim(),
-         city: dto.city?.trim(),
-         supplierLogoUrl: dto.supplierLogoUrl,
-         isVerified: true,
-         supplierStatus: SUPPLIER_STATUS.ACTIVE,
-      });
-
-      this.eventEmitter.emit(
-         COMMERCE_EVENTS.SUPPLIER_REGISTERED,
-         new SupplierRegisteredEvent(created.supplierId, created.supplierName, created.supplierCode),
-      );
-
-      return created;
-   }
-
    async createProductOffer(dto: CreateProductOfferDto): Promise<SupplierProductEntity> {
-      const supplier = await this.supplierRepository.findById(dto.supplierId);
+      const supplier = await this.supplierAdapter.getSupplierById(dto.supplierId);
       if (!supplier || supplier.supplierStatus !== SUPPLIER_STATUS.ACTIVE) {
          throw new NotFoundException(COMMERCE_ERROR_CODES.SUPPLIER_NOT_FOUND, {
             params: { supplierId: dto.supplierId },
@@ -143,6 +128,8 @@ export class SupplierOfferService {
          productUrl: dto.productUrl?.trim(),
          productImageUrl: dto.productImageUrl?.trim(),
       });
+
+      created.supplier = supplier;
 
       this.eventEmitter.emit(
          COMMERCE_EVENTS.PRODUCT_OFFER_CREATED,

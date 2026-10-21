@@ -1,9 +1,11 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 import {
    COMMAND_BUS,
    CommandBus,
+   createGrpcRetryChannelOptions,
    GRPC_METRICS_COLLECTOR,
    GrpcHealthModule,
    GrpcLoggingInterceptor,
@@ -13,7 +15,13 @@ import {
    SERVICES,
    type ICommandHandler,
 } from '@common';
-import { CommerceConfigModule } from '@commerce/config';
+import {
+   SUPPLIER_V1_GRPC_CLIENT,
+   SUPPLIER_V1_GRPC_PACKAGE_NAME,
+   getSupplierProtoLoaderOptions,
+   getSupplierProtoPath,
+} from '@contracts/supplier';
+import { CommerceConfigModule, CommerceConfigService } from '@commerce/config';
 import { CommerceLoggerModule } from '@commerce/logger';
 import { PrismaModule } from '@commerce/prisma';
 import { UnitOfWorkModule } from '@commerce/unit-of-work';
@@ -23,9 +31,7 @@ import {
    INGREDIENT_REPOSITORY,
    IngredientRepository,
    SUPPLIER_PRODUCT_REPOSITORY,
-   SUPPLIER_REPOSITORY,
    SupplierProductRepository,
-   SupplierRepository,
 } from '@commerce/repositories';
 import {
    COMMERCE_METRICS_SERVICE,
@@ -35,7 +41,13 @@ import {
 } from '@commerce/services';
 import { COMMERCE_QUERY_HANDLERS } from '@commerce/queries';
 import { COMMERCE_COMMAND_HANDLERS } from '@commerce/commands';
-import { COMMERCE_SEARCH_ADAPTER, CommerceGrpcController, RabbitMqCommerceSearchAdapter } from '@commerce/adapters';
+import {
+   COMMERCE_SEARCH_ADAPTER,
+   CommerceGrpcController,
+   GrpcSupplierAdapter,
+   RabbitMqCommerceSearchAdapter,
+   SUPPLIER_ADAPTER,
+} from '@commerce/adapters';
 import { CommerceMetricsController } from '@commerce/commerce-metrics.controller';
 
 @Module({
@@ -53,16 +65,43 @@ import { CommerceMetricsController } from '@commerce/commerce-metrics.controller
       RmqModule.register({
          name: SERVICES.SEARCH_SERVICE,
       }),
+      ClientsModule.registerAsync([
+         {
+            name: SUPPLIER_V1_GRPC_CLIENT,
+            imports: [CommerceConfigModule],
+            inject: [CommerceConfigService],
+            useFactory: (config: CommerceConfigService) => ({
+               transport: Transport.GRPC,
+               options: {
+                  package: [SUPPLIER_V1_GRPC_PACKAGE_NAME],
+                  protoPath: [getSupplierProtoPath()],
+                  url: config.supplierGrpcUrl,
+                  loader: getSupplierProtoLoaderOptions(),
+                  channelOptions: createGrpcRetryChannelOptions({
+                     serviceNames: [SUPPLIER_V1_GRPC_PACKAGE_NAME],
+                  }),
+               },
+            }),
+         },
+      ]),
       GrpcHealthModule,
    ],
    controllers: [CommerceGrpcController, CommerceMetricsController],
    providers: [
+      // Supplier Adapter (ACL)
+      GrpcSupplierAdapter,
+      {
+         provide: SUPPLIER_ADAPTER,
+         useExisting: GrpcSupplierAdapter,
+      },
+
       // Search Adapter
       RabbitMqCommerceSearchAdapter,
       {
          provide: COMMERCE_SEARCH_ADAPTER,
          useExisting: RabbitMqCommerceSearchAdapter,
       },
+
       // Repositories
       CategoryRepository,
       {
@@ -73,11 +112,6 @@ import { CommerceMetricsController } from '@commerce/commerce-metrics.controller
       {
          provide: INGREDIENT_REPOSITORY,
          useExisting: IngredientRepository,
-      },
-      SupplierRepository,
-      {
-         provide: SUPPLIER_REPOSITORY,
-         useExisting: SupplierRepository,
       },
       SupplierProductRepository,
       {
@@ -117,8 +151,8 @@ import { CommerceMetricsController } from '@commerce/commerce-metrics.controller
       CommerceMetricsService,
       CATEGORY_REPOSITORY,
       INGREDIENT_REPOSITORY,
-      SUPPLIER_REPOSITORY,
       SUPPLIER_PRODUCT_REPOSITORY,
+      SUPPLIER_ADAPTER,
       COMMERCE_SEARCH_ADAPTER,
       RabbitMqCommerceSearchAdapter,
    ],

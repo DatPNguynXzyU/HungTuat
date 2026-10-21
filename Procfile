@@ -6,3 +6,4 @@ search: pnpm run start:nowatch:search
 media: pnpm run start:nowatch:media
 gateway: pnpm run start:nowatch:gateway
 commerce: pnpm run start:nowatch:commerce
+supplier: pnpm run start:nowatch:supplier

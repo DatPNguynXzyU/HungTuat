@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package supplier.v1;
+
+import "models/supplier.proto";
+
+message GetSupplierByIdRequest {
+  string supplierId = 1;
+}
+
+message GetSupplierByIdResponse {
+  SupplierProto supplier = 1;
+}
+
+message GetSuppliersByIdsRequest {
+  repeated string supplierIds = 1;
+}
+
+message GetSuppliersByIdsResponse {
+  repeated SupplierProto suppliers = 1;
+}
+
+message ListSuppliersRequest {
+  optional string status = 1;
+  optional string city = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+
+message ListSuppliersResponse {
+  repeated SupplierProto suppliers = 1;
+  int32 total = 2;
+}
+
+message RegisterSupplierRequest {
+  string supplierName = 1;
+  string supplierCode = 2;
+  optional string contactEmail = 3;
+  optional string contactPhone = 4;
+  optional string address = 5;
+  optional string city = 6;
+  optional string supplierLogoUrl = 7;
+}
+
+message RegisterSupplierResponse {
+  SupplierProto supplier = 1;
+}
+
+message UpdateSupplierRequest {
+  string supplierId = 1;
+  optional string supplierName = 2;
+  optional string contactEmail = 3;
+  optional string contactPhone = 4;
+  optional string address = 5;
+  optional string city = 6;
+  optional string supplierLogoUrl = 7;
+  optional string supplierStatus = 8;
+}
+
+message UpdateSupplierResponse {
+  SupplierProto supplier = 1;
+}
+
+message VerifySupplierRequest {
+  string supplierId = 1;
+  bool isVerified = 2;
+}
+
+message VerifySupplierResponse {
+  SupplierProto supplier = 1;
+}

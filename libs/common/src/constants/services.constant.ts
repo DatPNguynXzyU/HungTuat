@@ -8,6 +8,7 @@ export const SERVICE_NAMES = {
    SEARCH: 'search-service',
    MEDIA: 'media-service',
    COMMERCE: 'commerce-service',
+   SUPPLIER: 'supplier-service',
 } as const;
 
 export type ServiceName = (typeof SERVICE_NAMES)[keyof typeof SERVICE_NAMES];

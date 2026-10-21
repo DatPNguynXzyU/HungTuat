@@ -6,6 +6,7 @@ export const COMMERCE_ENV_KEYS = {
    GRPC_PORT: 'GRPC_PORT',
    DATABASE_URL: 'DATABASE_URL',
    POSTGRES_PORT: 'POSTGRES_PORT',
+   SUPPLIER_GRPC_URL: 'SUPPLIER_GRPC_URL',
 } as const;
 
 export type CommerceEnvKey = (typeof COMMERCE_ENV_KEYS)[keyof typeof COMMERCE_ENV_KEYS];
@@ -19,6 +20,7 @@ export const commerceEnvSchema = sharedEnvSchema.extend({
    DATABASE_URL: z.string().default('postgresql://postgres:postgres@localhost:5443/omni_service_commerce'),
    PORT: z.coerce.number().int().positive().default(3007),
    GRPC_PORT: z.coerce.number().int().positive().default(50053),
+   SUPPLIER_GRPC_URL: z.string().default('localhost:50054'),
 });
 
 export type CommerceEnvConfig = z.infer<typeof commerceEnvSchema>;

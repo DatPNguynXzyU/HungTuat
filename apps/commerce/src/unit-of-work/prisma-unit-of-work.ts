@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@commerce/prisma/prisma.service';
 import { CategoryRepository } from '@commerce/repositories/category.repository';
 import { IngredientRepository } from '@commerce/repositories/ingredient.repository';
-import { SupplierRepository } from '@commerce/repositories/supplier.repository';
 import { SupplierProductRepository } from '@commerce/repositories/supplier-product.repository';
 import type {
    ICommerceUnitOfWork,
@@ -26,7 +25,6 @@ export class PrismaCommerceUnitOfWork implements ICommerceUnitOfWork {
             const repositories: ICommerceUnitOfWorkRepositories = {
                categoryRepository: new CategoryRepository(txPrisma),
                ingredientRepository: new IngredientRepository(txPrisma),
-               supplierRepository: new SupplierRepository(txPrisma),
                supplierProductRepository: new SupplierProductRepository(txPrisma),
             };
 

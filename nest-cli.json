@@ -189,6 +189,30 @@
                { "include": "**/*.proto", "watchAssets": true }
             ]
          }
+      },
+      "supplier": {
+         "type": "application",
+         "root": "apps/supplier",
+         "entryFile": "main",
+         "sourceRoot": "apps/supplier/src",
+         "compilerOptions": {
+            "tsConfigPath": "apps/supplier/tsconfig.app.json",
+            "assets": [
+               { "include": "**/*.proto", "watchAssets": true }
+            ]
+         }
+      },
+      "contracts-supplier": {
+         "type": "library",
+         "root": "libs/contracts/supplier",
+         "entryFile": "index",
+         "sourceRoot": "libs/contracts/supplier/src",
+         "compilerOptions": {
+            "tsConfigPath": "libs/contracts/supplier/tsconfig.lib.json",
+            "assets": [
+               { "include": "**/*.proto", "watchAssets": true }
+            ]
+         }
       }
    }
 }

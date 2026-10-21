@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CurrencyEnum, OFFER_STATUS, SUPPLIER_STATUS } from '@contracts/commerce';
+import { CurrencyEnum, OFFER_STATUS } from '@contracts/commerce';
 import { PrismaService } from '@commerce/prisma/prisma.service';
 import type {
    CurrencyEnum as PrismaCurrencyEnum,
@@ -35,24 +35,6 @@ export class SupplierProductRepository implements ISupplierProductRepository {
       deletedAt: Date | null;
       createdAt: Date;
       updatedAt: Date;
-      supplier?: {
-         supplierId: string;
-         supplierName: string;
-         supplierSlug: string;
-         supplierCode: string;
-         contactEmail: string | null;
-         contactPhone: string | null;
-         address: string | null;
-         city: string | null;
-         rating: number;
-         isVerified: boolean;
-         supplierStatus: string;
-         supplierLogoUrl: string | null;
-         version: number;
-         deletedAt: Date | null;
-         createdAt: Date;
-         updatedAt: Date;
-      } | null;
    }): SupplierProductEntity {
       return {
          productId: record.productId,
@@ -72,33 +54,12 @@ export class SupplierProductRepository implements ISupplierProductRepository {
          deletedAt: record.deletedAt,
          createdAt: record.createdAt,
          updatedAt: record.updatedAt,
-         supplier: record.supplier
-            ? {
-                 supplierId: record.supplier.supplierId,
-                 supplierName: record.supplier.supplierName,
-                 supplierSlug: record.supplier.supplierSlug,
-                 supplierCode: record.supplier.supplierCode,
-                 contactEmail: record.supplier.contactEmail,
-                 contactPhone: record.supplier.contactPhone,
-                 address: record.supplier.address,
-                 city: record.supplier.city,
-                 rating: record.supplier.rating,
-                 isVerified: record.supplier.isVerified,
-                 supplierStatus: record.supplier.supplierStatus,
-                 supplierLogoUrl: record.supplier.supplierLogoUrl,
-                 version: record.supplier.version,
-                 deletedAt: record.supplier.deletedAt,
-                 createdAt: record.supplier.createdAt,
-                 updatedAt: record.supplier.updatedAt,
-              }
-            : undefined,
       };
    }
 
    async findById(productId: string): Promise<SupplierProductEntity | null> {
       const record = await this.prisma.supplierProduct.findFirst({
          where: { productId, deletedAt: null },
-         include: { supplier: true, ingredient: true },
       });
       return record ? this.mapPrismaToEntity(record) : null;
    }
@@ -106,7 +67,6 @@ export class SupplierProductRepository implements ISupplierProductRepository {
    async findBySupplierAndSku(supplierId: string, sku: string): Promise<SupplierProductEntity | null> {
       const record = await this.prisma.supplierProduct.findFirst({
          where: { supplierId, productSku: sku, deletedAt: null },
-         include: { supplier: true },
       });
       return record ? this.mapPrismaToEntity(record) : null;
    }
@@ -115,10 +75,6 @@ export class SupplierProductRepository implements ISupplierProductRepository {
       const where: Prisma.SupplierProductWhereInput = {
          ingredientId,
          deletedAt: null,
-         supplier: {
-            deletedAt: null,
-            supplierStatus: SUPPLIER_STATUS.ACTIVE,
-         },
       };
 
       if (inStockOnly) {
@@ -128,7 +84,6 @@ export class SupplierProductRepository implements ISupplierProductRepository {
 
       const records = await this.prisma.supplierProduct.findMany({
          where,
-         include: { supplier: true },
          orderBy: [{ offerStatus: 'asc' }, { price: 'asc' }],
       });
 
@@ -138,7 +93,6 @@ export class SupplierProductRepository implements ISupplierProductRepository {
    async findBySupplierId(supplierId: string): Promise<SupplierProductEntity[]> {
       const records = await this.prisma.supplierProduct.findMany({
          where: { supplierId, deletedAt: null },
-         include: { supplier: true },
          orderBy: { createdAt: 'desc' },
       });
       return records.map((r) => this.mapPrismaToEntity(r));
@@ -160,7 +114,6 @@ export class SupplierProductRepository implements ISupplierProductRepository {
             productImageUrl: data.productImageUrl,
             offerStatus: OFFER_STATUS.AVAILABLE,
          },
-         include: { supplier: true },
       });
       return this.mapPrismaToEntity(record);
    }
@@ -180,7 +133,6 @@ export class SupplierProductRepository implements ISupplierProductRepository {
             ...(data.offerStatus ? { offerStatus: data.offerStatus as PrismaOfferStatus } : {}),
             version: { increment: 1 },
          },
-         include: { supplier: true },
       });
       return this.mapPrismaToEntity(record);
    }
@@ -194,7 +146,6 @@ export class SupplierProductRepository implements ISupplierProductRepository {
             offerStatus: newStatus,
             version: { increment: 1 },
          },
-         include: { supplier: true },
       });
       return this.mapPrismaToEntity(record);
    }

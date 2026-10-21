@@ -1,0 +1,65 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma-client"
+}
+
+enum SupplierStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
+
+model Supplier {
+  supplierId      String         @id @default(uuid()) @map("supplier_id")
+  supplierName    String         @map("supplier_name") @db.VarChar(150)
+  supplierSlug    String         @unique @map("supplier_slug") @db.VarChar(180)
+  supplierCode    String         @unique @map("supplier_code") @db.VarChar(50)
+  contactEmail    String?        @map("contact_email") @db.VarChar(100)
+  contactPhone    String?        @map("contact_phone") @db.VarChar(30)
+  address         String?        @db.VarChar(255)
+  city            String?        @db.VarChar(100)
+  rating          Float          @default(5.0)
+  isVerified      Boolean        @default(false) @map("is_verified")
+  supplierStatus  SupplierStatus @default(ACTIVE) @map("supplier_status")
+  supplierLogoUrl String?        @map("supplier_logo_url")
+  version         Int            @default(1)
+  deletedAt       DateTime?      @map("deleted_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@index([supplierSlug])
+  @@index([supplierCode])
+  @@index([supplierStatus])
+  @@index([city])
+  @@index([deletedAt])
+  @@map("suppliers")
+}
+
+model OutboxEvent {
+  eventId       String       @id @default(uuid()) @map("event_id")
+  aggregateType String       @map("aggregate_type") @db.VarChar(50)
+  aggregateId   String       @map("aggregate_id")
+  eventType     String       @map("event_type") @db.VarChar(100)
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  retryCount    Int          @default(0) @map("retry_count")
+  lastError     String?      @map("last_error")
+  processedAt   DateTime?    @map("processed_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}

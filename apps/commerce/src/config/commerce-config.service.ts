@@ -24,4 +24,8 @@ export class CommerceConfigService extends CommonConfigService {
    get databaseUrl(): string {
       return this.configService.get(COMMERCE_ENV_KEYS.DATABASE_URL, { infer: true });
    }
+
+   get supplierGrpcUrl(): string {
+      return this.configService.get(COMMERCE_ENV_KEYS.SUPPLIER_GRPC_URL, { infer: true });
+   }
 }

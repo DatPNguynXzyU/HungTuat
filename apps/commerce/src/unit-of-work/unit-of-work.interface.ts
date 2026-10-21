@@ -3,7 +3,6 @@ import type {
    ICategoryRepository,
    IIngredientRepository,
    ISupplierProductRepository,
-   ISupplierRepository,
 } from '@commerce/repositories';
 
 export const COMMERCE_UNIT_OF_WORK = Symbol('COMMERCE_UNIT_OF_WORK');
@@ -11,7 +10,6 @@ export const COMMERCE_UNIT_OF_WORK = Symbol('COMMERCE_UNIT_OF_WORK');
 export interface ICommerceUnitOfWorkRepositories {
    readonly categoryRepository: ICategoryRepository;
    readonly ingredientRepository: IIngredientRepository;
-   readonly supplierRepository: ISupplierRepository;
    readonly supplierProductRepository: ISupplierProductRepository;
 }
 

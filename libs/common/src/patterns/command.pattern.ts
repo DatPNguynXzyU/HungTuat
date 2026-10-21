@@ -5,7 +5,7 @@ export abstract class Command<TResult = unknown> {
     * Phantom property used for TypeScript return type inference.
     * It never holds an actual runtime value.
     */
-   declare readonly _resultType?: TResult;
+   declare readonly _resultType: TResult;
 }
 
 export type ICommand<TResult = unknown> = Command<TResult>;
@@ -21,7 +21,7 @@ export const COMMAND_HANDLER_METADATA = '__commandHandler__';
 /**
  * Decorator to mark a class as a handler for a specific command type.
  */
-export const CommandHandler = (command: CommandType): ClassDecorator => {
+export const CommandHandler = <TCommand extends Command<unknown>>(command: CommandType<TCommand>): ClassDecorator => {
    return (target: object) => {
       Reflect.defineMetadata(COMMAND_HANDLER_METADATA, command, target);
    };
