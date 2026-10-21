@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package commerce.v1;
+
+import "models/supplier.proto";
+
+message SupplierProductProto {
+  string productId = 1;
+  string supplierId = 2;
+  string ingredientId = 3;
+  string productSku = 4;
+  string productTitle = 5;
+  double price = 6;
+  string currency = 7;
+  double originalPrice = 8;
+  string packageSize = 9;
+  int32 stockQuantity = 10;
+  bool inStock = 11;
+  string productUrl = 12;
+  string productImageUrl = 13;
+  string offerStatus = 14;
+  SupplierProto supplier = 15;
+}

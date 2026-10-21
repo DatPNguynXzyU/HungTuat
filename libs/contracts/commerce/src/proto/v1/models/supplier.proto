@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package commerce.v1;
+
+message SupplierProto {
+  string supplierId = 1;
+  string supplierName = 2;
+  string supplierSlug = 3;
+  string supplierCode = 4;
+  string contactEmail = 5;
+  string contactPhone = 6;
+  string address = 7;
+  string city = 8;
+  double rating = 9;
+  bool isVerified = 10;
+  string supplierStatus = 11;
+  string supplierLogoUrl = 12;
+}

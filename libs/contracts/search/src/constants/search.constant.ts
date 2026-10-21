@@ -1,6 +1,7 @@
 export const SEARCH_PATTERNS = {
    SEARCH_USERS: 'search_users',
    SEARCH_POSTS: 'search_posts',
+   SEARCH_INGREDIENTS: 'search_ingredients',
    GLOBAL_SEARCH: 'global_search',
 } as const;
 
@@ -24,6 +25,7 @@ export const SEARCH_INDICES = {
    USERS: 'users',
    POSTS: 'posts',
    RECIPES: 'recipes',
+   INGREDIENTS: 'ingredients',
 } as const;
 
 export type SearchIndex = (typeof SEARCH_INDICES)[keyof typeof SEARCH_INDICES];

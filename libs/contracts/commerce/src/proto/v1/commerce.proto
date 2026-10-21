@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package commerce.v1;
+
+import "messages/commerce_messages.proto";
+
+service CommerceService {
+  rpc GetIngredientById (GetIngredientByIdRequest) returns (GetIngredientByIdResponse);
+  rpc GetSuppliersByIngredient (GetSuppliersByIngredientRequest) returns (GetSuppliersByIngredientResponse);
+  rpc ValidateIngredients (ValidateIngredientsRequest) returns (ValidateIngredientsResponse);
+  rpc ListCategories (ListCategoriesRequest) returns (ListCategoriesResponse);
+  rpc CreateIngredient (CreateIngredientRequest) returns (CreateIngredientResponse);
+  rpc RegisterSupplier (RegisterSupplierRequest) returns (RegisterSupplierResponse);
+  rpc CreateSupplierProduct (CreateSupplierProductRequest) returns (CreateSupplierProductResponse);
+}

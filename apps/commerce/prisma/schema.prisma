@@ -1,0 +1,163 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma-client"
+}
+
+enum IngredientStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+}
+
+enum SupplierStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+}
+
+enum OfferStatus {
+  AVAILABLE
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
+
+enum CurrencyEnum {
+   VND
+   USD
+   EUR
+}
+
+model Category {
+  categoryId   String       @id @default(uuid()) @map("category_id")
+  categoryName String       @unique @map("category_name") @db.VarChar(100)
+  categorySlug String       @unique @map("category_slug") @db.VarChar(120)
+  iconUrl      String?      @map("icon_url")
+  version      Int          @default(1)
+  deletedAt    DateTime?    @map("deleted_at")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  ingredients  Ingredient[]
+
+  @@index([categorySlug])
+  @@index([deletedAt])
+  @@map("categories")
+}
+
+model Ingredient {
+  ingredientId          String           @id @default(uuid()) @map("ingredient_id")
+  ingredientName        String           @map("ingredient_name") @db.VarChar(150)
+  normalizedName        String           @map("normalized_name") @db.VarChar(150)
+  ingredientSlug        String           @unique @map("ingredient_slug") @db.VarChar(180)
+  ingredientDescription String           @map("ingredient_description") @db.Text
+  ingredientImageUrl    String           @map("ingredient_image_url")
+  categoryId            String           @map("category_id")
+  defaultUnit           String           @map("default_unit") @db.VarChar(30)
+  ingredientStatus      IngredientStatus @default(ACTIVE) @map("ingredient_status")
+  version               Int              @default(1)
+  deletedAt             DateTime?        @map("deleted_at")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+
+  category              Category         @relation(fields: [categoryId], references: [categoryId], onDelete: Restrict)
+  offers                SupplierProduct[]
+
+  @@index([categoryId])
+  @@index([ingredientName])
+  @@index([normalizedName])
+  @@index([ingredientSlug])
+  @@index([ingredientStatus])
+  @@index([deletedAt])
+  @@index([ingredientStatus, categoryId])
+  @@map("ingredients")
+}
+
+model Supplier {
+  supplierId      String         @id @default(uuid()) @map("supplier_id")
+  supplierName    String         @map("supplier_name") @db.VarChar(150)
+  supplierSlug    String         @unique @map("supplier_slug") @db.VarChar(180)
+  supplierCode    String         @unique @map("supplier_code") @db.VarChar(50)
+  contactEmail    String?        @map("contact_email") @db.VarChar(100)
+  contactPhone    String?        @map("contact_phone") @db.VarChar(30)
+  address         String?        @db.VarChar(255)
+  city            String?        @db.VarChar(100)
+  rating          Float          @default(5.0)
+  isVerified      Boolean        @default(false) @map("is_verified")
+  supplierStatus  SupplierStatus @default(ACTIVE) @map("supplier_status")
+  supplierLogoUrl String?        @map("supplier_logo_url")
+  version         Int            @default(1)
+  deletedAt       DateTime?      @map("deleted_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  products        SupplierProduct[]
+
+  @@index([supplierSlug])
+  @@index([supplierCode])
+  @@index([supplierStatus])
+  @@index([city])
+  @@index([deletedAt])
+  @@map("suppliers")
+}
+
+model SupplierProduct {
+  productId       String         @id @default(uuid()) @map("product_id")
+  supplierId      String         @map("supplier_id")
+  ingredientId    String         @map("ingredient_id")
+  productSku      String         @map("product_sku") @db.VarChar(100)
+  productTitle    String         @map("product_title") @db.VarChar(200)
+  price           Decimal        @db.Decimal(12, 2)
+  currency        CurrencyEnum   @default(VND) @map("currency")
+  originalPrice   Decimal?       @map("original_price") @db.Decimal(12, 2)
+  packageSize     String?        @map("package_size") @db.VarChar(50)
+  stockQuantity   Int            @default(0) @map("stock_quantity")
+  productUrl      String?        @map("product_url") @db.Text
+  productImageUrl String?        @map("product_image_url")
+  offerStatus     OfferStatus    @default(AVAILABLE) @map("offer_status")
+  version         Int            @default(1)
+  deletedAt       DateTime?      @map("deleted_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  supplier        Supplier       @relation(fields: [supplierId], references: [supplierId], onDelete: Cascade)
+  ingredient      Ingredient     @relation(fields: [ingredientId], references: [ingredientId], onDelete: Cascade)
+
+  @@unique([supplierId, productSku])
+  @@index([supplierId])
+  @@index([ingredientId])
+  @@index([supplierId, offerStatus])
+  @@index([ingredientId, offerStatus])
+  @@index([offerStatus])
+  @@index([price])
+  @@index([deletedAt])
+  @@map("supplier_products")
+}
+
+model OutboxEvent {
+  eventId       String       @id @default(uuid()) @map("event_id")
+  aggregateType String       @map("aggregate_type") @db.VarChar(50)
+  aggregateId   String       @map("aggregate_id")
+  eventType     String       @map("event_type") @db.VarChar(100)
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  retryCount    Int          @default(0) @map("retry_count")
+  lastError     String?      @map("last_error")
+  processedAt   DateTime?    @map("processed_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}

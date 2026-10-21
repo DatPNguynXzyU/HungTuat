@@ -16,6 +16,7 @@ export const gatewayEnvSchema = sharedEnvSchema.extend({
    JWT_KEY_ID: z.string().default(DEFAULT_JWT_KEY_ID),
    AUTH_GRPC_URL: z.string().default('localhost:50051'),
    USER_GRPC_URL: z.string().default('localhost:50052'),
+   COMMERCE_GRPC_URL: z.string().default('localhost:50053'),
 });
 
 export type GatewayEnvConfig = z.infer<typeof gatewayEnvSchema>;

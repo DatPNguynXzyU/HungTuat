@@ -7,6 +7,7 @@ import { QueueModule } from '@search/core/queue';
 import { HealthModule } from '@search/core/health';
 import { MetricsModule } from '@search/core/metrics';
 import { UserSearchModule } from '@search/domains/user-search';
+import { IngredientSearchModule } from '@search/domains/ingredient-search';
 import { SearchService } from '@search/search.service';
 
 @Module({
@@ -19,8 +20,9 @@ import { SearchService } from '@search/search.service';
       HealthModule,
       MetricsModule,
       UserSearchModule,
+      IngredientSearchModule,
    ],
    providers: [SearchService],
-   exports: [SearchService, UserSearchModule, QueueModule, ElasticsearchModule],
+   exports: [SearchService, UserSearchModule, IngredientSearchModule, QueueModule, ElasticsearchModule],
 })
 export class SearchModule {}

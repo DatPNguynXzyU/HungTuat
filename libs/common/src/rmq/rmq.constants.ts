@@ -6,6 +6,7 @@ export const SERVICES = {
    POST_SERVICE: 'POST_SERVICE',
    SEARCH_SERVICE: 'SEARCH_SERVICE',
    MEDIA_SERVICE: 'MEDIA_SERVICE',
+   COMMERCE_SERVICE: 'COMMERCE_SERVICE',
 } as const;
 
 export const QUEUES = {
@@ -16,6 +17,7 @@ export const QUEUES = {
    POST: 'POST_QUEUE',
    SEARCH: 'SEARCH_QUEUE',
    MEDIA: 'MEDIA_QUEUE',
+   COMMERCE: 'COMMERCE_QUEUE',
 } as const;
 
 export const RBAC_INTERNAL_PATTERNS = {

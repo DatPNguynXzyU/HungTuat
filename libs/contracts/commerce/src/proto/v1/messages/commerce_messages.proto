@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package commerce.v1;
+
+import "models/category.proto";
+import "models/ingredient.proto";
+import "models/supplier.proto";
+import "models/product.proto";
+
+message GetIngredientByIdRequest {
+  string ingredientId = 1;
+}
+
+message GetIngredientByIdResponse {
+  IngredientProto ingredient = 1;
+  repeated SupplierProductProto offers = 2;
+}
+
+message GetSuppliersByIngredientRequest {
+  string ingredientId = 1;
+  bool inStockOnly = 2;
+}
+
+message GetSuppliersByIngredientResponse {
+  string ingredientId = 1;
+  string ingredientName = 2;
+  repeated SupplierProductProto offers = 3;
+  int32 totalOffers = 4;
+}
+
+message ValidateIngredientsRequest {
+  repeated string ingredientIds = 1;
+}
+
+message ValidatedIngredientItem {
+  string ingredientId = 1;
+  string ingredientName = 2;
+  string defaultUnit = 3;
+  bool exists = 4;
+  bool hasSuppliers = 5;
+}
+
+message ValidateIngredientsResponse {
+  repeated ValidatedIngredientItem items = 1;
+  bool allValid = 2;
+}
+
+message ListCategoriesRequest {}
+
+message ListCategoriesResponse {
+  repeated CategoryProto categories = 1;
+}
+
+message CreateIngredientRequest {
+  string ingredientName = 1;
+  string ingredientDescription = 2;
+  string categoryId = 3;
+  string defaultUnit = 4;
+  string ingredientImageUrl = 5;
+}
+
+message CreateIngredientResponse {
+  IngredientProto ingredient = 1;
+}
+
+message RegisterSupplierRequest {
+  string supplierName = 1;
+  string supplierCode = 2;
+  string contactEmail = 3;
+  string contactPhone = 4;
+  string address = 5;
+  string city = 6;
+  string supplierLogoUrl = 7;
+}
+
+message RegisterSupplierResponse {
+  SupplierProto supplier = 1;
+}
+
+message CreateSupplierProductRequest {
+  string supplierId = 1;
+  string ingredientId = 2;
+  string productSku = 3;
+  string productTitle = 4;
+  double price = 5;
+  string currency = 6;
+  double originalPrice = 7;
+  string packageSize = 8;
+  int32 stockQuantity = 9;
+  string productUrl = 10;
+  string productImageUrl = 11;
+}
+
+message CreateSupplierProductResponse {
+  SupplierProductProto product = 1;
+}

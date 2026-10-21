@@ -33,6 +33,7 @@
          "@notification/*": ["apps/notification/src/*"],
          "@post/*": ["apps/post/src/*"],
          "@search/*": ["apps/search/src/*"],
+         "@commerce/*": ["apps/commerce/src/*"],
 
          // Prisma clients - Convention-based & type-safe
          "@auth/prisma-client": ["apps/auth/src/generated/prisma-client"],
@@ -40,6 +41,7 @@
          "@media/prisma-client": ["apps/media/src/generated/prisma-client"],
          "@notification/prisma-client": ["apps/notification/src/generated/prisma-client"],
          "@post/prisma-client": ["apps/post/src/generated/prisma-client"],
+         "@commerce/prisma-client": ["apps/commerce/src/generated/prisma-client"],
          "@*/prisma-client": ["apps/*/src/generated/prisma-client"],
 
          // Shared libraries
@@ -60,7 +62,9 @@
          "@contracts/post": ["libs/contracts/post/src"],
          "@contracts/post/*": ["libs/contracts/post/src/*"],
          "@contracts/health": ["libs/contracts/health/src"],
-         "@contracts/health/*": ["libs/contracts/health/src/*"]
+         "@contracts/health/*": ["libs/contracts/health/src/*"],
+         "@contracts/commerce": ["libs/contracts/commerce/src"],
+         "@contracts/commerce/*": ["libs/contracts/commerce/src/*"]
       },
       "jsx": "react-jsx"
    }

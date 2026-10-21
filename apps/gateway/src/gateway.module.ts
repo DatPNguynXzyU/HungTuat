@@ -10,6 +10,7 @@ import { HealthModule } from '@/modules/health/health.module';
 import { UsersModule } from '@/modules/users/users.module';
 import { MediaModule } from '@/modules/media/media.module';
 import { PostsModule } from '@/modules/posts/posts.module';
+import { CommerceModule } from '@/modules/commerce/commerce.module';
 
 @Module({
    imports: [
@@ -46,6 +47,7 @@ import { PostsModule } from '@/modules/posts/posts.module';
       AuditLogsModule,
       MediaModule,
       PostsModule,
+      CommerceModule,
    ],
    controllers: [],
    providers: [

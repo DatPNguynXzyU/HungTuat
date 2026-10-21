@@ -39,4 +39,12 @@ export class PostIngredientDto {
       example: 1,
    })
    sortOrder!: number;
+
+   @ApiPropertyOptional({
+      description:
+         'Optional catalog ingredient ID linked to the commerce catalog for instant vendor lookup & purchasing',
+      example: '0192e21b-0002-7000-8000-000000000001',
+      nullable: true,
+   })
+   catalogIngredientId?: string | null;
 }

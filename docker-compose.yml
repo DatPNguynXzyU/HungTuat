@@ -7,6 +7,7 @@ include:
    - apps/post/docker-compose.yml
    - apps/search/docker-compose.yml
    - apps/media/docker-compose.yml
+   - apps/commerce/docker-compose.yml
 
 services:
    redis:

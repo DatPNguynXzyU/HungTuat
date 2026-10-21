@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package commerce.v1;
+
+message CategoryProto {
+  string categoryId = 1;
+  string categoryName = 2;
+  string categorySlug = 3;
+  string iconUrl = 4;
+}

@@ -1,0 +1,141 @@
+import { Module, type OnModuleInit } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import {
+   COMMAND_BUS,
+   CommandBus,
+   GRPC_METRICS_COLLECTOR,
+   GrpcHealthModule,
+   GrpcLoggingInterceptor,
+   GrpcMetricsInterceptor,
+   RedisModule,
+   RmqModule,
+   SERVICES,
+   type ICommandHandler,
+} from '@common';
+import { CommerceConfigModule } from '@commerce/config';
+import { CommerceLoggerModule } from '@commerce/logger';
+import { PrismaModule } from '@commerce/prisma';
+import { UnitOfWorkModule } from '@commerce/unit-of-work';
+import {
+   CATEGORY_REPOSITORY,
+   CategoryRepository,
+   INGREDIENT_REPOSITORY,
+   IngredientRepository,
+   SUPPLIER_PRODUCT_REPOSITORY,
+   SUPPLIER_REPOSITORY,
+   SupplierProductRepository,
+   SupplierRepository,
+} from '@commerce/repositories';
+import {
+   COMMERCE_METRICS_SERVICE,
+   CommerceMetricsService,
+   IngredientCatalogService,
+   SupplierOfferService,
+} from '@commerce/services';
+import { COMMERCE_QUERY_HANDLERS } from '@commerce/queries';
+import { COMMERCE_COMMAND_HANDLERS } from '@commerce/commands';
+import { COMMERCE_SEARCH_ADAPTER, CommerceGrpcController, RabbitMqCommerceSearchAdapter } from '@commerce/adapters';
+import { CommerceMetricsController } from '@commerce/commerce-metrics.controller';
+
+@Module({
+   imports: [
+      EventEmitterModule.forRoot({
+         wildcard: true,
+         delimiter: '.',
+      }),
+      CommerceConfigModule,
+      CommerceLoggerModule,
+      PrismaModule,
+      UnitOfWorkModule,
+      RedisModule,
+      RmqModule,
+      RmqModule.register({
+         name: SERVICES.SEARCH_SERVICE,
+      }),
+      GrpcHealthModule,
+   ],
+   controllers: [CommerceGrpcController, CommerceMetricsController],
+   providers: [
+      // Search Adapter
+      RabbitMqCommerceSearchAdapter,
+      {
+         provide: COMMERCE_SEARCH_ADAPTER,
+         useExisting: RabbitMqCommerceSearchAdapter,
+      },
+      // Repositories
+      CategoryRepository,
+      {
+         provide: CATEGORY_REPOSITORY,
+         useExisting: CategoryRepository,
+      },
+      IngredientRepository,
+      {
+         provide: INGREDIENT_REPOSITORY,
+         useExisting: IngredientRepository,
+      },
+      SupplierRepository,
+      {
+         provide: SUPPLIER_REPOSITORY,
+         useExisting: SupplierRepository,
+      },
+      SupplierProductRepository,
+      {
+         provide: SUPPLIER_PRODUCT_REPOSITORY,
+         useExisting: SupplierProductRepository,
+      },
+
+      // Domain & Application Services
+      IngredientCatalogService,
+      SupplierOfferService,
+      CommerceMetricsService,
+      {
+         provide: COMMERCE_METRICS_SERVICE,
+         useExisting: CommerceMetricsService,
+      },
+      {
+         provide: GRPC_METRICS_COLLECTOR,
+         useExisting: CommerceMetricsService,
+      },
+
+      // Interceptors
+      GrpcLoggingInterceptor,
+      GrpcMetricsInterceptor,
+
+      // CQRS Command Bus & Handlers
+      CommandBus,
+      {
+         provide: COMMAND_BUS,
+         useExisting: CommandBus,
+      },
+      ...COMMERCE_QUERY_HANDLERS,
+      ...COMMERCE_COMMAND_HANDLERS,
+   ],
+   exports: [
+      IngredientCatalogService,
+      SupplierOfferService,
+      CommerceMetricsService,
+      CATEGORY_REPOSITORY,
+      INGREDIENT_REPOSITORY,
+      SUPPLIER_REPOSITORY,
+      SUPPLIER_PRODUCT_REPOSITORY,
+      COMMERCE_SEARCH_ADAPTER,
+      RabbitMqCommerceSearchAdapter,
+   ],
+})
+export class CommerceModule implements OnModuleInit {
+   constructor(
+      private readonly commandBus: CommandBus,
+      private readonly moduleRef: ModuleRef,
+   ) {}
+
+   onModuleInit(): void {
+      const allHandlers = [...COMMERCE_QUERY_HANDLERS, ...COMMERCE_COMMAND_HANDLERS];
+      for (const handlerClass of allHandlers) {
+         const handler = this.moduleRef.get<ICommandHandler<never, never>>(handlerClass, { strict: false });
+         if (handler) {
+            this.commandBus.registerHandler(handler);
+         }
+      }
+   }
+}
