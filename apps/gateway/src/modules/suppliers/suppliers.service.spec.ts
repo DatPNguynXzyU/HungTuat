@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import type { ClientGrpc } from '@nestjs/microservices';
 import { of } from 'rxjs';
+import { DEFAULT_ROLES } from '@common';
 import {
+   SUPPLIER_MEMBER_STATUS,
    SUPPLIER_STATUS,
    SUPPLIER_V1_GRPC_CLIENT,
    type ISupplierV1GrpcService,
@@ -34,6 +36,7 @@ describe('SuppliersService', () => {
          getSuppliersByIds: jest.fn(),
          listSuppliers: jest.fn(),
          registerSupplier: jest.fn(),
+         getMySupplier: jest.fn(),
          updateSupplier: jest.fn(),
          verifySupplier: jest.fn(),
       };
@@ -85,5 +88,40 @@ describe('SuppliersService', () => {
       expect(mockGrpcService.registerSupplier).toHaveBeenCalled();
       expect(result.supplierId).toBe(mockSupplier.supplierId);
       expect(result.supplierName).toBe('Mega Market');
+   });
+
+   it('should call supplier gRPC getMySupplier and map response', async () => {
+      mockGrpcService.getMySupplier.mockReturnValue(
+         of({
+            hasSupplier: true,
+            supplier: {
+               supplierId: mockSupplier.supplierId,
+               supplierName: mockSupplier.supplierName,
+               supplierSlug: mockSupplier.supplierSlug,
+               supplierCode: mockSupplier.supplierCode,
+               contactEmail: mockSupplier.contactEmail || '',
+               contactPhone: mockSupplier.contactPhone || '',
+               address: mockSupplier.address || '',
+               city: mockSupplier.city || '',
+               rating: mockSupplier.rating,
+               isVerified: mockSupplier.isVerified,
+               supplierStatus: mockSupplier.supplierStatus,
+               supplierLogoUrl: mockSupplier.supplierLogoUrl || '',
+            },
+            role: DEFAULT_ROLES.SUPPLIER_ADMIN,
+            memberStatus: SUPPLIER_MEMBER_STATUS.ACTIVE,
+         }),
+      );
+
+      const result = await service.getMySupplier({
+         authHeader: 'Bearer test-token',
+         correlationId: 'req-123',
+         accountId: 'acc-123',
+      });
+
+      expect(mockGrpcService.getMySupplier).toHaveBeenCalled();
+      expect(result.hasSupplier).toBe(true);
+      expect(result.supplier?.supplierId).toBe(mockSupplier.supplierId);
+      expect(result.role).toBe(DEFAULT_ROLES.SUPPLIER_ADMIN);
    });
 });

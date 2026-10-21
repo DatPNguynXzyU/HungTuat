@@ -1,4 +1,4 @@
-import { BadRequestException } from '@common';
+import { BadRequestException, DEFAULT_ROLES } from '@common';
 import { FollowEntity, FollowStatus } from '@user/entities';
 import type { FollowService } from '@user/services/domain/follow.service';
 import {
@@ -57,7 +57,7 @@ describe('Follow Command Handlers', () => {
          const result = await handler.execute(
             new FollowUserCommand({
                data: { followerId: 'user-1', followingId: 'user-2' },
-               user: { userId: 'user-1', email: 'test@example.com', roles: ['user'], permissions: [] },
+               user: { userId: 'user-1', email: 'test@example.com', roles: [DEFAULT_ROLES.USER], permissions: [] },
             }),
          );
 
@@ -72,7 +72,7 @@ describe('Follow Command Handlers', () => {
          const result = await handler.execute(
             new UnfollowUserCommand({
                data: { followerId: 'user-1', followingId: 'user-2' },
-               user: { userId: 'user-1', email: 'test@example.com', roles: ['user'], permissions: [] },
+               user: { userId: 'user-1', email: 'test@example.com', roles: [DEFAULT_ROLES.USER], permissions: [] },
             }),
          );
 

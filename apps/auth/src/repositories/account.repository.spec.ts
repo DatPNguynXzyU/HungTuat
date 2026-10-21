@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UUID_V7_REGEX } from '@common';
+import { DEFAULT_ROLES, UUID_V7_REGEX } from '@common';
+import { USER_STATUS } from '@contracts/auth';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import { AccountRepository } from '@auth/repositories/account.repository';
 
@@ -98,7 +99,7 @@ describe('AccountRepository', () => {
          email: 'user@example.com',
          phoneNumber: null,
          passwordHash: 'hash',
-         status: 'ACTIVE',
+         status: USER_STATUS.ACTIVE,
          isEmailVerified: true,
          lastLoginAt: new Date('2026-09-27T01:00:00.000Z'),
          version: 1,
@@ -109,7 +110,7 @@ describe('AccountRepository', () => {
             {
                role: {
                   roleId: 'role-1',
-                  code: 'USER',
+                  code: DEFAULT_ROLES.USER,
                   name: 'User',
                   description: 'Standard user',
                   version: 1,
@@ -137,10 +138,10 @@ describe('AccountRepository', () => {
       });
       expect(found).toBeDefined();
       expect(found?.email).toBe('user@example.com');
-      expect(found?.status).toBe('ACTIVE');
+      expect(found?.status).toBe(USER_STATUS.ACTIVE);
       expect(found?.isEmailVerified).toBe(true);
       expect(found?.lastLoginAt).toBe('2026-09-27T01:00:00.000Z');
-      expect(found?.roles).toEqual(['USER']);
+      expect(found?.roles).toEqual([DEFAULT_ROLES.USER]);
    });
 
    it('should return null when finding account by email if soft deleted', async () => {

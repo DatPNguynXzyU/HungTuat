@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, type JwtPayload } from '@common';
+import { BadRequestException, DEFAULT_ROLES, type JwtPayload } from '@common';
 import { GenderDto } from '@contracts/user';
 import { UsersController } from '@/modules/users/users.controller';
 import { UsersService } from '@/modules/users/users.service';
@@ -27,7 +27,7 @@ describe('UsersController', () => {
    const mockUser: JwtPayload = {
       sub: 'user-1',
       email: 'user@example.com',
-      roles: ['user'],
+      roles: [DEFAULT_ROLES.USER],
    };
 
    beforeEach(async () => {

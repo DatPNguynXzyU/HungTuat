@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CommandBus, GrpcJwtAuthGuard } from '@common';
-import { SUPPLIER_STATUS, type SupplierItemDto } from '@contracts/supplier';
+import { CommandBus, DEFAULT_ROLES, GrpcJwtAuthGuard } from '@common';
+import { SUPPLIER_MEMBER_STATUS, SUPPLIER_STATUS, type SupplierItemDto } from '@contracts/supplier';
 import { SupplierGrpcController } from '@supplier/adapters/grpc/supplier-grpc.controller';
 import { RegisterSupplierCommand } from '@supplier/commands';
 import { firstValueFrom } from 'rxjs';
@@ -59,5 +59,22 @@ describe('SupplierGrpcController', () => {
       expect(mockCommandBus.execute).toHaveBeenCalledWith(expect.any(RegisterSupplierCommand));
       expect(result.supplier.supplierId).toBe(mockSupplier.supplierId);
       expect(result.supplier.supplierName).toBe(mockSupplier.supplierName);
+   });
+
+   it('should execute GetMySupplierQuery when calling getMySupplier', async () => {
+      mockCommandBus.execute.mockResolvedValue({
+         hasSupplier: true,
+         supplier: mockSupplier,
+         role: DEFAULT_ROLES.SUPPLIER_ADMIN,
+         memberStatus: SUPPLIER_MEMBER_STATUS.ACTIVE,
+      });
+
+      const request = { accountId: 'acc-123' };
+      const response$ = controller.getMySupplier(request);
+      const result = await firstValueFrom(response$);
+
+      expect(result.hasSupplier).toBe(true);
+      expect(result.supplier?.supplierId).toBe(mockSupplier.supplierId);
+      expect(result.role).toBe(DEFAULT_ROLES.SUPPLIER_ADMIN);
    });
 });

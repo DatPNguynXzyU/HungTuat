@@ -45,6 +45,7 @@ describe('Supplier gRPC Constants', () => {
          expect(SUPPLIER_V1_GRPC_METHODS.GET_SUPPLIERS_BY_IDS).toBe('GetSuppliersByIds');
          expect(SUPPLIER_V1_GRPC_METHODS.LIST_SUPPLIERS).toBe('ListSuppliers');
          expect(SUPPLIER_V1_GRPC_METHODS.REGISTER_SUPPLIER).toBe('RegisterSupplier');
+         expect(SUPPLIER_V1_GRPC_METHODS.GET_MY_SUPPLIER).toBe('GetMySupplier');
          expect(SUPPLIER_V1_GRPC_METHODS.UPDATE_SUPPLIER).toBe('UpdateSupplier');
          expect(SUPPLIER_V1_GRPC_METHODS.VERIFY_SUPPLIER).toBe('VerifySupplier');
       });

@@ -1,5 +1,5 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { RedisService, UnauthorizedException } from '@common';
+import { DEFAULT_ROLES, RedisService, UnauthorizedException } from '@common';
 import { AUTH_ERROR_CODES, USER_STATUS } from '@contracts/auth';
 import { AUTH_LOCKOUT_VALUE, AUTH_REDIS_TTL } from '@auth/constants';
 import { AUTH_DOMAIN_EVENTS } from '@auth/domain/events';
@@ -50,7 +50,7 @@ describe('LoginValidationPipeline & Chain Handlers', () => {
       id: 'acc-123',
       email: 'user@example.com',
       passwordHash: 'hashed_pw',
-      roles: ['USER'],
+      roles: [DEFAULT_ROLES.USER],
       status: USER_STATUS.ACTIVE,
       isEmailVerified: true,
       lastLoginAt: null,

@@ -3,6 +3,7 @@ import { of, throwError } from 'rxjs';
 import {
    CircuitBreakerOpenException,
    CircuitBreakerRegistry,
+   DEFAULT_ROLES,
    FixedBackoffStrategy,
    GrpcStatus,
    RetryPolicyRegistry,
@@ -34,7 +35,7 @@ describe('UsersService', () => {
    const mockUser: JwtPayload = {
       sub: 'auth-user-1',
       email: 'user@example.com',
-      roles: ['user'],
+      roles: [DEFAULT_ROLES.USER],
       jti: 'session-456',
    };
 

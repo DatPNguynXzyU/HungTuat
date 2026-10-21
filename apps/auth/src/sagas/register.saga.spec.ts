@@ -1,3 +1,5 @@
+import { DEFAULT_ROLES } from '@common';
+import { USER_STATUS } from '@contracts/auth';
 import type { AccountEntity } from '@auth/entities';
 import type { ITokenLifecycleService } from '@auth/services/infrastructure';
 import { RegisterSaga } from '@auth/sagas/register.saga';
@@ -35,8 +37,8 @@ describe('RegisterSaga', () => {
       id: 'acc-new',
       email: 'newuser@example.com',
       passwordHash: 'hash',
-      roles: ['USER'],
-      status: 'ACTIVE',
+      roles: [DEFAULT_ROLES.USER],
+      status: USER_STATUS.ACTIVE,
       isEmailVerified: false,
       lastLoginAt: null,
       version: 1,

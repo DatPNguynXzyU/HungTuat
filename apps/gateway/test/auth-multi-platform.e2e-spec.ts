@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
-import { JwtUtil, SERVICES } from '@common';
-import { AUTH_RESPONSE_MESSAGES, DEFAULT_DEV_RSA_PRIVATE_KEY } from '@contracts/auth';
+import { DEFAULT_ROLES, JwtUtil, SERVICES } from '@common';
+import { AUTH_PATTERNS, AUTH_RESPONSE_MESSAGES, DEFAULT_DEV_RSA_PRIVATE_KEY, USER_STATUS } from '@contracts/auth';
 import { GatewayConfigService } from '@/config';
 import { GatewayModule } from '@/gateway.module';
 import { App } from 'supertest/types';
@@ -16,13 +16,13 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
    const mockUser = {
       id: 'usr_test_123',
       email: 'test@example.com',
-      roles: ['USER'],
-      status: 'active',
+      roles: [DEFAULT_ROLES.USER],
+      status: USER_STATUS.ACTIVE,
    };
 
    const mockAuthClient = {
       send: jest.fn((pattern: { cmd: string }, data: unknown) => {
-         if (pattern.cmd === 'auth.register') {
+         if (pattern.cmd === AUTH_PATTERNS.REGISTER) {
             const dto = data as { email: string };
             return of({
                user: {
@@ -467,13 +467,13 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
       it('should prioritize cookie over Bearer token when both are present', async () => {
          const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_RSA_PRIVATE_KEY;
          const cookieToken = JwtUtil.sign(
-            { sub: 'cookie-user-id', email: 'cookie@example.com', roles: ['USER'], tokenType: 'access' },
+            { sub: 'cookie-user-id', email: 'cookie@example.com', roles: [DEFAULT_ROLES.USER], tokenType: 'access' },
             privateKey,
             3600,
             { keyid: configService.jwtKeyId },
          );
          const bearerToken = JwtUtil.sign(
-            { sub: 'bearer-user-id', email: 'bearer@example.com', roles: ['USER'], tokenType: 'access' },
+            { sub: 'bearer-user-id', email: 'bearer@example.com', roles: [DEFAULT_ROLES.USER], tokenType: 'access' },
             privateKey,
             3600,
             { keyid: configService.jwtKeyId },

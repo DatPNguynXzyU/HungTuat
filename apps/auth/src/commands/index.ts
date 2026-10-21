@@ -1,6 +1,7 @@
 import {
    CheckEmailHandler,
    RegisterHandler,
+   RegisterSupplierHandler,
    SendRegisterOtpHandler,
    VerifyRegisterOtpHandler,
 } from '@auth/commands/registration';
@@ -36,6 +37,7 @@ export const AUTH_COMMAND_HANDLERS = [
    SendRegisterOtpHandler,
    VerifyRegisterOtpHandler,
    RegisterHandler,
+   RegisterSupplierHandler,
 
    // Auth Handlers
    GetJwksHandler,

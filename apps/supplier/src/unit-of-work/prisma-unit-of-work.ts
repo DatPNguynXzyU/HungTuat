@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@supplier/prisma/prisma.service';
 import { SupplierRepository } from '@supplier/repositories/supplier.repository';
+import { SupplierMemberRepository } from '@supplier/repositories/supplier-member.repository';
 import type {
    ISupplierUnitOfWork,
    ISupplierUnitOfWorkRepositories,
@@ -22,6 +23,7 @@ export class PrismaSupplierUnitOfWork implements ISupplierUnitOfWork {
             const txPrisma = tx as unknown as PrismaService;
             const repositories: ISupplierUnitOfWorkRepositories = {
                supplierRepository: new SupplierRepository(txPrisma),
+               supplierMemberRepository: new SupplierMemberRepository(txPrisma),
             };
 
             return work(repositories);

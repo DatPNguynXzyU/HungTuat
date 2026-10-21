@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { DEFAULT_ROLES } from '@common';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import { RbacRepository } from '@auth/repositories/rbac.repository';
 
@@ -92,7 +93,7 @@ describe('RbacRepository', () => {
    it('should find role by id', async () => {
       prismaService.role.findFirst.mockResolvedValue({
          roleId: 'role-1',
-         code: 'USER',
+         code: DEFAULT_ROLES.USER,
          name: 'User',
          description: null,
          version: 1,
@@ -162,7 +163,7 @@ describe('RbacRepository', () => {
          {
             role: {
                roleId: 'role-1',
-               code: 'USER',
+               code: DEFAULT_ROLES.USER,
                name: 'User',
                description: null,
                version: 1,
@@ -176,6 +177,6 @@ describe('RbacRepository', () => {
 
       const roles = await repository.getAccountRoles('acc-1');
       expect(roles).toHaveLength(1);
-      expect(roles[0].code).toBe('USER');
+      expect(roles[0].code).toBe(DEFAULT_ROLES.USER);
    });
 });

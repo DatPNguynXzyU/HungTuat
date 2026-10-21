@@ -1,16 +1,54 @@
-import { Injectable } from '@nestjs/common';
-import { CommandHandler, type ICommandHandler } from '@common';
-import type { SupplierItemDto, SupplierStatusType } from '@contracts/supplier';
+import { Inject, Injectable } from '@nestjs/common';
+import { CommandHandler, ConflictException, DEFAULT_ROLES, type ICommandHandler } from '@common';
+import {
+   SUPPLIER_ERROR_CODES,
+   SUPPLIER_MEMBER_STATUS,
+   type SupplierItemDto,
+   type SupplierStatusType,
+} from '@contracts/supplier';
 import { SupplierService } from '@supplier/services/supplier.service';
 import { RegisterSupplierCommand } from '@supplier/commands/register-supplier.command';
+import { SUPPLIER_MEMBER_REPOSITORY, type ISupplierMemberRepository } from '@supplier/repositories';
 
 @Injectable()
 @CommandHandler(RegisterSupplierCommand)
 export class RegisterSupplierHandler implements ICommandHandler<RegisterSupplierCommand, SupplierItemDto> {
-   constructor(private readonly supplierService: SupplierService) {}
+   constructor(
+      private readonly supplierService: SupplierService,
+      @Inject(SUPPLIER_MEMBER_REPOSITORY)
+      private readonly supplierMemberRepository: ISupplierMemberRepository,
+   ) {}
 
    async execute(command: RegisterSupplierCommand): Promise<SupplierItemDto> {
+      let existingMember = null;
+      if (command.userId) {
+         existingMember = await this.supplierMemberRepository.findByAccountId(command.userId);
+         if (existingMember?.supplierId) {
+            throw new ConflictException(SUPPLIER_ERROR_CODES.SUPPLIER_ALREADY_EXISTS, {
+               params: { accountId: command.userId },
+            });
+         }
+      }
+
       const created = await this.supplierService.registerSupplier(command.dto);
+
+      if (command.userId) {
+         if (existingMember) {
+            await this.supplierMemberRepository.update(existingMember.memberId, {
+               supplierId: created.supplierId,
+            });
+         } else {
+            await this.supplierMemberRepository.create({
+               accountId: command.userId,
+               supplierId: created.supplierId,
+               email: created.contactEmail || '',
+               role: DEFAULT_ROLES.SUPPLIER_ADMIN,
+               memberStatus: SUPPLIER_MEMBER_STATUS.ACTIVE,
+               joinedAt: new Date(),
+            });
+         }
+      }
+
       return {
          supplierId: created.supplierId,
          supplierName: created.supplierName,

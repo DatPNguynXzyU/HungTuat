@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AUTH_AGGREGATES } from '@contracts/auth';
+import { NOTIFICATION_EVENTS } from '@contracts/notification';
 import { OUTBOX_REPOSITORY } from '@auth/outbox/repositories/outbox.repository.interface';
 import { OUTBOX_EVENT_PUBLISHER } from '@auth/outbox/adapters/outbox-event-publisher.interface';
 import { OutboxPublisherService } from '@auth/outbox/services/outbox-publisher.service';
+import { OUTBOX_STATUS } from '@auth/outbox/entities/outbox-event.entity';
 
 describe('OutboxPublisherService', () => {
    let service: OutboxPublisherService;
@@ -63,11 +66,11 @@ describe('OutboxPublisherService', () => {
       const pendingEvents = [
          {
             eventId: 'event-1',
-            aggregateType: 'USER',
+            aggregateType: AUTH_AGGREGATES.ACCOUNT,
             aggregateId: 'user-1',
-            eventType: 'USER_REGISTERED',
+            eventType: NOTIFICATION_EVENTS.USER_REGISTERED,
             payload: { email: 'test@example.com' },
-            status: 'PENDING',
+            status: OUTBOX_STATUS.PENDING,
             retryCount: 0,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -80,7 +83,9 @@ describe('OutboxPublisherService', () => {
 
       expect(count).toBe(1);
       expect(outboxRepository.markAsProcessing).toHaveBeenCalledWith(['event-1']);
-      expect(eventPublisher.publish).toHaveBeenCalledWith('USER_REGISTERED', { email: 'test@example.com' });
+      expect(eventPublisher.publish).toHaveBeenCalledWith(NOTIFICATION_EVENTS.USER_REGISTERED, {
+         email: 'test@example.com',
+      });
       expect(outboxRepository.markAsPublished).toHaveBeenCalledWith('event-1');
    });
 
@@ -88,11 +93,11 @@ describe('OutboxPublisherService', () => {
       const pendingEvents = [
          {
             eventId: 'event-2',
-            aggregateType: 'USER',
+            aggregateType: AUTH_AGGREGATES.ACCOUNT,
             aggregateId: 'user-2',
-            eventType: 'USER_REGISTERED',
+            eventType: NOTIFICATION_EVENTS.USER_REGISTERED,
             payload: { email: 'fail@example.com' },
-            status: 'PENDING',
+            status: OUTBOX_STATUS.PENDING,
             retryCount: 0,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),

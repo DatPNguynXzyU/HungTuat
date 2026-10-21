@@ -35,6 +35,7 @@ import {
    IValidateTokenResult,
    LoginDto,
    RegisterDto,
+   RegisterSupplierAccountDto,
    SendRegisterOtpDto,
    SendRegisterOtpResponseDto,
    UserEmailResponseDto,
@@ -128,6 +129,15 @@ export class AuthService implements OnModuleInit {
       return firstValueFrom(
          this.authClient.send<IAuthResult, RegisterDto & { deviceInfo?: IDeviceInfo }>(
             { cmd: AUTH_PATTERNS.REGISTER },
+            { ...registerDto, deviceInfo },
+         ),
+      );
+   }
+
+   async registerSupplier(registerDto: RegisterSupplierAccountDto, deviceInfo?: IDeviceInfo): Promise<IAuthResult> {
+      return firstValueFrom(
+         this.authClient.send<IAuthResult, RegisterSupplierAccountDto & { deviceInfo?: IDeviceInfo }>(
+            { cmd: AUTH_PATTERNS.REGISTER_SUPPLIER },
             { ...registerDto, deviceInfo },
          ),
       );

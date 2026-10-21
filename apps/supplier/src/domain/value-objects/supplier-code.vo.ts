@@ -1,4 +1,5 @@
 import { BadRequestException, COMMON_ERROR_CODES } from '@common';
+import { generateFallbackSupplierCode, generateSupplierCode } from '@supplier/utils';
 
 export class SupplierCode {
    readonly value: string;
@@ -22,5 +23,13 @@ export class SupplierCode {
 
    equals(other: SupplierCode): boolean {
       return this.value === other.value;
+   }
+
+   static generate(prefix?: string): SupplierCode {
+      return new SupplierCode(generateSupplierCode(prefix));
+   }
+
+   static generateFallback(prefix?: string): SupplierCode {
+      return new SupplierCode(generateFallbackSupplierCode(prefix));
    }
 }

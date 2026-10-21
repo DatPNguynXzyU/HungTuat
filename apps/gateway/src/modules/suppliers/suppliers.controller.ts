@@ -1,15 +1,17 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
+import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import {
    AUTH_COOKIES,
    ApiErrorResponses,
    COMMON_ERROR_CODES,
    CORRELATION_ID_HEADER,
-   Public,
+   CurrentUser,
+   type JwtPayload,
    ResponseMessage,
 } from '@common';
 import {
+   MySupplierResponseDto,
    RegisterSupplierDto,
    SUPPLIER_ERROR_CODES,
    SUPPLIER_RESPONSE_MESSAGES,
@@ -23,18 +25,25 @@ export class SuppliersController {
    constructor(private readonly suppliersService: SuppliersService) {}
 
    @Post()
-   @Public()
+   @ApiCookieAuth()
+   @ApiBearerAuth()
    @HttpCode(HttpStatus.CREATED)
    @ApiOperation({
       operationId: 'registerSupplier',
-      summary: 'Register a new supplier or vendor',
+      summary: 'Register a new supplier store or vendor',
       description:
-         'Registers a new vendor, merchant, or supermarket as an ingredient supplier directly into the supplier microservice. Authentication is verified downstream by the Supplier microservice.',
+         'Registers a new vendor, merchant, or supermarket as an ingredient supplier linked to the authenticated user account.',
    })
    @ApiResponse({
       status: HttpStatus.CREATED,
       description: 'Supplier registered successfully.',
       type: SupplierItemDto,
+      links: {
+         GetMySupplier: {
+            operationId: 'getMySupplierProfile',
+            description: 'Check supplier onboarding state or retrieve store profile',
+         },
+      },
    })
    @ApiErrorResponses([
       {
@@ -44,10 +53,11 @@ export class SuppliersController {
       },
       {
          status: HttpStatus.CONFLICT,
-         description: 'Supplier with this code or name slug already exists',
+         description: 'Supplier code/slug already exists, or user already registered a supplier',
          errorCodes: [
             SUPPLIER_ERROR_CODES.SUPPLIER_CODE_ALREADY_EXISTS,
             SUPPLIER_ERROR_CODES.SUPPLIER_SLUG_ALREADY_EXISTS,
+            SUPPLIER_ERROR_CODES.SUPPLIER_ALREADY_EXISTS,
          ],
       },
    ])
@@ -62,6 +72,42 @@ export class SuppliersController {
       return this.suppliersService.registerSupplier(dto, {
          authHeader,
          correlationId,
+      });
+   }
+
+   @Get('me')
+   @ApiCookieAuth()
+   @ApiBearerAuth()
+   @ApiOperation({
+      operationId: 'getMySupplierProfile',
+      summary: 'Get supplier onboarding status and store profile for the authenticated merchant',
+      description:
+         'Returns the supplier profile and member role if the authenticated account has completed store onboarding, or hasSupplier=false if onboarding is required.',
+   })
+   @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Supplier profile and onboarding status retrieved successfully.',
+      type: MySupplierResponseDto,
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Authentication token is missing, expired, or invalid',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+   ])
+   @ResponseMessage(SUPPLIER_RESPONSE_MESSAGES.GET_MY_SUPPLIER_SUCCESS)
+   async getMySupplier(@Req() req: Request, @CurrentUser() user?: JwtPayload): Promise<MySupplierResponseDto> {
+      const authHeader =
+         req.headers.authorization ||
+         (req.cookies?.[AUTH_COOKIES.ACCESS_TOKEN] ? `Bearer ${req.cookies[AUTH_COOKIES.ACCESS_TOKEN]}` : undefined);
+
+      const correlationId = (req.headers[CORRELATION_ID_HEADER] as string) || undefined;
+
+      return this.suppliersService.getMySupplier({
+         authHeader,
+         correlationId,
+         accountId: user?.sub,
       });
    }
 }

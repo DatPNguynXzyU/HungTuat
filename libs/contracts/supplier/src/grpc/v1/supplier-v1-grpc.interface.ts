@@ -1,6 +1,8 @@
 import type { Observable } from 'rxjs';
 import type { Metadata } from '@grpc/grpc-js';
 import type {
+   IGetMySupplierRequest,
+   IGetMySupplierResponse,
    IGetSupplierByIdRequest,
    IGetSupplierByIdResponse,
    IGetSuppliersByIdsRequest,
@@ -23,6 +25,8 @@ export interface ISupplierV1GrpcService {
    listSuppliers(request: IListSuppliersRequest, metadata?: Metadata): Observable<IListSuppliersResponse>;
 
    registerSupplier(request: IRegisterSupplierRequest, metadata?: Metadata): Observable<IRegisterSupplierResponse>;
+
+   getMySupplier(request: IGetMySupplierRequest, metadata?: Metadata): Observable<IGetMySupplierResponse>;
 
    updateSupplier(request: IUpdateSupplierRequest, metadata?: Metadata): Observable<IUpdateSupplierResponse>;
 

@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AUTH_AGGREGATES } from '@contracts/auth';
+import { NOTIFICATION_EVENTS } from '@contracts/notification';
 import { PrismaService } from '@auth/prisma/prisma.service';
 import { OutboxRepository } from '@auth/outbox/repositories/outbox.repository';
+import { OUTBOX_STATUS } from '@auth/outbox/entities/outbox-event.entity';
 
 describe('OutboxRepository', () => {
    let repository: OutboxRepository;
@@ -48,11 +51,11 @@ describe('OutboxRepository', () => {
       const now = new Date();
       prismaService.outboxEvent.create.mockResolvedValue({
          eventId: 'event-1',
-         aggregateType: 'USER',
+         aggregateType: AUTH_AGGREGATES.ACCOUNT,
          aggregateId: 'user-1',
-         eventType: 'USER_REGISTERED',
+         eventType: NOTIFICATION_EVENTS.USER_REGISTERED,
          payload: { email: 'test@example.com' },
-         status: 'PENDING',
+         status: OUTBOX_STATUS.PENDING,
          retryCount: 0,
          lastError: null,
          processedAt: null,
@@ -61,15 +64,15 @@ describe('OutboxRepository', () => {
       });
 
       const result = await repository.create({
-         aggregateType: 'USER',
+         aggregateType: AUTH_AGGREGATES.ACCOUNT,
          aggregateId: 'user-1',
-         eventType: 'USER_REGISTERED',
+         eventType: NOTIFICATION_EVENTS.USER_REGISTERED,
          payload: { email: 'test@example.com' },
       });
 
       expect(result).toBeDefined();
       expect(result.eventId).toBe('event-1');
-      expect(result.status).toBe('PENDING');
+      expect(result.status).toBe(OUTBOX_STATUS.PENDING);
       expect(prismaService.outboxEvent.create).toHaveBeenCalled();
    });
 
@@ -78,11 +81,11 @@ describe('OutboxRepository', () => {
       prismaService.outboxEvent.findMany.mockResolvedValue([
          {
             eventId: 'event-1',
-            aggregateType: 'USER',
+            aggregateType: AUTH_AGGREGATES.ACCOUNT,
             aggregateId: 'user-1',
-            eventType: 'USER_REGISTERED',
+            eventType: NOTIFICATION_EVENTS.USER_REGISTERED,
             payload: {},
-            status: 'PENDING',
+            status: OUTBOX_STATUS.PENDING,
             retryCount: 0,
             lastError: null,
             processedAt: null,
@@ -95,7 +98,7 @@ describe('OutboxRepository', () => {
       expect(events).toHaveLength(1);
       expect(events[0].eventId).toBe('event-1');
       expect(prismaService.outboxEvent.findMany).toHaveBeenCalledWith({
-         where: { status: { in: ['PENDING', 'PROCESSING'] } },
+         where: { status: { in: [OUTBOX_STATUS.PENDING, OUTBOX_STATUS.PROCESSING] } },
          orderBy: { createdAt: 'asc' },
          take: 10,
       });
@@ -106,7 +109,7 @@ describe('OutboxRepository', () => {
       await repository.markAsProcessing(['id1', 'id2']);
       expect(prismaService.outboxEvent.updateMany).toHaveBeenCalledWith({
          where: { eventId: { in: ['id1', 'id2'] } },
-         data: { status: 'PROCESSING' },
+         data: { status: OUTBOX_STATUS.PROCESSING },
       });
    });
 
@@ -116,7 +119,7 @@ describe('OutboxRepository', () => {
       expect(prismaService.outboxEvent.update).toHaveBeenCalledWith({
          where: { eventId: 'event-1' },
          data: expect.objectContaining({
-            status: 'PUBLISHED',
+            status: OUTBOX_STATUS.PUBLISHED,
             lastError: null,
          }) as unknown,
       });
@@ -134,7 +137,7 @@ describe('OutboxRepository', () => {
       expect(prismaService.outboxEvent.update).toHaveBeenCalledWith({
          where: { eventId: 'event-1' },
          data: {
-            status: 'PENDING',
+            status: OUTBOX_STATUS.PENDING,
             retryCount: 2,
             lastError: 'Connection timeout',
          },
@@ -153,7 +156,7 @@ describe('OutboxRepository', () => {
       expect(prismaService.outboxEvent.update).toHaveBeenCalledWith({
          where: { eventId: 'event-1' },
          data: expect.objectContaining({
-            status: 'FAILED',
+            status: OUTBOX_STATUS.FAILED,
             retryCount: 5,
             lastError: 'Permanent error',
          }) as unknown,

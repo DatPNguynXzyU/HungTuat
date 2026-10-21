@@ -3,6 +3,8 @@ import {
    CheckEmailHandler,
    RegisterCommand,
    RegisterHandler,
+   RegisterSupplierCommand,
+   RegisterSupplierHandler,
    SendRegisterOtpCommand,
    SendRegisterOtpHandler,
    VerifyRegisterOtpCommand,
@@ -72,5 +74,31 @@ describe('Registration Command Handlers', () => {
          undefined,
       );
       expect(result.accessToken).toBe('atk-123');
+   });
+
+   it('should execute RegisterSupplierCommand', async () => {
+      authRegistrationService.registerSupplier = jest.fn().mockResolvedValue({
+         accessToken: 'atk-supplier-123',
+         refreshToken: 'rtk-supplier-123',
+         user: { id: 'acc-sup-1', email: 'supplier@example.com' },
+      });
+      const handler = new RegisterSupplierHandler(authRegistrationService as AuthRegistrationService);
+      const result = await handler.execute(
+         new RegisterSupplierCommand({
+            email: 'supplier@example.com',
+            password: 'Password123!',
+            confirmPassword: 'Password123!',
+         }),
+      );
+
+      expect(authRegistrationService.registerSupplier).toHaveBeenCalledWith(
+         {
+            email: 'supplier@example.com',
+            password: 'Password123!',
+            confirmPassword: 'Password123!',
+         },
+         undefined,
+      );
+      expect(result.accessToken).toBe('atk-supplier-123');
    });
 });

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RbacCacheService } from '@common';
+import { DEFAULT_ROLES, RbacCacheService } from '@common';
 import { RBAC_REPOSITORY } from '@auth/repositories';
 import { AuthRbacService } from '@auth/services/domain/auth-rbac.service';
 
@@ -41,28 +41,34 @@ describe('AuthRbacService', () => {
 
    describe('getOrCacheRole', () => {
       it('should return cached role if present in cache', async () => {
-         const cachedRole = { id: 'role-1', code: 'USER', name: 'User', permissions: ['read'] };
+         const cachedRole = { id: 'role-1', code: DEFAULT_ROLES.USER, name: 'User', permissions: ['read'] };
          mockRbacCacheService.getRole.mockResolvedValueOnce(cachedRole);
 
-         const result = await service.getOrCacheRole('USER');
+         const result = await service.getOrCacheRole(DEFAULT_ROLES.USER);
 
          expect(result).toEqual(cachedRole);
-         expect(mockRbacCacheService.getRole).toHaveBeenCalledWith('USER');
+         expect(mockRbacCacheService.getRole).toHaveBeenCalledWith(DEFAULT_ROLES.USER);
          expect(mockRbacRepository.findRoleByCode).not.toHaveBeenCalled();
       });
 
       it('should fetch from repository and cache role if not in cache', async () => {
-         const repoRole = { id: 'role-1', code: 'USER', name: 'User', description: 'User role', permissions: ['read'] };
+         const repoRole = {
+            id: 'role-1',
+            code: DEFAULT_ROLES.USER,
+            name: 'User',
+            description: 'User role',
+            permissions: ['read'],
+         };
          mockRbacCacheService.getRole.mockResolvedValueOnce(null);
          mockRbacRepository.findRoleByCode.mockResolvedValueOnce(repoRole);
 
-         const result = await service.getOrCacheRole('USER');
+         const result = await service.getOrCacheRole(DEFAULT_ROLES.USER);
 
          expect(result).toEqual(repoRole);
-         expect(mockRbacRepository.findRoleByCode).toHaveBeenCalledWith('USER');
-         expect(mockRbacCacheService.setRole).toHaveBeenCalledWith('USER', {
+         expect(mockRbacRepository.findRoleByCode).toHaveBeenCalledWith(DEFAULT_ROLES.USER);
+         expect(mockRbacCacheService.setRole).toHaveBeenCalledWith(DEFAULT_ROLES.USER, {
             id: 'role-1',
-            code: 'USER',
+            code: DEFAULT_ROLES.USER,
             name: 'User',
             description: 'User role',
             permissions: ['read'],
@@ -84,7 +90,7 @@ describe('AuthRbacService', () => {
       it('should return role permissions', async () => {
          mockRbacCacheService.getRole.mockResolvedValueOnce({ id: 'r1', permissions: ['read:auth', 'write:auth'] });
 
-         const permissions = await service.getRolePermissions('ADMIN');
+         const permissions = await service.getRolePermissions(DEFAULT_ROLES.ADMIN);
 
          expect(permissions).toEqual(['read:auth', 'write:auth']);
       });

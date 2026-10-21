@@ -6,3 +6,5 @@ export * from '@auth/commands/registration/verify-register-otp.command';
 export * from '@auth/commands/registration/verify-register-otp.handler';
 export * from '@auth/commands/registration/register.command';
 export * from '@auth/commands/registration/register.handler';
+export * from '@auth/commands/registration/register-supplier.command';
+export * from '@auth/commands/registration/register-supplier.handler';

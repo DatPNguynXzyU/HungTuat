@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuditLogsController } from '@/modules/audit-logs/audit-logs.controller';
 import { AuditLogsService } from '@/modules/audit-logs/audit-logs.service';
-import type { JwtPayload } from '@common';
+import { DEFAULT_ROLES, type JwtPayload } from '@common';
 
 describe('AuditLogsController', () => {
    let controller: AuditLogsController;
@@ -12,7 +12,7 @@ describe('AuditLogsController', () => {
    const mockUser: JwtPayload = {
       sub: 'user-admin-1',
       email: 'admin@example.com',
-      roles: ['admin'],
+      roles: [DEFAULT_ROLES.ADMIN],
    };
 
    beforeEach(async () => {

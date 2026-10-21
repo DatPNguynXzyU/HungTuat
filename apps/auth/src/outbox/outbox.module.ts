@@ -16,6 +16,9 @@ import { RabbitMqOutboxEventPublisher } from '@auth/outbox/adapters/rabbitmq-out
       RmqModule.register({
          name: SERVICES.USER_SERVICE,
       }),
+      RmqModule.register({
+         name: SERVICES.SUPPLIER_SERVICE,
+      }),
    ],
    providers: [
       {

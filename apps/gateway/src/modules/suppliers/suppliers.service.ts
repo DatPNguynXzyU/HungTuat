@@ -7,16 +7,20 @@ import {
    handleGrpcError,
    RetryPolicyRegistry,
    SERVICE_NAMES,
+   type SupplierRole,
    withGrpcRetry,
 } from '@common';
 import {
    SUPPLIER_V1_GRPC_CLIENT,
    SUPPLIER_V1_GRPC_SERVICE_NAME,
+   type IGetMySupplierRequest,
    type IRegisterSupplierRequest,
    type ISupplierProto,
    type ISupplierV1GrpcService,
+   type MySupplierResponseDto,
    type RegisterSupplierDto,
    type SupplierItemDto,
+   type SupplierMemberStatusType,
    type SupplierStatusType,
 } from '@contracts/supplier';
 
@@ -96,6 +100,48 @@ export class SuppliersService implements OnModuleInit {
             );
 
             return this.mapProtoToDto(res.supplier);
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   /**
+    * Retrieves the current authenticated supplier profile and onboarding state.
+    */
+   async getMySupplier(options?: {
+      authHeader?: string;
+      correlationId?: string;
+      accountId?: string;
+   }): Promise<MySupplierResponseDto> {
+      try {
+         const metadata = createGrpcMetadata({
+            correlationId: options?.correlationId,
+            callerService: SERVICE_NAMES.GATEWAY,
+         });
+
+         if (options?.authHeader) {
+            metadata.set('authorization', options.authHeader);
+            metadata.set('x-authorization', options.authHeader);
+         }
+
+         return await this.supplierGrpcBreaker.execute(async () => {
+            const request: IGetMySupplierRequest = {
+               accountId: options?.accountId || '',
+            };
+
+            const res = await firstValueFrom(
+               defer(() => this.supplierGrpcService.getMySupplier(request, metadata)).pipe(
+                  withGrpcRetry(this.supplierGrpcRetryPolicy),
+               ),
+            );
+
+            return {
+               hasSupplier: res.hasSupplier,
+               supplier: res.supplier ? this.mapProtoToDto(res.supplier) : null,
+               role: (res.role as SupplierRole) || undefined,
+               memberStatus: (res.memberStatus as SupplierMemberStatusType) || undefined,
+            };
          });
       } catch (error: unknown) {
          return handleGrpcError(error);

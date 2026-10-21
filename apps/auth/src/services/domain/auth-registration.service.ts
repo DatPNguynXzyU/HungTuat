@@ -16,6 +16,7 @@ import {
    AUTH_SECURITY,
    USER_STATUS,
    RegisterDto,
+   RegisterSupplierAccountDto,
    SendRegisterOtpDto,
    type SendRegisterOtpResponseDto,
    VerifyRegisterOtpDto,
@@ -59,12 +60,17 @@ import {
 } from '@auth/domain/events';
 import { AbstractAuthFlow, type AuthFlowContext, type AuthProvisionResult } from '@auth/templates';
 
+export interface RegistrationFlowDto extends RegisterDto {
+   targetRole?: string;
+   outboxEventType?: string;
+}
+
 /**
  * AuthRegistrationService handles account registration, verification tokens, and OTP verification.
  * Implements the concrete Template Method operations derived from AbstractAuthFlow.
  */
 @Injectable()
-export class AuthRegistrationService extends AbstractAuthFlow<RegisterDto, RegisterSaga> {
+export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDto, RegisterSaga> {
    constructor(
       @Inject(ACCOUNT_REPOSITORY)
       private readonly accountRepository: IAccountRepository,
@@ -324,14 +330,36 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegisterDto, Regis
     * Executes the Template Method defined in AbstractAuthFlow.
     */
    async register(dto: RegisterDto, deviceInfo?: IDeviceInfo): Promise<IAuthResult> {
-      return this.execute(dto, deviceInfo);
+      return this.execute(
+         {
+            ...dto,
+            targetRole: DEFAULT_ROLES.USER,
+            outboxEventType: NOTIFICATION_EVENTS.USER_REGISTERED,
+         },
+         deviceInfo,
+      );
+   }
+
+   /**
+    * Public entry point for supplier admin registration.
+    * Provisions supplier account with SUPPLIER_ADMIN role and emits SUPPLIER_REGISTERED outbox event.
+    */
+   async registerSupplier(dto: RegisterSupplierAccountDto, deviceInfo?: IDeviceInfo): Promise<IAuthResult> {
+      return this.execute(
+         {
+            ...dto,
+            targetRole: DEFAULT_ROLES.SUPPLIER_ADMIN,
+            outboxEventType: NOTIFICATION_EVENTS.SUPPLIER_REGISTERED,
+         },
+         deviceInfo,
+      );
    }
 
    /**
     * Primitive step: Validates registration payload, hashes password, executes transaction, and prepares saga.
     */
    protected async authenticateOrProvision(
-      dto: RegisterDto,
+      dto: RegistrationFlowDto,
       deviceInfo?: IDeviceInfo,
    ): Promise<AuthProvisionResult<RegisterSaga>> {
       const emailResult = Email.create(dto.email);
@@ -377,9 +405,13 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegisterDto, Regis
       if (mightContain) {
          const existing = await this.accountRepository.findByEmail(normalizedEmail);
          if (existing) {
+            const auditAction =
+               dto.targetRole === DEFAULT_ROLES.SUPPLIER_ADMIN
+                  ? AUDIT_ACTIONS.AUTH_REGISTER_SUPPLIER
+                  : AUDIT_ACTIONS.AUTH_REGISTER;
             await this.auditLogService.record(
                AuditLogBuilder.create()
-                  .withAction(AUDIT_ACTIONS.AUTH_REGISTER)
+                  .withAction(auditAction)
                   .asFailure(AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS)
                   .withActorEmail(normalizedEmail)
                   .withDeviceInfo(deviceInfo)
@@ -391,13 +423,15 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegisterDto, Regis
          }
       }
 
+      const targetRoleName = dto.targetRole ?? DEFAULT_ROLES.USER;
       const [defaultRole, passwordHash] = await Promise.all([
-         this.getOrCacheRole(DEFAULT_ROLES.USER),
+         this.getOrCacheRole(targetRoleName),
          password.hash(this.passwordHasher),
       ]);
 
       const saga = new RegisterSaga(this.accountRepository, this.tokenLifecycleService, this.outboxRepository);
 
+      const eventType = dto.outboxEventType ?? NOTIFICATION_EVENTS.USER_REGISTERED;
       const newAccount = await this.unitOfWork.runInTransaction(async (uow) => {
          const account = await uow.accountRepository.create({
             email: normalizedEmail,
@@ -410,10 +444,11 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegisterDto, Regis
          await uow.outboxRepository.create({
             aggregateType: AUTH_AGGREGATES.ACCOUNT,
             aggregateId: account.id,
-            eventType: NOTIFICATION_EVENTS.USER_REGISTERED,
+            eventType,
             payload: {
                email: normalizedEmail,
                accountId: account.id,
+               role: targetRoleName,
             },
          });
 
@@ -440,7 +475,7 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegisterDto, Regis
    /**
     * Primitive step: Adds email to bloom filter and triggers outbox event publisher.
     */
-   protected async onSuccess(context: AuthFlowContext<RegisterDto, RegisterSaga>): Promise<void> {
+   protected async onSuccess(context: AuthFlowContext<RegistrationFlowDto, RegisterSaga>): Promise<void> {
       const normalizedEmail = context.account.email;
       await this.emailBloomFilterService.addEmail(normalizedEmail);
       this.logger.log(`Created account ${context.account.email} with Outbox event; triggering publisher`);
@@ -455,11 +490,32 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegisterDto, Regis
    }
 
    /**
-    * Primitive step: Emits domain event for user registered.
+    * Hook: Dispatches structured audit log with context-aware action identifier.
     */
-   protected emitSuccessEvent(context: AuthFlowContext<RegisterDto, RegisterSaga>): void {
+   protected override recordAudit(context: AuthFlowContext<RegistrationFlowDto, RegisterSaga>): void {
+      const isSupplier = context.dto.targetRole === DEFAULT_ROLES.SUPPLIER_ADMIN;
+      this.auditLogService
+         .record(
+            AuditLogBuilder.create()
+               .withAction(isSupplier ? AUDIT_ACTIONS.AUTH_REGISTER_SUPPLIER : this.getAuditAction())
+               .asSuccess()
+               .withAccount(context.account)
+               .withDeviceInfo(context.deviceInfo)
+               .withIpAddress(context.clientIp)
+               .build(),
+         )
+         .catch((err: unknown) => {
+            this.logger.error('Failed to write audit log in registration flow', err);
+         });
+   }
+
+   /**
+    * Primitive step: Emits domain event for registration.
+    */
+   protected emitSuccessEvent(context: AuthFlowContext<RegistrationFlowDto, RegisterSaga>): void {
+      const isSupplier = context.dto.targetRole === DEFAULT_ROLES.SUPPLIER_ADMIN;
       this.eventEmitter.emit(
-         AUTH_DOMAIN_EVENTS.USER_REGISTERED,
+         isSupplier ? AUTH_DOMAIN_EVENTS.SUPPLIER_REGISTERED : AUTH_DOMAIN_EVENTS.USER_REGISTERED,
          new UserRegisteredEvent(context.account.id, context.account.email, new Date(), context.deviceInfo),
       );
    }
@@ -467,10 +523,11 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegisterDto, Regis
    /**
     * Primitive step: Emits domain event for registration failure.
     */
-   protected emitFailureEvent(error: unknown, dto: RegisterDto, deviceInfo?: IDeviceInfo): void {
+   protected emitFailureEvent(error: unknown, dto: RegistrationFlowDto, deviceInfo?: IDeviceInfo): void {
       const reason = this.extractFailureReason(error);
+      const isSupplier = dto.targetRole === DEFAULT_ROLES.SUPPLIER_ADMIN;
       this.eventEmitter.emit(
-         AUTH_DOMAIN_EVENTS.USER_REGISTRATION_FAILED,
+         isSupplier ? AUTH_DOMAIN_EVENTS.SUPPLIER_REGISTRATION_FAILED : AUTH_DOMAIN_EVENTS.USER_REGISTRATION_FAILED,
          new UserRegistrationFailedEvent(dto.email, reason, new Date(), deviceInfo),
       );
    }

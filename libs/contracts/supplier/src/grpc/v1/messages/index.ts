@@ -30,7 +30,7 @@ export interface IListSuppliersResponse {
 
 export interface IRegisterSupplierRequest {
    supplierName: string;
-   supplierCode: string;
+   supplierCode?: string;
    contactEmail?: string;
    contactPhone?: string;
    address?: string;
@@ -40,6 +40,17 @@ export interface IRegisterSupplierRequest {
 
 export interface IRegisterSupplierResponse {
    supplier: ISupplierProto;
+}
+
+export interface IGetMySupplierRequest {
+   accountId?: string;
+}
+
+export interface IGetMySupplierResponse {
+   hasSupplier: boolean;
+   supplier?: ISupplierProto;
+   role?: string;
+   memberStatus?: string;
 }
 
 export interface IUpdateSupplierRequest {

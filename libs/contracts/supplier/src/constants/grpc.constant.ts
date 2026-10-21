@@ -29,6 +29,7 @@ export const SUPPLIER_V1_GRPC_METHODS = {
    GET_SUPPLIERS_BY_IDS: 'GetSuppliersByIds',
    LIST_SUPPLIERS: 'ListSuppliers',
    REGISTER_SUPPLIER: 'RegisterSupplier',
+   GET_MY_SUPPLIER: 'GetMySupplier',
    UPDATE_SUPPLIER: 'UpdateSupplier',
    VERIFY_SUPPLIER: 'VerifySupplier',
 } as const;

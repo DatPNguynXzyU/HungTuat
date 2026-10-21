@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { of } from 'rxjs';
-import { SERVICES } from '@common';
+import { DEFAULT_ROLES, SERVICES } from '@common';
 import { AUTH_PATTERNS } from '@contracts/auth';
 import { AuditLogsService } from '@/modules/audit-logs/audit-logs.service';
 import type { JwtPayload } from '@common';
@@ -13,7 +13,7 @@ describe('AuditLogsService', () => {
    const mockUser: JwtPayload = {
       sub: 'user-admin-1',
       email: 'admin@example.com',
-      roles: ['admin'],
+      roles: [DEFAULT_ROLES.ADMIN],
       jti: 'session-123',
    };
 

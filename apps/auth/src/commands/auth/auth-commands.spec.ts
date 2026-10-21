@@ -1,3 +1,4 @@
+import { DEFAULT_ROLES } from '@common';
 import {
    GetEmailCommand,
    GetEmailHandler,
@@ -97,9 +98,9 @@ describe('Auth Command Handlers', () => {
 
    it('should execute GetRolePermissionsCommand', async () => {
       const handler = new GetRolePermissionsHandler(authCoreService as AuthCoreService);
-      const result = await handler.execute(new GetRolePermissionsCommand('USER'));
+      const result = await handler.execute(new GetRolePermissionsCommand(DEFAULT_ROLES.USER));
 
-      expect(authCoreService.getRolePermissions).toHaveBeenCalledWith('USER');
+      expect(authCoreService.getRolePermissions).toHaveBeenCalledWith(DEFAULT_ROLES.USER);
       expect(result).toEqual(['USERS:READ']);
    });
 

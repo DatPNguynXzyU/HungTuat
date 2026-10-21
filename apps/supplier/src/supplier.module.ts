@@ -17,11 +17,16 @@ import { SupplierConfigModule } from '@supplier/config';
 import { SupplierLoggerModule } from '@supplier/logger';
 import { PrismaModule } from '@supplier/prisma';
 import { UnitOfWorkModule } from '@supplier/unit-of-work';
-import { SUPPLIER_REPOSITORY, SupplierRepository } from '@supplier/repositories';
+import {
+   SUPPLIER_MEMBER_REPOSITORY,
+   SUPPLIER_REPOSITORY,
+   SupplierMemberRepository,
+   SupplierRepository,
+} from '@supplier/repositories';
 import { SUPPLIER_METRICS_SERVICE, SupplierMetricsService, SupplierService } from '@supplier/services';
 import { SUPPLIER_QUERY_HANDLERS } from '@supplier/queries';
 import { SUPPLIER_COMMAND_HANDLERS } from '@supplier/commands';
-import { SupplierGrpcController } from '@supplier/adapters';
+import { SupplierGrpcController, SupplierRmqController } from '@supplier/adapters';
 import { SupplierMetricsController } from '@supplier/supplier-metrics.controller';
 
 @Module({
@@ -38,13 +43,18 @@ import { SupplierMetricsController } from '@supplier/supplier-metrics.controller
       RmqModule,
       GrpcHealthModule,
    ],
-   controllers: [SupplierGrpcController, SupplierMetricsController],
+   controllers: [SupplierGrpcController, SupplierMetricsController, SupplierRmqController],
    providers: [
       // Repositories
       SupplierRepository,
       {
          provide: SUPPLIER_REPOSITORY,
          useExisting: SupplierRepository,
+      },
+      SupplierMemberRepository,
+      {
+         provide: SUPPLIER_MEMBER_REPOSITORY,
+         useExisting: SupplierMemberRepository,
       },
 
       // Domain & Application Services
@@ -73,7 +83,7 @@ import { SupplierMetricsController } from '@supplier/supplier-metrics.controller
       ...SUPPLIER_QUERY_HANDLERS,
       ...SUPPLIER_COMMAND_HANDLERS,
    ],
-   exports: [SupplierService, SupplierMetricsService, SUPPLIER_REPOSITORY],
+   exports: [SupplierService, SupplierMetricsService, SUPPLIER_REPOSITORY, SUPPLIER_MEMBER_REPOSITORY],
 })
 export class SupplierModule implements OnModuleInit {
    constructor(

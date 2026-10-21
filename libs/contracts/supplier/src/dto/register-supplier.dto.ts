@@ -12,15 +12,15 @@ export class RegisterSupplierDto {
    @MaxLength(150)
    supplierName!: string;
 
-   @ApiProperty({
-      description: 'Merchant unique identification code',
+   @ApiPropertyOptional({
+      description: 'Merchant unique identification code (optional, auto-generated if omitted)',
       example: 'SUPP-MM-AP',
       maxLength: 50,
    })
-   @IsNotEmpty()
+   @IsOptional()
    @IsString()
    @MaxLength(50)
-   supplierCode!: string;
+   supplierCode?: string;
 
    @ApiPropertyOptional({
       description: 'Supplier contact email',

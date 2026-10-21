@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { RedisService, UnauthorizedException } from '@common';
+import { DEFAULT_ROLES, RedisService, UnauthorizedException } from '@common';
 import { USER_STATUS } from '@contracts/auth';
 import { AUTH_LOCKOUT_VALUE } from '@auth/constants';
 import { AUTH_DOMAIN_EVENTS } from '@auth/domain/events';
@@ -23,7 +23,7 @@ describe('AuthLoginService', () => {
    };
 
    const mockAuthRbacService = {
-      getOrCacheRole: jest.fn().mockResolvedValue({ id: 'r1', code: 'USER', permissions: [] }),
+      getOrCacheRole: jest.fn().mockResolvedValue({ id: 'r1', code: DEFAULT_ROLES.USER, permissions: [] }),
    };
 
    const mockPasswordHasher = {
@@ -109,7 +109,7 @@ describe('AuthLoginService', () => {
          id: 'user-id-1',
          email: 'test@example.com',
          passwordHash: '$argon2id$v=19$m=65536,t=3,p=4$dummyhash',
-         roles: ['USER'],
+         roles: [DEFAULT_ROLES.USER],
          status: USER_STATUS.ACTIVE,
          isEmailVerified: true,
          lastLoginAt: '2026-10-12T00:00:00.000Z',

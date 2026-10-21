@@ -48,12 +48,30 @@ export class SupplierService {
    }
 
    async registerSupplier(dto: RegisterSupplierDto): Promise<SupplierEntity> {
-      const codeVo = new SupplierCode(dto.supplierCode);
-      const existingByCode = await this.supplierRepository.findByCode(codeVo.value);
-      if (existingByCode) {
-         throw new ConflictException(SUPPLIER_ERROR_CODES.SUPPLIER_CODE_ALREADY_EXISTS, {
-            params: { code: codeVo.value },
-         });
+      let codeVo: SupplierCode;
+      if (dto.supplierCode && dto.supplierCode.trim()) {
+         codeVo = new SupplierCode(dto.supplierCode);
+         const existingByCode = await this.supplierRepository.findByCode(codeVo.value);
+         if (existingByCode) {
+            throw new ConflictException(SUPPLIER_ERROR_CODES.SUPPLIER_CODE_ALREADY_EXISTS, {
+               params: { code: codeVo.value },
+            });
+         }
+      } else {
+         let attempts = 0;
+         while (true) {
+            const candidate = SupplierCode.generate();
+            const existing = await this.supplierRepository.findByCode(candidate.value);
+            if (!existing) {
+               codeVo = candidate;
+               break;
+            }
+            attempts++;
+            if (attempts > 5) {
+               codeVo = SupplierCode.generateFallback();
+               break;
+            }
+         }
       }
 
       const slugVo = new Slug(dto.supplierName);

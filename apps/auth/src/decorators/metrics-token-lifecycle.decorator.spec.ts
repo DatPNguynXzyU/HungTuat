@@ -1,4 +1,4 @@
-import type { JwtPayload } from '@common';
+import { DEFAULT_ROLES, type JwtPayload } from '@common';
 import { AUTH_METRICS_STATUS, AUTH_METRICS_TOKEN_OPERATIONS, AUTH_METRICS_TOKEN_TYPES } from '@auth/constants';
 import type { IAuthMetricsService } from '@auth/services/infrastructure/auth-metrics.interface';
 import type {
@@ -15,7 +15,7 @@ describe('MetricsTokenLifecycleDecorator', () => {
    const mockAccount: ITokenAccountPayload = {
       id: 'acc-1',
       email: 'test@example.com',
-      roles: ['USER'],
+      roles: [DEFAULT_ROLES.USER],
    };
 
    beforeEach(() => {

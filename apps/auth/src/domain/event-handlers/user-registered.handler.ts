@@ -13,6 +13,7 @@ export class UserRegisteredEventHandler {
    ) {}
 
    @OnEvent(AUTH_DOMAIN_EVENTS.USER_REGISTERED, { async: true })
+   @OnEvent(AUTH_DOMAIN_EVENTS.SUPPLIER_REGISTERED, { async: true })
    async handle(event: UserRegisteredEvent): Promise<void> {
       this.logger.log(`Handling user registered event for ${event.email}`);
 

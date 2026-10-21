@@ -9,6 +9,7 @@ service SupplierService {
   rpc GetSuppliersByIds (GetSuppliersByIdsRequest) returns (GetSuppliersByIdsResponse);
   rpc ListSuppliers (ListSuppliersRequest) returns (ListSuppliersResponse);
   rpc RegisterSupplier (RegisterSupplierRequest) returns (RegisterSupplierResponse);
+  rpc GetMySupplier (GetMySupplierRequest) returns (GetMySupplierResponse);
   rpc UpdateSupplier (UpdateSupplierRequest) returns (UpdateSupplierResponse);
   rpc VerifySupplier (VerifySupplierRequest) returns (VerifySupplierResponse);
 }

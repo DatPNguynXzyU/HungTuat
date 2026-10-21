@@ -62,6 +62,29 @@ describe('SupplierService', () => {
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(SUPPLIER_EVENTS.SUPPLIER_REGISTERED, expect.anything());
    });
 
+   it('should auto-generate supplier code when omitted', async () => {
+      mockSupplierRepo.findByCode.mockResolvedValue(null);
+      mockSupplierRepo.findBySlug.mockResolvedValue(null);
+      mockSupplierRepo.create.mockImplementation((data) =>
+         Promise.resolve({
+            supplierId: 'supp-auto-1',
+            ...data,
+            rating: 5,
+            version: 1,
+            deletedAt: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+         }),
+      );
+
+      const result = await service.registerSupplier({
+         supplierName: 'Fresh Greens',
+      });
+
+      expect(result.supplierId).toBe('supp-auto-1');
+      expect(result.supplierCode).toMatch(/^SUP-/);
+   });
+
    it('should throw ConflictException if supplier code already exists', async () => {
       mockSupplierRepo.findByCode.mockResolvedValue({ supplierId: 'existing' });
 

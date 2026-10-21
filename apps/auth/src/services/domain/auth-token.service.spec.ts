@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException } from '@common';
+import { DEFAULT_ROLES, UnauthorizedException } from '@common';
 import { USER_STATUS } from '@contracts/auth';
 import { ACCOUNT_REPOSITORY } from '@auth/repositories';
 import { AUTH_RATE_LIMITER, AuditLogService, TOKEN_LIFECYCLE_SERVICE } from '@auth/services/infrastructure';
@@ -65,14 +65,14 @@ describe('AuthTokenService', () => {
       const mockPayload = {
          sub: 'acc-1',
          jti: 'jti-1',
-         roles: ['USER'],
+         roles: [DEFAULT_ROLES.USER],
          exp: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const mockAccount = {
          id: 'acc-1',
          email: 'test@example.com',
-         roles: ['USER'],
+         roles: [DEFAULT_ROLES.USER],
          status: USER_STATUS.ACTIVE,
          isEmailVerified: true,
          lastLoginAt: '2026-10-10T00:00:00.000Z',
@@ -165,12 +165,12 @@ describe('AuthTokenService', () => {
       it('should validate token and return account info when active', async () => {
          mockTokenLifecycleService.validateAccessToken.mockResolvedValueOnce({
             sub: 'acc-1',
-            roles: ['USER'],
+            roles: [DEFAULT_ROLES.USER],
          });
          mockAccountRepository.findById.mockResolvedValueOnce({
             id: 'acc-1',
             email: 'user@example.com',
-            roles: ['USER'],
+            roles: [DEFAULT_ROLES.USER],
             status: USER_STATUS.ACTIVE,
             isEmailVerified: true,
             lastLoginAt: '2026-10-10T00:00:00.000Z',

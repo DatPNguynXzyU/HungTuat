@@ -34,7 +34,7 @@ message ListSuppliersResponse {
 
 message RegisterSupplierRequest {
   string supplierName = 1;
-  string supplierCode = 2;
+  optional string supplierCode = 2;
   optional string contactEmail = 3;
   optional string contactPhone = 4;
   optional string address = 5;
@@ -44,6 +44,17 @@ message RegisterSupplierRequest {
 
 message RegisterSupplierResponse {
   SupplierProto supplier = 1;
+}
+
+message GetMySupplierRequest {
+  string accountId = 1;
+}
+
+message GetMySupplierResponse {
+  bool hasSupplier = 1;
+  optional SupplierProto supplier = 2;
+  optional string role = 3;
+  optional string memberStatus = 4;
 }
 
 message UpdateSupplierRequest {

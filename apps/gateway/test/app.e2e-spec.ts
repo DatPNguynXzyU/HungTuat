@@ -2,7 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
-import { DEFAULT_DEV_RSA_PRIVATE_KEY, JwtUtil, SERVICES } from '@common';
+import { DEFAULT_DEV_RSA_PRIVATE_KEY, DEFAULT_ROLES, JwtUtil, SERVICES } from '@common';
+import { AUTH_PATTERNS } from '@contracts/auth';
 import { GatewayConfigService } from '@/config';
 import { GatewayModule } from '@/gateway.module';
 import { App } from 'supertest/types';
@@ -14,7 +15,7 @@ describe('GatewayController (e2e)', () => {
 
    const mockAuthClient = {
       send: jest.fn((pattern: { cmd: string }, data: unknown) => {
-         if (pattern.cmd === 'auth.get_jwks') {
+         if (pattern.cmd === AUTH_PATTERNS.GET_JWKS) {
             return of({
                keys: [
                   {
@@ -28,7 +29,7 @@ describe('GatewayController (e2e)', () => {
                ],
             });
          }
-         if (pattern.cmd === 'auth.register') {
+         if (pattern.cmd === AUTH_PATTERNS.REGISTER) {
             const dto = data as { email: string };
             return of({
                user: {
@@ -229,7 +230,7 @@ describe('GatewayController (e2e)', () => {
       const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_RSA_PRIVATE_KEY;
 
       const token = JwtUtil.sign(
-         { sub: 'usr_mock_123', email: 'john@example.com', roles: ['USER'], tokenType: 'access' },
+         { sub: 'usr_mock_123', email: 'john@example.com', roles: [DEFAULT_ROLES.USER], tokenType: 'access' },
          privateKey,
          3600,
          { keyid: configService.jwtKeyId },
@@ -249,7 +250,7 @@ describe('GatewayController (e2e)', () => {
       const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_RSA_PRIVATE_KEY;
 
       const token = JwtUtil.sign(
-         { sub: 'usr_mobile_456', email: 'mobile@example.com', roles: ['USER'], tokenType: 'access' },
+         { sub: 'usr_mobile_456', email: 'mobile@example.com', roles: [DEFAULT_ROLES.USER], tokenType: 'access' },
          privateKey,
          3600,
          { keyid: configService.jwtKeyId },

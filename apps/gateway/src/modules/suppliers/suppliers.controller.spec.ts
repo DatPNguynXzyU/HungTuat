@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Request } from 'express';
-import { SUPPLIER_STATUS, type SupplierItemDto } from '@contracts/supplier';
+import { DEFAULT_ROLES } from '@common';
+import { SUPPLIER_MEMBER_STATUS, SUPPLIER_STATUS, type SupplierItemDto } from '@contracts/supplier';
 import { SuppliersController } from '@/modules/suppliers/suppliers.controller';
 import { SuppliersService } from '@/modules/suppliers/suppliers.service';
 
@@ -59,5 +60,34 @@ describe('SuppliersController', () => {
          correlationId: 'corr-456',
       });
       expect(result).toEqual(mockSupplier);
+   });
+
+   it('should extract auth header and delegate getMySupplier to SuppliersService', async () => {
+      const mockMySupplier = {
+         hasSupplier: true,
+         supplier: mockSupplier,
+         role: DEFAULT_ROLES.SUPPLIER_ADMIN,
+         memberStatus: SUPPLIER_MEMBER_STATUS.ACTIVE,
+      };
+      mockSuppliersService.getMySupplier = jest.fn().mockResolvedValue(mockMySupplier);
+
+      const mockRequest = {
+         headers: {
+            authorization: 'Bearer jwt-token-xyz',
+            'x-correlation-id': 'corr-456',
+         },
+         cookies: {},
+      } as unknown as Request;
+
+      const mockUser = { sub: 'acc-123', email: 'test@example.com' } as never;
+
+      const result = await controller.getMySupplier(mockRequest, mockUser);
+
+      expect(mockSuppliersService.getMySupplier).toHaveBeenCalledWith({
+         authHeader: 'Bearer jwt-token-xyz',
+         correlationId: 'corr-456',
+         accountId: 'acc-123',
+      });
+      expect(result).toEqual(mockMySupplier);
    });
 });

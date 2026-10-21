@@ -12,6 +12,8 @@ import {
 import {
    SUPPLIER_V1_GRPC_METHODS,
    SUPPLIER_V1_GRPC_SERVICE_NAME,
+   type IGetMySupplierRequest,
+   type IGetMySupplierResponse,
    type IGetSupplierByIdRequest,
    type IGetSupplierByIdResponse,
    type IGetSuppliersByIdsRequest,
@@ -29,7 +31,12 @@ import {
    type SupplierItemDto,
 } from '@contracts/supplier';
 import { RegisterSupplierCommand, UpdateSupplierCommand, VerifySupplierCommand } from '@supplier/commands';
-import { GetSupplierByIdQuery, GetSuppliersByIdsQuery, ListSuppliersQuery } from '@supplier/queries';
+import {
+   GetMySupplierQuery,
+   GetSupplierByIdQuery,
+   GetSuppliersByIdsQuery,
+   ListSuppliersQuery,
+} from '@supplier/queries';
 
 @Controller()
 @UseFilters(new GrpcExceptionFilter())
@@ -114,6 +121,21 @@ export class SupplierGrpcController implements ISupplierV1GrpcService {
             .then((supplier) => ({
                supplier: this.mapSupplierToProto(supplier),
             })),
+      );
+   }
+
+   @UseGuards(GrpcJwtAuthGuard)
+   @GrpcMethod(SUPPLIER_V1_GRPC_SERVICE_NAME, SUPPLIER_V1_GRPC_METHODS.GET_MY_SUPPLIER)
+   getMySupplier(data: IGetMySupplierRequest): Observable<IGetMySupplierResponse> {
+      const user = (data as unknown as { user?: JwtPayload }).user;
+      const accountId = data.accountId || user?.sub || '';
+      return from(
+         this.commandBus.execute(new GetMySupplierQuery(accountId)).then((result) => ({
+            hasSupplier: result.hasSupplier,
+            supplier: result.supplier ? this.mapSupplierToProto(result.supplier) : undefined,
+            role: result.role,
+            memberStatus: result.memberStatus,
+         })),
       );
    }
 

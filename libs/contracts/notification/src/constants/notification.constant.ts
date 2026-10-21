@@ -11,6 +11,7 @@ export const NOTIFICATION_PATTERNS = {
 
 export const NOTIFICATION_EVENTS = {
    USER_REGISTERED: 'auth.user_registered',
+   SUPPLIER_REGISTERED: 'auth.supplier_registered',
    PASSWORD_RESET_REQUESTED: 'auth.password_reset_requested',
    EMAIL_VERIFICATION_REQUESTED: 'auth.email_verification_requested',
    OTP_REQUESTED: 'auth.otp_requested',

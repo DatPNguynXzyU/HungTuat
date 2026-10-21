@@ -60,6 +60,7 @@ import {
    LoginDto,
    RefreshTokenRequestDto,
    RegisterDto,
+   RegisterSupplierAccountDto,
    RevokeSessionResultDto,
    RevokeTokenRequestDto,
    SendRegisterOtpDto,
@@ -388,6 +389,83 @@ export class AuthController {
    ): Promise<AuthResponseDto> {
       const deviceInfo = this.extractDeviceInfo(req);
       const result = await this.authService.register(registerDto, deviceInfo);
+
+      this.setAuthCookies(res, {
+         accessToken: result.accessToken,
+         refreshToken: result.refreshToken,
+      });
+
+      return {
+         user: result.user,
+         tokens: this.buildTokensDto(result.accessToken, result.refreshToken),
+      };
+   }
+
+   @Public()
+   @Post('register-supplier')
+   @HttpCode(HttpStatus.CREATED)
+   @ApiOperation({
+      operationId: 'registerSupplierAccount',
+      summary:
+         'Register a new supplier admin account and automatically log in. Supports verificationToken from OTP step. Returns tokens in response body and HttpOnly cookies.',
+   })
+   @ApiHeader({
+      name: 'X-Client-Type',
+      required: false,
+      description: 'Client type identifier (e.g., ios, android, web)',
+      example: 'web',
+   })
+   @ApiHeader({
+      name: 'X-Device-Id',
+      required: false,
+      description: 'Unique device identifier for session tracking',
+      example: 'device-uuid-123',
+   })
+   @ApiResponse({
+      status: 201,
+      description:
+         'Supplier admin successfully registered. Tokens returned in response body and stored in HttpOnly cookies.',
+      type: AuthResponseDto,
+      links: {
+         GetAuthProfile: {
+            operationId: 'getAuthProfile',
+            description: 'Retrieve authenticated supplier profile and token payload after successful registration',
+         },
+         RegisterSupplier: {
+            operationId: 'registerSupplier',
+            description: 'Step 2: Submit supplier store details after account creation',
+         },
+         GetMySupplier: {
+            operationId: 'getMySupplierProfile',
+            description: 'Check supplier onboarding state or retrieve store profile',
+         },
+      },
+   })
+   @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failed or invalid/expired verification token',
+         errorCodes: [
+            COMMON_ERROR_CODES.VALIDATION_FAILED,
+            AUTH_ERROR_CODES.VERIFICATION_TOKEN_INVALID,
+            AUTH_ERROR_CODES.VERIFICATION_TOKEN_EXPIRED,
+         ],
+      },
+      {
+         status: HttpStatus.CONFLICT,
+         description: 'Email already registered',
+         errorCodes: [AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS],
+         exampleParams: { email: 'supplier.admin@example.com' },
+      },
+   ])
+   @ResponseMessage(AUTH_RESPONSE_MESSAGES.REGISTER_SUPPLIER_SUCCESS)
+   async registerSupplier(
+      @Req() req: Request,
+      @Body() registerDto: RegisterSupplierAccountDto,
+      @Res({ passthrough: true }) res: Response,
+   ): Promise<AuthResponseDto> {
+      const deviceInfo = this.extractDeviceInfo(req);
+      const result = await this.authService.registerSupplier(registerDto, deviceInfo);
 
       this.setAuthCookies(res, {
          accessToken: result.accessToken,

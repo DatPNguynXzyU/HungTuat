@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { RbacCacheService, RedisService, UnauthorizedException } from '@common';
+import { DEFAULT_ROLES, RbacCacheService, RedisService, UnauthorizedException } from '@common';
 import { NOTIFICATION_ADAPTER } from '@auth/adapters';
-import { AUTH_ERROR_CODES } from '@contracts/auth';
+import { AUTH_AGGREGATES, AUTH_ERROR_CODES, USER_STATUS } from '@contracts/auth';
+import { NOTIFICATION_EVENTS } from '@contracts/notification';
 import { AuthRegistrationService } from '@auth/services/domain/auth-registration.service';
 import { ACCOUNT_REPOSITORY, RBAC_REPOSITORY } from '@auth/repositories';
 import { AuthConfigService } from '@auth/config';
@@ -203,8 +204,8 @@ describe('AuthRegistrationService', () => {
       const mockCreatedAccount = {
          id: 'new-account-id',
          email: 'newuser@example.com',
-         roles: ['USER'],
-         status: 'ACTIVE',
+         roles: [DEFAULT_ROLES.USER],
+         status: USER_STATUS.ACTIVE,
          isEmailVerified: true,
          lastLoginAt: null,
          createdAt: '2026-10-12T00:00:00.000Z',
@@ -216,9 +217,9 @@ describe('AuthRegistrationService', () => {
          mockAccountRepository.create.mockResolvedValue(mockCreatedAccount);
          mockOutboxRepository.create.mockResolvedValue({
             eventId: 'mock-event-id',
-            aggregateType: 'ACCOUNT',
+            aggregateType: AUTH_AGGREGATES.ACCOUNT,
             aggregateId: 'new-account-id',
-            eventType: 'USER_REGISTERED',
+            eventType: NOTIFICATION_EVENTS.USER_REGISTERED,
             payload: { email: 'newuser@example.com' },
          });
          mockTokenLifecycleService.generateTokenPair.mockResolvedValue({
@@ -348,6 +349,28 @@ describe('AuthRegistrationService', () => {
 
          expect(result.user.id).toBe('new-account-id');
          expect(result.accessToken).toBe('mock-reg-access');
+      });
+
+      it('should successfully register supplier admin and emit SUPPLIER_REGISTERED event', async () => {
+         mockRbacRepository.findRoleByCode.mockResolvedValue({
+            id: 'role-supplier-admin-id',
+            code: DEFAULT_ROLES.SUPPLIER_ADMIN,
+         });
+         const result = await service.registerSupplier({
+            email: 'newuser@example.com',
+            password: 'Password123!',
+            confirmPassword: 'Password123!',
+         });
+
+         expect(result.user.id).toBe('new-account-id');
+         expect(mockOutboxRepository.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+               eventType: NOTIFICATION_EVENTS.SUPPLIER_REGISTERED,
+               payload: expect.objectContaining({
+                  role: DEFAULT_ROLES.SUPPLIER_ADMIN,
+               }),
+            }),
+         );
       });
    });
 });

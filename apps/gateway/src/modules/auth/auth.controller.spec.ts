@@ -22,6 +22,7 @@ describe('Gateway AuthController', () => {
       sendRegisterOtp: jest.fn(),
       verifyRegisterOtp: jest.fn(),
       register: jest.fn(),
+      registerSupplier: jest.fn(),
       login: jest.fn(),
       refreshToken: jest.fn(),
       revokeToken: jest.fn(),
@@ -255,6 +256,54 @@ describe('Gateway AuthController', () => {
          expect(res.tokens.refreshToken).toBe('mock-refresh-token');
          expect(res.tokens.tokenType).toBe('Bearer');
          expect(res.tokens.expiresIn).toBe(900);
+      });
+
+      it('should register supplier admin and return tokens in both cookies and response body', async () => {
+         const registerDto = {
+            email: 'supplier.admin@example.com',
+            password: 'password123',
+            confirmPassword: 'password123',
+         };
+
+         const mockRequest = {
+            headers: {
+               'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+            },
+         } as unknown as Request;
+
+         const mockCookie = jest.fn();
+         const mockResponse = {
+            cookie: mockCookie,
+         } as unknown as Response;
+
+         mockAuthService.registerSupplier.mockResolvedValue({
+            user: { id: 'usr_sup_1', email: 'supplier.admin@example.com' },
+            accessToken: 'mock-sup-access-token',
+            refreshToken: 'mock-sup-refresh-token',
+         });
+
+         const res = await controller.registerSupplier(mockRequest, registerDto, mockResponse);
+
+         expect(mockAuthService.registerSupplier).toHaveBeenCalledWith(registerDto, expect.any(Object));
+
+         expect(mockCookie).toHaveBeenCalledWith(
+            AUTH_COOKIES.ACCESS_TOKEN,
+            'mock-sup-access-token',
+            mockConfigService.accessTokenCookieOptions,
+         );
+         expect(mockCookie).toHaveBeenCalledWith(
+            AUTH_COOKIES.REFRESH_TOKEN,
+            'mock-sup-refresh-token',
+            mockConfigService.refreshTokenCookieOptions,
+         );
+
+         expect(res.user).toEqual({
+            id: 'usr_sup_1',
+            email: 'supplier.admin@example.com',
+         });
+         expect(res.tokens).toBeDefined();
+         expect(res.tokens.accessToken).toBe('mock-sup-access-token');
+         expect(res.tokens.refreshToken).toBe('mock-sup-refresh-token');
       });
 
       it('should login and return tokens in both cookies and response body', async () => {

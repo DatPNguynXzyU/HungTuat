@@ -1,4 +1,4 @@
-import { BadRequestException } from '@common';
+import { BadRequestException, DEFAULT_ROLES } from '@common';
 import { UserEntity, UserStatus } from '@user/entities';
 import type { ProfileService } from '@user/services/domain/profile.service';
 import {
@@ -116,7 +116,7 @@ describe('Profile Command Handlers', () => {
          const result = await handler.execute(
             new GetUserByIdCommand({
                data: { userId: 'acc-1' },
-               user: { userId: 'acc-1', email: 'test@example.com', roles: ['user'], permissions: [] },
+               user: { userId: 'acc-1', email: 'test@example.com', roles: [DEFAULT_ROLES.USER], permissions: [] },
             }),
          );
 
@@ -176,11 +176,15 @@ describe('Profile Command Handlers', () => {
          const result = await handler.execute(
             new UpdateUserProfileCommand({
                data: { userId: 'profile-1', displayName: 'Updated' },
-               user: { userId: 'acc-1', email: 'test@example.com', roles: ['user'], permissions: [] },
+               user: { userId: 'acc-1', email: 'test@example.com', roles: [DEFAULT_ROLES.USER], permissions: [] },
             }),
          );
 
-         expect(profileService.updateUserProfile).toHaveBeenCalledWith('profile-1', { displayName: 'Updated' });
+         expect(profileService.updateUserProfile).toHaveBeenCalledWith(
+            'profile-1',
+            { displayName: 'Updated' },
+            { isActorAdmin: false },
+         );
          expect(result).toEqual(mockUser);
       });
    });
@@ -191,7 +195,7 @@ describe('Profile Command Handlers', () => {
          const result = await handler.execute(
             new UpsertUserProfileCommand({
                data: { userId: 'acc-1', displayName: 'Upserted' },
-               user: { userId: 'acc-1', email: 'test@example.com', roles: ['user'], permissions: [] },
+               user: { userId: 'acc-1', email: 'test@example.com', roles: [DEFAULT_ROLES.USER], permissions: [] },
             }),
          );
 
@@ -206,11 +210,11 @@ describe('Profile Command Handlers', () => {
          const result = await handler.execute(
             new UpdateUsernameCommand({
                data: { userId: 'profile-1', username: 'new_john' },
-               user: { userId: 'acc-1', email: 'test@example.com', roles: ['user'], permissions: [] },
+               user: { userId: 'acc-1', email: 'test@example.com', roles: [DEFAULT_ROLES.USER], permissions: [] },
             }),
          );
 
-         expect(profileService.updateUsername).toHaveBeenCalledWith('profile-1', 'new_john');
+         expect(profileService.updateUsername).toHaveBeenCalledWith('profile-1', 'new_john', { isActorAdmin: false });
          expect(result).toEqual(mockUser);
       });
    });
@@ -221,7 +225,7 @@ describe('Profile Command Handlers', () => {
          const result = await handler.execute(
             new DeleteUserCommand({
                data: { userId: 'profile-1' },
-               user: { userId: 'acc-1', email: 'test@example.com', roles: ['user'], permissions: [] },
+               user: { userId: 'acc-1', email: 'test@example.com', roles: [DEFAULT_ROLES.USER], permissions: [] },
             }),
          );
 
@@ -246,7 +250,7 @@ describe('Profile Command Handlers', () => {
          const result = await handler.execute(
             new UploadAvatarCommand({
                data: { userId: 'acc-1', fileBase64: 'abc123' },
-               user: { userId: 'acc-1', email: 'test@example.com', roles: ['user'], permissions: [] },
+               user: { userId: 'acc-1', email: 'test@example.com', roles: [DEFAULT_ROLES.USER], permissions: [] },
             }),
          );
 
@@ -261,7 +265,7 @@ describe('Profile Command Handlers', () => {
          const result = await handler.execute(
             new GetAvatarUploadSignatureCommand({
                data: { userId: 'acc-1' },
-               user: { userId: 'acc-1', email: 'test@example.com', roles: ['user'], permissions: [] },
+               user: { userId: 'acc-1', email: 'test@example.com', roles: [DEFAULT_ROLES.USER], permissions: [] },
             }),
          );
 

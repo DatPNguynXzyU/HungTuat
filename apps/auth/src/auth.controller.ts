@@ -7,6 +7,7 @@ import {
    CreateAuditLogDto,
    QueryAuditLogDto,
    RegisterDto,
+   RegisterSupplierAccountDto,
    SendRegisterOtpDto,
    VerifyChangePasswordOtpDto,
    VerifyRegisterOtpDto,
@@ -18,6 +19,7 @@ import {
    GetRolePermissionsCommand,
    LogoutAllCommand,
    RegisterCommand,
+   RegisterSupplierCommand,
    RevokeAllAccountTokensCommand,
    RevokeTokenCommand,
    SendRegisterOtpCommand,
@@ -97,6 +99,21 @@ export class AuthController {
    async register(@Payload() data: RegisterDto & { deviceInfo?: IDeviceInfo }, @Ctx() context: RmqContext) {
       try {
          const result = await this.commandBus.execute(new RegisterCommand(data, data.deviceInfo));
+         this.rmqService.ack(context);
+         return result;
+      } catch (error) {
+         this.rmqService.ack(context);
+         throw error;
+      }
+   }
+
+   @MessagePattern({ cmd: AUTH_PATTERNS.REGISTER_SUPPLIER })
+   async registerSupplier(
+      @Payload() data: RegisterSupplierAccountDto & { deviceInfo?: IDeviceInfo },
+      @Ctx() context: RmqContext,
+   ) {
+      try {
+         const result = await this.commandBus.execute(new RegisterSupplierCommand(data, data.deviceInfo));
          this.rmqService.ack(context);
          return result;
       } catch (error) {

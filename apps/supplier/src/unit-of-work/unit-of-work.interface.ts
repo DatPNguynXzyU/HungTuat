@@ -1,10 +1,11 @@
 import type { Prisma } from '@supplier/prisma-client';
-import type { ISupplierRepository } from '@supplier/repositories';
+import type { ISupplierMemberRepository, ISupplierRepository } from '@supplier/repositories';
 
 export const SUPPLIER_UNIT_OF_WORK = Symbol('SUPPLIER_UNIT_OF_WORK');
 
 export interface ISupplierUnitOfWorkRepositories {
    readonly supplierRepository: ISupplierRepository;
+   readonly supplierMemberRepository: ISupplierMemberRepository;
 }
 
 export interface TransactionOptions {
