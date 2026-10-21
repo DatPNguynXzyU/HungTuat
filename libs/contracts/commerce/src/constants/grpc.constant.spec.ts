@@ -44,7 +44,6 @@ describe('Commerce gRPC Constants & Path Resolver', () => {
       expect(COMMERCE_V1_GRPC_METHODS.VALIDATE_INGREDIENTS).toBe('ValidateIngredients');
       expect(COMMERCE_V1_GRPC_METHODS.LIST_CATEGORIES).toBe('ListCategories');
       expect(COMMERCE_V1_GRPC_METHODS.CREATE_INGREDIENT).toBe('CreateIngredient');
-      expect(COMMERCE_V1_GRPC_METHODS.REGISTER_SUPPLIER).toBe('RegisterSupplier');
       expect(COMMERCE_V1_GRPC_METHODS.CREATE_SUPPLIER_PRODUCT).toBe('CreateSupplierProduct');
    });
 

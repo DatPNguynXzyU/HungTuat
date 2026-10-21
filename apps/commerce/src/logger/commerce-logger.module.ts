@@ -30,19 +30,24 @@ interface ExtendedError extends Error {
          imports: [CommerceConfigModule],
          inject: [CommerceConfigService],
          useFactory: (config: CommerceConfigService) => {
+            const nodeEnv = config.nodeEnv;
             const isProduction = config.isProduction;
-            const isDevelopment = !isProduction;
+            const isDevelopment = nodeEnv === 'development';
             const serviceName = config.serviceName;
+            const logLevel = config.logLevel;
 
+            // Clear and prepare log file for development environment
             let logFilePath: string | undefined;
             if (isDevelopment) {
                const logsDir = join(process.cwd(), 'apps/commerce/logs');
                logFilePath = join(logsDir, 'commerce.log');
 
+               // Ensure logs directory exists
                if (!existsSync(logsDir)) {
                   mkdirSync(logsDir, { recursive: true });
                }
 
+               // Clear log file on startup
                if (existsSync(logFilePath)) {
                   writeFileSync(logFilePath, '');
                }
@@ -50,12 +55,16 @@ interface ExtendedError extends Error {
 
             return {
                pinoHttp: {
-                  level: isProduction ? 'info' : 'debug',
+                  level: logLevel,
+                  // Base attributes attached to every single log line across the service
                   base: {
                      service: serviceName,
+                     env: nodeEnv,
                   },
+                  // Generate request ID for RabbitMQ messages
                   genReqId: () => randomUUID(),
                   customProps: (req: unknown) => {
+                     // For RabbitMQ microservice context
                      const context = req as RabbitMQContext;
                      const correlationId = context?.correlationId || randomUUID();
                      const userId = context?.userId;
@@ -76,6 +85,75 @@ interface ExtendedError extends Error {
                      responseTime: 'durationMs',
                   },
                   timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
+                  redact: {
+                     paths: [
+                        'context.password',
+                        'context.currentPassword',
+                        'context.newPassword',
+                        'context.confirmPassword',
+                        'context.token',
+                        'context.refreshToken',
+                        'context.accessToken',
+                        'context.secret',
+                        'context.apiKey',
+                        'context.otp',
+                        'context.data.password',
+                        'context.data.currentPassword',
+                        'context.data.newPassword',
+                        'context.data.confirmPassword',
+                        'context.data.token',
+                        'context.data.refreshToken',
+                        'context.data.accessToken',
+                        'context.data.secret',
+                        'context.data.apiKey',
+                        'context.data.otp',
+                        'result.password',
+                        'result.token',
+                        'result.refreshToken',
+                        'result.accessToken',
+                        'result.data.password',
+                        'result.data.token',
+                        'result.data.refreshToken',
+                        'result.data.accessToken',
+                     ],
+                     censor: '***REDACTED***',
+                  },
+                  // Dual transport: pino-pretty console + JSON file streaming for development
+                  transport:
+                     isDevelopment && logFilePath
+                        ? {
+                             targets: [
+                                {
+                                   target: 'pino-pretty',
+                                   level: logLevel,
+                                   options: {
+                                      colorize: true,
+                                      singleLine: true,
+                                      translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
+                                      ignore: 'pid,hostname',
+                                   },
+                                },
+                                {
+                                   target: 'pino/file',
+                                   level: logLevel,
+                                   options: {
+                                      destination: logFilePath,
+                                      mkdir: true,
+                                   },
+                                },
+                             ],
+                          }
+                        : !isProduction
+                          ? {
+                               target: 'pino-pretty',
+                               options: {
+                                  colorize: true,
+                                  singleLine: true,
+                                  translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
+                                  ignore: 'pid,hostname',
+                               },
+                            }
+                          : undefined,
                   serializers: {
                      context(rawContext: unknown) {
                         const ctx = rawContext as RabbitMQContext;
@@ -88,6 +166,7 @@ interface ExtendedError extends Error {
                         };
                      },
                      result(rawResult: unknown) {
+                        // Only serialize basic result info, avoid dumping large payloads
                         if (rawResult && typeof rawResult === 'object') {
                            return {
                               success: true,

@@ -56,7 +56,7 @@ model Ingredient {
   ingredientSlug        String           @unique @map("ingredient_slug") @db.VarChar(180)
   ingredientDescription String           @map("ingredient_description") @db.Text
   ingredientImageUrl    String           @map("ingredient_image_url")
-  categoryId            String           @map("category_id")
+  categoryId            String           @map("category_id") @db.Uuid
   defaultUnit           String           @map("default_unit") @db.VarChar(30)
   ingredientStatus      IngredientStatus @default(ACTIVE) @map("ingredient_status")
   version               Int              @default(1)
@@ -78,7 +78,7 @@ model Ingredient {
 }
 
 model SupplierProduct {
-  productId       String         @id @default(uuid())       @map("product_id")
+  productId       String         @id @default(uuid())       @map("product_id") @db.Uuid
   supplierId      String         @map("supplier_id")        @db.Uuid
   ingredientId    String         @map("ingredient_id")      @db.Uuid
   productSku      String         @map("product_sku")        @db.VarChar(100)

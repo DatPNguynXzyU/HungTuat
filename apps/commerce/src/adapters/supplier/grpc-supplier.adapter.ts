@@ -1,11 +1,7 @@
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
 import { defer, firstValueFrom } from 'rxjs';
-import {
-   CircuitBreakerRegistry,
-   RetryPolicyRegistry,
-   withGrpcRetry,
-} from '@common';
+import { CircuitBreakerRegistry, RetryPolicyRegistry, withGrpcRetry } from '@common';
 import {
    SUPPLIER_V1_GRPC_CLIENT,
    SUPPLIER_V1_GRPC_SERVICE_NAME,

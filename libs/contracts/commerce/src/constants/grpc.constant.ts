@@ -30,7 +30,6 @@ export const COMMERCE_V1_GRPC_METHODS = {
    VALIDATE_INGREDIENTS: 'ValidateIngredients',
    LIST_CATEGORIES: 'ListCategories',
    CREATE_INGREDIENT: 'CreateIngredient',
-   REGISTER_SUPPLIER: 'RegisterSupplier',
    CREATE_SUPPLIER_PRODUCT: 'CreateSupplierProduct',
 } as const;
 

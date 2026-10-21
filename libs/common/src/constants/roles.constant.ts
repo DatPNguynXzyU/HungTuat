@@ -4,6 +4,13 @@ export const DEFAULT_ROLES = {
    MODERATOR: 'MODERATOR',
    CHEF: 'CHEF',
    USER: 'USER',
+
+   // Supplier Roles
+   SUPPLIER: 'SUPPLIER',
+   SUPPLIER_ADMIN: 'SUPPLIER_ADMIN',
+   SUPPLIER_MANAGER: 'SUPPLIER_MANAGER',
+   SUPPLIER_STAFF: 'SUPPLIER_STAFF',
+   SUPPLIER_VIEWER: 'SUPPLIER_VIEWER',
 } as const;
 
 export type DefaultRole = (typeof DEFAULT_ROLES)[keyof typeof DEFAULT_ROLES];
@@ -11,3 +18,12 @@ export type RoleCode = DefaultRole;
 
 export const DEFAULT_ADMIN_ROLES = [DEFAULT_ROLES.ADMIN, DEFAULT_ROLES.SUPER_ADMIN] as const;
 export type AdminRole = (typeof DEFAULT_ADMIN_ROLES)[number];
+
+export const DEFAULT_SUPPLIER_ROLES = [
+   DEFAULT_ROLES.SUPPLIER,
+   DEFAULT_ROLES.SUPPLIER_ADMIN,
+   DEFAULT_ROLES.SUPPLIER_MANAGER,
+   DEFAULT_ROLES.SUPPLIER_STAFF,
+   DEFAULT_ROLES.SUPPLIER_VIEWER,
+] as const;
+export type SupplierRole = (typeof DEFAULT_SUPPLIER_ROLES)[number];

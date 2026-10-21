@@ -64,11 +64,31 @@ export class NebulaService implements OnModuleInit, OnModuleDestroy {
             await adminClient.execute(
                `CREATE SPACE IF NOT EXISTS ${this.config.space}(partition_num=10, replica_factor=1, vid_type=FIXED_STRING(64));`,
             );
-            // NebulaGraph requires a short delay for heartbeat sync when a space is newly created
-            await new Promise((resolve) => setTimeout(resolve, 3000));
          }
 
-         // 3. Ensure configured user exists with DBA role if not root
+         // 3. Ensure target space is fully ready across graphd and storaged
+         if (this.config.space) {
+            const startTime = Date.now();
+            let spaceReady = false;
+            while (!spaceReady && Date.now() - startTime < 30000) {
+               try {
+                  const checkRes = (await adminClient.execute(`USE ${this.config.space};`)) as NebulaRawResponse;
+                  if (checkRes.error_code === 0) {
+                     spaceReady = true;
+                     break;
+                  }
+               } catch {
+                  // Wait for heartbeat synchronization
+               }
+               await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+
+            if (!spaceReady) {
+               this.logger.warn(`NebulaGraph space ${this.config.space} was not ready within 30 seconds`);
+            }
+         }
+
+         // 4. Ensure configured user exists with DBA role if not root
          if (this.config.username !== 'root') {
             try {
                await adminClient.execute(
@@ -188,7 +208,15 @@ export class NebulaService implements OnModuleInit, OnModuleDestroy {
 
       try {
          this.logger.debug(`Executing query: ${query}`);
-         const result = (await this.client.execute(query)) as NebulaRawResponse;
+         let result = (await this.client.execute(query)) as NebulaRawResponse;
+
+         if (result.error_code !== 0) {
+            // Auto-recover if session dropped space
+            if (result.error_msg?.includes('Space was not chosen') && this.config.space) {
+               this.logger.warn(`Space was not chosen, re-trying query with explicit USE ${this.config.space}`);
+               result = (await this.client.execute(`USE ${this.config.space}; ${query}`)) as NebulaRawResponse;
+            }
+         }
 
          if (result.error_code !== 0) {
             throw new Error(`NebulaGraph query failed: ${result.error_msg || `code ${result.error_code}`}`);

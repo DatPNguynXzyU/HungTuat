@@ -11,8 +11,6 @@ import type {
    IGetSuppliersByIngredientResponse,
    IListCategoriesRequest,
    IListCategoriesResponse,
-   IRegisterSupplierRequest,
-   IRegisterSupplierResponse,
    IValidateIngredientsRequest,
    IValidateIngredientsResponse,
 } from '@contracts/commerce/grpc/v1/messages';
@@ -33,8 +31,6 @@ export interface ICommerceV1GrpcService {
    listCategories(request: IListCategoriesRequest, metadata?: Metadata): Observable<IListCategoriesResponse>;
 
    createIngredient(request: ICreateIngredientRequest, metadata?: Metadata): Observable<ICreateIngredientResponse>;
-
-   registerSupplier(request: IRegisterSupplierRequest, metadata?: Metadata): Observable<IRegisterSupplierResponse>;
 
    createSupplierProduct(
       request: ICreateSupplierProductRequest,

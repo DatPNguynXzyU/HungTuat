@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { SupplierItemDto } from '@contracts/commerce/dto/supplier/supplier-response.dto';
+import { SupplierItemDto } from '@contracts/supplier';
 
 export class SupplierProductOfferDto {
    @ApiProperty({

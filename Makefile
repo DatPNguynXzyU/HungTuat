@@ -17,7 +17,13 @@ prisma-generate:
 
 .PHONY: prisma-seed
 prisma-seed:
-	cd apps/auth && pnpm run prisma:seed
+ifdef service
+	pnpm --filter @omni/$(subst @omni/,,$(service)) run prisma:seed
+else ifdef app
+	pnpm --filter @omni/$(subst @omni/,,$(app)) run prisma:seed
+else
+	pnpm run prisma:seed
+endif
 
 .PHONY: start-gateway
 start-gateway:
@@ -46,6 +52,14 @@ start-search:
 .PHONY: start-media
 start-media:
 	pnpm run start:media
+
+.PHONY: start-commerce
+start-commerce:
+	pnpm run start:commerce
+
+.PHONY: start-supplier
+start-supplier:
+	pnpm run start:supplier
 
 .PHONY: build
 build:

@@ -26,6 +26,13 @@ const permissionsData = [
    { code: PERMISSIONS.ROLES_DELETE, name: 'Delete Roles', description: 'Delete roles' },
    { code: PERMISSIONS.PERMISSIONS_READ, name: 'Read Permissions', description: 'View all permissions' },
 
+   // Audit Logs Management (SOC 2, ISO 27001, GDPR compliance)
+   {
+      code: PERMISSIONS.AUDIT_LOGS_READ,
+      name: 'Read Audit Logs',
+      description: 'View security and compliance audit logs',
+   },
+
    // Recipes
    { code: PERMISSIONS.RECIPES_READ, name: 'Read Recipes', description: 'Browse and view recipes' },
    { code: PERMISSIONS.RECIPES_CREATE, name: 'Create Recipes', description: 'Create and submit recipes' },
@@ -79,6 +86,199 @@ const permissionsData = [
    { code: PERMISSIONS.MODERATION_REJECT, name: 'Reject Content', description: 'Reject submitted content' },
    { code: PERMISSIONS.REPORTS_READ, name: 'Read Reports', description: 'View reported content and users' },
    { code: PERMISSIONS.REPORTS_RESOLVE, name: 'Resolve Reports', description: 'Resolve moderation reports' },
+
+   // Supplier Profile & Organization Management
+   {
+      code: PERMISSIONS.SUPPLIERS_READ,
+      name: 'Read Suppliers',
+      description: 'Browse and view supplier profiles and store details',
+   },
+   {
+      code: PERMISSIONS.SUPPLIERS_REGISTER,
+      name: 'Register Supplier',
+      description: 'Submit vendor application to become a supplier',
+   },
+   {
+      code: PERMISSIONS.SUPPLIERS_CREATE,
+      name: 'Create Supplier',
+      description: 'Directly provision a new supplier entity',
+   },
+   {
+      code: PERMISSIONS.SUPPLIERS_UPDATE_OWN,
+      name: 'Update Own Supplier',
+      description: 'Update own supplier organization profile and contact info',
+   },
+   {
+      code: PERMISSIONS.SUPPLIERS_UPDATE_ANY,
+      name: 'Update Any Supplier',
+      description: 'Update any supplier organization details',
+   },
+   {
+      code: PERMISSIONS.SUPPLIERS_DELETE_OWN,
+      name: 'Delete Own Supplier',
+      description: 'Deactivate or request closure of own supplier entity',
+   },
+   {
+      code: PERMISSIONS.SUPPLIERS_DELETE_ANY,
+      name: 'Delete Any Supplier',
+      description: 'Delete or purge any supplier entity',
+   },
+   {
+      code: PERMISSIONS.SUPPLIERS_VERIFY,
+      name: 'Verify Supplier',
+      description: 'Approve KYB certification and grant verified badge to supplier',
+   },
+   {
+      code: PERMISSIONS.SUPPLIERS_SUSPEND,
+      name: 'Suspend Supplier',
+      description: 'Suspend or restore a supplier organization',
+   },
+
+   // Supplier Staff & Member Management
+   {
+      code: PERMISSIONS.SUPPLIER_MEMBERS_READ,
+      name: 'Read Supplier Members',
+      description: 'View members and staff within supplier organization',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_MEMBERS_INVITE,
+      name: 'Invite Supplier Member',
+      description: 'Invite staff members to join supplier organization',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_MEMBERS_UPDATE,
+      name: 'Update Supplier Member',
+      description: 'Modify member roles and permissions in supplier organization',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_MEMBERS_REMOVE,
+      name: 'Remove Supplier Member',
+      description: 'Remove staff members from supplier organization',
+   },
+
+   // Supplier Products & Catalog Management
+   {
+      code: PERMISSIONS.SUPPLIER_PRODUCTS_READ,
+      name: 'Read Supplier Products',
+      description: 'Browse and view supplier product listings and pricing',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_PRODUCTS_CREATE,
+      name: 'Create Supplier Product',
+      description: 'Add new ingredient supply offer and catalog item',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_PRODUCTS_UPDATE_OWN,
+      name: 'Update Own Supplier Product',
+      description: 'Edit own product pricing, package specs and status',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_PRODUCTS_UPDATE_ANY,
+      name: 'Update Any Supplier Product',
+      description: 'Administrative update of any supplier product offer',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_PRODUCTS_DELETE_OWN,
+      name: 'Delete Own Supplier Product',
+      description: 'Remove own product offer from catalog',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_PRODUCTS_DELETE_ANY,
+      name: 'Delete Any Supplier Product',
+      description: 'Administrative removal of any supplier product offer',
+   },
+
+   // Supplier Inventory & Stock Management
+   {
+      code: PERMISSIONS.SUPPLIER_INVENTORY_READ,
+      name: 'Read Supplier Inventory',
+      description: 'View inventory counts, safety stock and batch levels',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_INVENTORY_UPDATE,
+      name: 'Update Supplier Inventory',
+      description: 'Adjust stock quantities and update inventory levels',
+   },
+
+   // Supplier Purchase Orders & Fulfillment
+   {
+      code: PERMISSIONS.SUPPLIER_ORDERS_READ_OWN,
+      name: 'Read Own Supplier Orders',
+      description: 'View incoming and completed orders assigned to own supplier',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_ORDERS_READ_ANY,
+      name: 'Read Any Supplier Order',
+      description: 'Administrative access to all platform supplier orders',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_ORDERS_UPDATE_STATUS,
+      name: 'Update Supplier Order Status',
+      description: 'Advance order fulfillment status (confirm, dispatch, complete)',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_ORDERS_CANCEL,
+      name: 'Cancel Supplier Order',
+      description: 'Cancel and reject supplier fulfillment orders',
+   },
+
+   // Supplier Documents & Compliance (KYB, certifications, food safety)
+   {
+      code: PERMISSIONS.SUPPLIER_DOCUMENTS_UPLOAD,
+      name: 'Upload Supplier Documents',
+      description: 'Upload food safety, business registration and hygiene certificates',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_DOCUMENTS_READ_OWN,
+      name: 'Read Own Supplier Documents',
+      description: 'Inspect uploaded regulatory and compliance documentation',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_DOCUMENTS_READ_ANY,
+      name: 'Read Any Supplier Documents',
+      description: 'Administrative review of compliance files across suppliers',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_DOCUMENTS_APPROVE,
+      name: 'Approve Supplier Documents',
+      description: 'Audit and approve legal or food safety certifications',
+   },
+
+   // Supplier Finance & Payouts
+   {
+      code: PERMISSIONS.SUPPLIER_FINANCE_READ,
+      name: 'Read Supplier Finance',
+      description: 'View revenue statements, balance and disbursement history',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_FINANCE_MANAGE,
+      name: 'Manage Supplier Finance',
+      description: 'Configure payout accounts and initiate fund withdrawals',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_INVOICES_READ,
+      name: 'Read Supplier Invoices',
+      description: 'Access tax invoices and financial settlement receipts',
+   },
+
+   // Supplier Analytics & Reports
+   {
+      code: PERMISSIONS.SUPPLIER_ANALYTICS_READ,
+      name: 'Read Supplier Analytics',
+      description: 'Access sales metrics, fulfillment rate and customer retention charts',
+   },
+
+   // Supplier Feedback & Reviews
+   {
+      code: PERMISSIONS.SUPPLIER_REVIEWS_READ,
+      name: 'Read Supplier Reviews',
+      description: 'Read vendor ratings and user reviews on products and services',
+   },
+   {
+      code: PERMISSIONS.SUPPLIER_REVIEWS_RESPOND,
+      name: 'Respond Supplier Reviews',
+      description: 'Reply to customer feedback and reviews as a vendor',
+   },
 ];
 
 const rolesDefinition = [
@@ -91,7 +291,7 @@ const rolesDefinition = [
    {
       code: DEFAULT_ROLES.ADMIN,
       name: 'Administrator',
-      description: 'System administrator for users, content, and category management',
+      description: 'System administrator for users, content, suppliers, and category management',
       permissions: [
          PERMISSIONS.USERS_READ,
          PERMISSIONS.USERS_CREATE,
@@ -100,6 +300,7 @@ const rolesDefinition = [
          PERMISSIONS.USERS_BAN,
          PERMISSIONS.ROLES_READ,
          PERMISSIONS.PERMISSIONS_READ,
+         PERMISSIONS.AUDIT_LOGS_READ,
          PERMISSIONS.RECIPES_READ,
          PERMISSIONS.RECIPES_CREATE,
          PERMISSIONS.RECIPES_UPDATE_OWN,
@@ -138,12 +339,28 @@ const rolesDefinition = [
          PERMISSIONS.MODERATION_REJECT,
          PERMISSIONS.REPORTS_READ,
          PERMISSIONS.REPORTS_RESOLVE,
+         // Supplier Administration
+         PERMISSIONS.SUPPLIERS_READ,
+         PERMISSIONS.SUPPLIERS_CREATE,
+         PERMISSIONS.SUPPLIERS_UPDATE_ANY,
+         PERMISSIONS.SUPPLIERS_DELETE_ANY,
+         PERMISSIONS.SUPPLIERS_VERIFY,
+         PERMISSIONS.SUPPLIERS_SUSPEND,
+         PERMISSIONS.SUPPLIER_PRODUCTS_READ,
+         PERMISSIONS.SUPPLIER_PRODUCTS_UPDATE_ANY,
+         PERMISSIONS.SUPPLIER_PRODUCTS_DELETE_ANY,
+         PERMISSIONS.SUPPLIER_ORDERS_READ_ANY,
+         PERMISSIONS.SUPPLIER_DOCUMENTS_READ_ANY,
+         PERMISSIONS.SUPPLIER_DOCUMENTS_APPROVE,
+         PERMISSIONS.SUPPLIER_FINANCE_READ,
+         PERMISSIONS.SUPPLIER_ANALYTICS_READ,
+         PERMISSIONS.SUPPLIER_REVIEWS_READ,
       ],
    },
    {
       code: DEFAULT_ROLES.MODERATOR,
       name: 'Content Moderator',
-      description: 'Community moderator responsible for reviewing recipes, videos, comments and handling reports',
+      description: 'Community moderator responsible for reviewing content, supplier listings and handling reports',
       permissions: [
          PERMISSIONS.USERS_READ,
          PERMISSIONS.USERS_BAN,
@@ -162,6 +379,12 @@ const rolesDefinition = [
          PERMISSIONS.MODERATION_REJECT,
          PERMISSIONS.REPORTS_READ,
          PERMISSIONS.REPORTS_RESOLVE,
+         PERMISSIONS.SUPPLIERS_READ,
+         PERMISSIONS.SUPPLIER_PRODUCTS_READ,
+         PERMISSIONS.SUPPLIER_PRODUCTS_DELETE_ANY,
+         PERMISSIONS.SUPPLIER_DOCUMENTS_READ_ANY,
+         PERMISSIONS.SUPPLIER_DOCUMENTS_APPROVE,
+         PERMISSIONS.SUPPLIER_REVIEWS_READ,
       ],
    },
    {
@@ -194,13 +417,16 @@ const rolesDefinition = [
          PERMISSIONS.CATEGORIES_READ,
          PERMISSIONS.INGREDIENTS_READ,
          PERMISSIONS.INGREDIENTS_CREATE,
+         PERMISSIONS.SUPPLIERS_READ,
+         PERMISSIONS.SUPPLIER_PRODUCTS_READ,
+         PERMISSIONS.SUPPLIER_REVIEWS_READ,
       ],
    },
    {
       code: DEFAULT_ROLES.USER,
       name: 'Standard User',
       description:
-         'Standard community member who can browse, create personal recipes, comment, review and save cookbooks',
+         'Standard community member who can browse, create personal recipes, comment, review and register as supplier',
       permissions: [
          PERMISSIONS.USERS_READ,
          PERMISSIONS.USERS_UPDATE,
@@ -222,6 +448,141 @@ const rolesDefinition = [
          PERMISSIONS.COOKBOOKS_DELETE_OWN,
          PERMISSIONS.CATEGORIES_READ,
          PERMISSIONS.INGREDIENTS_READ,
+         PERMISSIONS.SUPPLIERS_READ,
+         PERMISSIONS.SUPPLIERS_REGISTER,
+         PERMISSIONS.SUPPLIER_PRODUCTS_READ,
+         PERMISSIONS.SUPPLIER_REVIEWS_READ,
+      ],
+   },
+   {
+      code: DEFAULT_ROLES.SUPPLIER,
+      name: 'Supplier Partner',
+      description:
+         'Verified supplier partner capable of listing products, managing inventory and fulfilling ingredient orders',
+      permissions: [
+         PERMISSIONS.USERS_READ,
+         PERMISSIONS.USERS_UPDATE,
+         PERMISSIONS.CATEGORIES_READ,
+         PERMISSIONS.INGREDIENTS_READ,
+         PERMISSIONS.SUPPLIERS_READ,
+         PERMISSIONS.SUPPLIERS_UPDATE_OWN,
+         PERMISSIONS.SUPPLIER_MEMBERS_READ,
+         PERMISSIONS.SUPPLIER_PRODUCTS_READ,
+         PERMISSIONS.SUPPLIER_PRODUCTS_CREATE,
+         PERMISSIONS.SUPPLIER_PRODUCTS_UPDATE_OWN,
+         PERMISSIONS.SUPPLIER_PRODUCTS_DELETE_OWN,
+         PERMISSIONS.SUPPLIER_INVENTORY_READ,
+         PERMISSIONS.SUPPLIER_INVENTORY_UPDATE,
+         PERMISSIONS.SUPPLIER_ORDERS_READ_OWN,
+         PERMISSIONS.SUPPLIER_ORDERS_UPDATE_STATUS,
+         PERMISSIONS.SUPPLIER_ORDERS_CANCEL,
+         PERMISSIONS.SUPPLIER_DOCUMENTS_UPLOAD,
+         PERMISSIONS.SUPPLIER_DOCUMENTS_READ_OWN,
+         PERMISSIONS.SUPPLIER_FINANCE_READ,
+         PERMISSIONS.SUPPLIER_FINANCE_MANAGE,
+         PERMISSIONS.SUPPLIER_INVOICES_READ,
+         PERMISSIONS.SUPPLIER_ANALYTICS_READ,
+         PERMISSIONS.SUPPLIER_REVIEWS_READ,
+         PERMISSIONS.SUPPLIER_REVIEWS_RESPOND,
+      ],
+   },
+   {
+      code: DEFAULT_ROLES.SUPPLIER_ADMIN,
+      name: 'Supplier Administrator',
+      description:
+         'Primary administrator for a supplier organization with complete organization, member, and financial control',
+      permissions: [
+         PERMISSIONS.USERS_READ,
+         PERMISSIONS.USERS_UPDATE,
+         PERMISSIONS.CATEGORIES_READ,
+         PERMISSIONS.INGREDIENTS_READ,
+         PERMISSIONS.SUPPLIERS_READ,
+         PERMISSIONS.SUPPLIERS_UPDATE_OWN,
+         PERMISSIONS.SUPPLIERS_DELETE_OWN,
+         PERMISSIONS.SUPPLIER_MEMBERS_READ,
+         PERMISSIONS.SUPPLIER_MEMBERS_INVITE,
+         PERMISSIONS.SUPPLIER_MEMBERS_UPDATE,
+         PERMISSIONS.SUPPLIER_MEMBERS_REMOVE,
+         PERMISSIONS.SUPPLIER_PRODUCTS_READ,
+         PERMISSIONS.SUPPLIER_PRODUCTS_CREATE,
+         PERMISSIONS.SUPPLIER_PRODUCTS_UPDATE_OWN,
+         PERMISSIONS.SUPPLIER_PRODUCTS_DELETE_OWN,
+         PERMISSIONS.SUPPLIER_INVENTORY_READ,
+         PERMISSIONS.SUPPLIER_INVENTORY_UPDATE,
+         PERMISSIONS.SUPPLIER_ORDERS_READ_OWN,
+         PERMISSIONS.SUPPLIER_ORDERS_UPDATE_STATUS,
+         PERMISSIONS.SUPPLIER_ORDERS_CANCEL,
+         PERMISSIONS.SUPPLIER_DOCUMENTS_UPLOAD,
+         PERMISSIONS.SUPPLIER_DOCUMENTS_READ_OWN,
+         PERMISSIONS.SUPPLIER_FINANCE_READ,
+         PERMISSIONS.SUPPLIER_FINANCE_MANAGE,
+         PERMISSIONS.SUPPLIER_INVOICES_READ,
+         PERMISSIONS.SUPPLIER_ANALYTICS_READ,
+         PERMISSIONS.SUPPLIER_REVIEWS_READ,
+         PERMISSIONS.SUPPLIER_REVIEWS_RESPOND,
+      ],
+   },
+   {
+      code: DEFAULT_ROLES.SUPPLIER_MANAGER,
+      name: 'Supplier Operations Manager',
+      description:
+         'Supplier operations manager responsible for catalog offers, stock levels, orders and feedback management',
+      permissions: [
+         PERMISSIONS.USERS_READ,
+         PERMISSIONS.CATEGORIES_READ,
+         PERMISSIONS.INGREDIENTS_READ,
+         PERMISSIONS.SUPPLIERS_READ,
+         PERMISSIONS.SUPPLIERS_UPDATE_OWN,
+         PERMISSIONS.SUPPLIER_MEMBERS_READ,
+         PERMISSIONS.SUPPLIER_PRODUCTS_READ,
+         PERMISSIONS.SUPPLIER_PRODUCTS_CREATE,
+         PERMISSIONS.SUPPLIER_PRODUCTS_UPDATE_OWN,
+         PERMISSIONS.SUPPLIER_PRODUCTS_DELETE_OWN,
+         PERMISSIONS.SUPPLIER_INVENTORY_READ,
+         PERMISSIONS.SUPPLIER_INVENTORY_UPDATE,
+         PERMISSIONS.SUPPLIER_ORDERS_READ_OWN,
+         PERMISSIONS.SUPPLIER_ORDERS_UPDATE_STATUS,
+         PERMISSIONS.SUPPLIER_ORDERS_CANCEL,
+         PERMISSIONS.SUPPLIER_DOCUMENTS_UPLOAD,
+         PERMISSIONS.SUPPLIER_DOCUMENTS_READ_OWN,
+         PERMISSIONS.SUPPLIER_ANALYTICS_READ,
+         PERMISSIONS.SUPPLIER_REVIEWS_READ,
+         PERMISSIONS.SUPPLIER_REVIEWS_RESPOND,
+      ],
+   },
+   {
+      code: DEFAULT_ROLES.SUPPLIER_STAFF,
+      name: 'Supplier Warehouse Staff',
+      description: 'Supplier fulfillment and warehouse staff handling stock updates and purchase order fulfillment',
+      permissions: [
+         PERMISSIONS.CATEGORIES_READ,
+         PERMISSIONS.INGREDIENTS_READ,
+         PERMISSIONS.SUPPLIERS_READ,
+         PERMISSIONS.SUPPLIER_PRODUCTS_READ,
+         PERMISSIONS.SUPPLIER_INVENTORY_READ,
+         PERMISSIONS.SUPPLIER_INVENTORY_UPDATE,
+         PERMISSIONS.SUPPLIER_ORDERS_READ_OWN,
+         PERMISSIONS.SUPPLIER_ORDERS_UPDATE_STATUS,
+      ],
+   },
+   {
+      code: DEFAULT_ROLES.SUPPLIER_VIEWER,
+      name: 'Supplier Viewer & Auditor',
+      description:
+         'Read-only auditor or finance viewer within supplier organization for monitoring orders and statements',
+      permissions: [
+         PERMISSIONS.CATEGORIES_READ,
+         PERMISSIONS.INGREDIENTS_READ,
+         PERMISSIONS.SUPPLIERS_READ,
+         PERMISSIONS.SUPPLIER_MEMBERS_READ,
+         PERMISSIONS.SUPPLIER_PRODUCTS_READ,
+         PERMISSIONS.SUPPLIER_INVENTORY_READ,
+         PERMISSIONS.SUPPLIER_ORDERS_READ_OWN,
+         PERMISSIONS.SUPPLIER_DOCUMENTS_READ_OWN,
+         PERMISSIONS.SUPPLIER_FINANCE_READ,
+         PERMISSIONS.SUPPLIER_INVOICES_READ,
+         PERMISSIONS.SUPPLIER_ANALYTICS_READ,
+         PERMISSIONS.SUPPLIER_REVIEWS_READ,
       ],
    },
 ];

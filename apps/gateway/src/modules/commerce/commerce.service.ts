@@ -22,14 +22,13 @@ import {
    type ICommerceV1GrpcService,
    type IngredientItemDto,
    type IngredientSuppliersResponseDto,
-   type RegisterSupplierDto,
    type SearchIngredientsDto,
    type SearchIngredientsResponseDto,
-   type SupplierItemDto,
    type SupplierProductOfferDto,
 } from '@contracts/commerce';
 import type { IHealthCheckResponse, IHealthGrpcService } from '@contracts/health';
 import { HEALTH_GRPC_SERVICE_NAME } from '@contracts/health';
+import type { ISupplierProto, SupplierItemDto, SupplierStatusType } from '@contracts/supplier';
 
 @Injectable()
 export class CommerceService implements OnModuleInit {
@@ -54,6 +53,23 @@ export class CommerceService implements OnModuleInit {
    onModuleInit(): void {
       this.commerceGrpcService =
          this.commerceGrpcClient.getService<ICommerceV1GrpcService>(COMMERCE_V1_GRPC_SERVICE_NAME);
+   }
+
+   private mapProtoToSupplierDto(supp: ISupplierProto): SupplierItemDto {
+      return {
+         supplierId: supp.supplierId,
+         supplierName: supp.supplierName,
+         supplierSlug: supp.supplierSlug,
+         supplierCode: supp.supplierCode,
+         contactEmail: supp.contactEmail || undefined,
+         contactPhone: supp.contactPhone || undefined,
+         address: supp.address || undefined,
+         city: supp.city || undefined,
+         rating: supp.rating,
+         isVerified: supp.isVerified,
+         supplierStatus: supp.supplierStatus as SupplierStatusType,
+         supplierLogoUrl: supp.supplierLogoUrl || undefined,
+      };
    }
 
    async searchIngredients(dto: SearchIngredientsDto): Promise<SearchIngredientsResponseDto> {
@@ -145,22 +161,7 @@ export class CommerceService implements OnModuleInit {
                   productUrl: offer.productUrl || undefined,
                   productImageUrl: offer.productImageUrl || undefined,
                   offerStatus: offer.offerStatus,
-                  supplier: offer.supplier
-                     ? {
-                          supplierId: offer.supplier.supplierId,
-                          supplierName: offer.supplier.supplierName,
-                          supplierSlug: offer.supplier.supplierSlug,
-                          supplierCode: offer.supplier.supplierCode,
-                          contactEmail: offer.supplier.contactEmail || undefined,
-                          contactPhone: offer.supplier.contactPhone || undefined,
-                          address: offer.supplier.address || undefined,
-                          city: offer.supplier.city || undefined,
-                          rating: offer.supplier.rating,
-                          isVerified: offer.supplier.isVerified,
-                          supplierStatus: offer.supplier.supplierStatus,
-                          supplierLogoUrl: offer.supplier.supplierLogoUrl || undefined,
-                       }
-                     : undefined,
+                  supplier: offer.supplier ? this.mapProtoToSupplierDto(offer.supplier) : undefined,
                })),
             };
          });
@@ -205,22 +206,7 @@ export class CommerceService implements OnModuleInit {
                   productUrl: offer.productUrl || undefined,
                   productImageUrl: offer.productImageUrl || undefined,
                   offerStatus: offer.offerStatus,
-                  supplier: offer.supplier
-                     ? {
-                          supplierId: offer.supplier.supplierId,
-                          supplierName: offer.supplier.supplierName,
-                          supplierSlug: offer.supplier.supplierSlug,
-                          supplierCode: offer.supplier.supplierCode,
-                          contactEmail: offer.supplier.contactEmail || undefined,
-                          contactPhone: offer.supplier.contactPhone || undefined,
-                          address: offer.supplier.address || undefined,
-                          city: offer.supplier.city || undefined,
-                          rating: offer.supplier.rating,
-                          isVerified: offer.supplier.isVerified,
-                          supplierStatus: offer.supplier.supplierStatus,
-                          supplierLogoUrl: offer.supplier.supplierLogoUrl || undefined,
-                       }
-                     : undefined,
+                  supplier: offer.supplier ? this.mapProtoToSupplierDto(offer.supplier) : undefined,
                })),
                totalOffers: res.totalOffers,
             };
@@ -302,52 +288,6 @@ export class CommerceService implements OnModuleInit {
       }
    }
 
-   async registerSupplier(dto: RegisterSupplierDto, correlationId?: string): Promise<SupplierItemDto> {
-      try {
-         const metadata = createGrpcMetadata({
-            correlationId,
-            callerService: SERVICE_NAMES.GATEWAY,
-         });
-
-         return await this.commerceGrpcBreaker.execute(async () => {
-            const res = await firstValueFrom(
-               defer(() =>
-                  this.commerceGrpcService.registerSupplier(
-                     {
-                        supplierName: dto.supplierName,
-                        supplierCode: dto.supplierCode,
-                        contactEmail: dto.contactEmail,
-                        contactPhone: dto.contactPhone,
-                        address: dto.address,
-                        city: dto.city,
-                        supplierLogoUrl: dto.supplierLogoUrl,
-                     },
-                     metadata,
-                  ),
-               ).pipe(withGrpcRetry(this.commerceGrpcRetryPolicy)),
-            );
-
-            const supp = res.supplier;
-            return {
-               supplierId: supp.supplierId,
-               supplierName: supp.supplierName,
-               supplierSlug: supp.supplierSlug,
-               supplierCode: supp.supplierCode,
-               contactEmail: supp.contactEmail || undefined,
-               contactPhone: supp.contactPhone || undefined,
-               address: supp.address || undefined,
-               city: supp.city || undefined,
-               rating: supp.rating,
-               isVerified: supp.isVerified,
-               supplierStatus: supp.supplierStatus,
-               supplierLogoUrl: supp.supplierLogoUrl || undefined,
-            };
-         });
-      } catch (error: unknown) {
-         return handleGrpcError(error);
-      }
-   }
-
    async createProductOffer(dto: CreateProductOfferDto, correlationId?: string): Promise<SupplierProductOfferDto> {
       try {
          const metadata = createGrpcMetadata({
@@ -393,22 +333,7 @@ export class CommerceService implements OnModuleInit {
                productUrl: offer.productUrl || undefined,
                productImageUrl: offer.productImageUrl || undefined,
                offerStatus: offer.offerStatus,
-               supplier: offer.supplier
-                  ? {
-                       supplierId: offer.supplier.supplierId,
-                       supplierName: offer.supplier.supplierName,
-                       supplierSlug: offer.supplier.supplierSlug,
-                       supplierCode: offer.supplier.supplierCode,
-                       contactEmail: offer.supplier.contactEmail || undefined,
-                       contactPhone: offer.supplier.contactPhone || undefined,
-                       address: offer.supplier.address || undefined,
-                       city: offer.supplier.city || undefined,
-                       rating: offer.supplier.rating,
-                       isVerified: offer.supplier.isVerified,
-                       supplierStatus: offer.supplier.supplierStatus,
-                       supplierLogoUrl: offer.supplier.supplierLogoUrl || undefined,
-                    }
-                  : undefined,
+               supplier: offer.supplier ? this.mapProtoToSupplierDto(offer.supplier) : undefined,
             };
          });
       } catch (error: unknown) {

@@ -20,23 +20,16 @@ import {
    type IIngredientProto,
    type IListCategoriesRequest,
    type IListCategoriesResponse,
-   type IRegisterSupplierRequest,
-   type IRegisterSupplierResponse,
    type ISupplierProductProto,
    type ISupplierProto,
    type IValidateIngredientsRequest,
    type IValidateIngredientsResponse,
    type IngredientItemDto,
-   type SupplierItemDto,
    type SupplierProductOfferDto,
 } from '@contracts/commerce';
+import type { SupplierItemDto } from '@contracts/supplier';
 import { GetIngredientDetailQuery, GetSuppliersByIngredientQuery, ListCategoriesQuery } from '@commerce/queries';
-import {
-   CreateIngredientCommand,
-   CreateProductOfferCommand,
-   RegisterSupplierCommand,
-   ValidateIngredientsCommand,
-} from '@commerce/commands';
+import { CreateIngredientCommand, CreateProductOfferCommand, ValidateIngredientsCommand } from '@commerce/commands';
 
 @Controller()
 @UseFilters(new GrpcExceptionFilter())
@@ -169,27 +162,6 @@ export class CommerceGrpcController implements ICommerceV1GrpcService {
             )
             .then((ingredient) => ({
                ingredient: this.mapIngredientToProto(ingredient),
-            })),
-      );
-   }
-
-   @GrpcMethod(COMMERCE_V1_GRPC_SERVICE_NAME, COMMERCE_V1_GRPC_METHODS.REGISTER_SUPPLIER)
-   registerSupplier(data: IRegisterSupplierRequest): Observable<IRegisterSupplierResponse> {
-      return from(
-         this.commandBus
-            .execute(
-               new RegisterSupplierCommand({
-                  supplierName: data.supplierName,
-                  supplierCode: data.supplierCode,
-                  contactEmail: data.contactEmail,
-                  contactPhone: data.contactPhone,
-                  address: data.address,
-                  city: data.city,
-                  supplierLogoUrl: data.supplierLogoUrl,
-               }),
-            )
-            .then((supplier) => ({
-               supplier: this.mapSupplierToProto(supplier),
             })),
       );
    }

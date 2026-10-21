@@ -15,10 +15,7 @@ import {
    type IIngredientRepository,
    type ISupplierProductRepository,
 } from '@commerce/repositories';
-import {
-   SUPPLIER_ADAPTER,
-   type ISupplierAdapter,
-} from '@commerce/adapters/supplier';
+import { SUPPLIER_ADAPTER, type ISupplierAdapter } from '@commerce/adapters/supplier';
 import { Money, Sku } from '@commerce/domain/value-objects';
 import { ProductOfferCreatedEvent, ProductStockUpdatedEvent } from '@commerce/domain/events';
 import type { SupplierProductEntity } from '@commerce/entities/supplier-product.entity';

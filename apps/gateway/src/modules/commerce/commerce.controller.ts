@@ -9,10 +9,8 @@ import {
    CreateProductOfferDto,
    IngredientItemDto,
    IngredientSuppliersResponseDto,
-   RegisterSupplierDto,
    SearchIngredientsDto,
    SearchIngredientsResponseDto,
-   SupplierItemDto,
    SupplierProductOfferDto,
 } from '@contracts/commerce';
 import { CommerceService } from '@/modules/commerce/commerce.service';
@@ -166,31 +164,6 @@ export class CommerceController {
    @ResponseMessage(COMMERCE_RESPONSE_MESSAGES.CREATE_INGREDIENT_SUCCESS)
    async createIngredient(@Body() dto: CreateIngredientDto): Promise<IngredientItemDto> {
       return this.commerceService.createIngredient(dto);
-   }
-
-   @Post('suppliers')
-   @HttpCode(HttpStatus.CREATED)
-   @ApiOperation({
-      operationId: 'registerSupplier',
-      summary: 'Register a merchant or supermarket as an ingredient supplier',
-      description:
-         'Registers a new vendor/supplier (e.g., Mega Market, WinMart, Đà Lạt Farm) into the commerce directory.',
-   })
-   @ApiResponse({
-      status: HttpStatus.CREATED,
-      description: 'Supplier registered successfully.',
-      type: SupplierItemDto,
-   })
-   @ApiErrorResponses([
-      {
-         status: HttpStatus.CONFLICT,
-         description: 'Supplier with this code already exists',
-         errorCodes: [COMMERCE_ERROR_CODES.SUPPLIER_ALREADY_EXISTS],
-      },
-   ])
-   @ResponseMessage(COMMERCE_RESPONSE_MESSAGES.REGISTER_SUPPLIER_SUCCESS)
-   async registerSupplier(@Body() dto: RegisterSupplierDto): Promise<SupplierItemDto> {
-      return this.commerceService.registerSupplier(dto);
    }
 
    @Post('products')

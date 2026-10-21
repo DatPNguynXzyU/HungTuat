@@ -1,9 +1,5 @@
 import type { Prisma } from '@commerce/prisma-client';
-import type {
-   ICategoryRepository,
-   IIngredientRepository,
-   ISupplierProductRepository,
-} from '@commerce/repositories';
+import type { ICategoryRepository, IIngredientRepository, ISupplierProductRepository } from '@commerce/repositories';
 
 export const COMMERCE_UNIT_OF_WORK = Symbol('COMMERCE_UNIT_OF_WORK');
 

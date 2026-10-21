@@ -1,7 +1,14 @@
-import { Controller, UseFilters, UseInterceptors } from '@nestjs/common';
+import { Controller, UseFilters, UseGuards, UseInterceptors } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { from, type Observable } from 'rxjs';
-import { CommandBus, GrpcExceptionFilter, GrpcLoggingInterceptor, GrpcMetricsInterceptor } from '@common';
+import {
+   CommandBus,
+   GrpcExceptionFilter,
+   GrpcJwtAuthGuard,
+   GrpcLoggingInterceptor,
+   GrpcMetricsInterceptor,
+   type JwtPayload,
+} from '@common';
 import {
    SUPPLIER_V1_GRPC_METHODS,
    SUPPLIER_V1_GRPC_SERVICE_NAME,
@@ -84,20 +91,25 @@ export class SupplierGrpcController implements ISupplierV1GrpcService {
       );
    }
 
+   @UseGuards(GrpcJwtAuthGuard)
    @GrpcMethod(SUPPLIER_V1_GRPC_SERVICE_NAME, SUPPLIER_V1_GRPC_METHODS.REGISTER_SUPPLIER)
    registerSupplier(data: IRegisterSupplierRequest): Observable<IRegisterSupplierResponse> {
+      const user = (data as unknown as { user?: JwtPayload }).user;
       return from(
          this.commandBus
             .execute(
-               new RegisterSupplierCommand({
-                  supplierName: data.supplierName,
-                  supplierCode: data.supplierCode,
-                  contactEmail: data.contactEmail,
-                  contactPhone: data.contactPhone,
-                  address: data.address,
-                  city: data.city,
-                  supplierLogoUrl: data.supplierLogoUrl,
-               }),
+               new RegisterSupplierCommand(
+                  {
+                     supplierName: data.supplierName,
+                     supplierCode: data.supplierCode,
+                     contactEmail: data.contactEmail,
+                     contactPhone: data.contactPhone,
+                     address: data.address,
+                     city: data.city,
+                     supplierLogoUrl: data.supplierLogoUrl,
+                  },
+                  user?.sub,
+               ),
             )
             .then((supplier) => ({
                supplier: this.mapSupplierToProto(supplier),

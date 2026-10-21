@@ -10,6 +10,5 @@ service CommerceService {
   rpc ValidateIngredients (ValidateIngredientsRequest) returns (ValidateIngredientsResponse);
   rpc ListCategories (ListCategoriesRequest) returns (ListCategoriesResponse);
   rpc CreateIngredient (CreateIngredientRequest) returns (CreateIngredientResponse);
-  rpc RegisterSupplier (RegisterSupplierRequest) returns (RegisterSupplierResponse);
   rpc CreateSupplierProduct (CreateSupplierProductRequest) returns (CreateSupplierProductResponse);
 }

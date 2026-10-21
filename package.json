@@ -31,6 +31,7 @@
       "prisma:migrate": "pnpm -r run prisma:migrate",
       "prisma:push": "pnpm -r run prisma:push",
       "prisma:push:reset": "pnpm -r run prisma:push --force-reset",
+      "prisma:seed": "pnpm -r --if-present run prisma:seed",
       "email:dev": "pnpm --filter @omni/notification run email:dev",
       "codegraph:init": "npx @colbymchenry/codegraph init",
       "codegraph:install": "npx @colbymchenry/codegraph install",

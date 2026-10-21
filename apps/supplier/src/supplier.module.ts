@@ -6,6 +6,7 @@ import {
    CommandBus,
    GRPC_METRICS_COLLECTOR,
    GrpcHealthModule,
+   GrpcJwtAuthGuard,
    GrpcLoggingInterceptor,
    GrpcMetricsInterceptor,
    RedisModule,
@@ -58,9 +59,10 @@ import { SupplierMetricsController } from '@supplier/supplier-metrics.controller
          useExisting: SupplierMetricsService,
       },
 
-      // Interceptors
+      // Interceptors & Guards
       GrpcLoggingInterceptor,
       GrpcMetricsInterceptor,
+      GrpcJwtAuthGuard,
 
       // CQRS Command Bus & Handlers
       CommandBus,
