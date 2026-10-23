@@ -2,7 +2,6 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from '@nestjs/
 import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import {
-   AUTH_COOKIES,
    ApiErrorResponses,
    COMMON_ERROR_CODES,
    CORRELATION_ID_HEADER,
@@ -62,16 +61,19 @@ export class SuppliersController {
       },
    ])
    @ResponseMessage(SUPPLIER_RESPONSE_MESSAGES.REGISTER_SUPPLIER_SUCCESS)
-   async registerSupplier(@Body() dto: RegisterSupplierDto, @Req() req: Request): Promise<SupplierItemDto> {
-      const authHeader =
-         req.headers.authorization ||
-         (req.cookies?.[AUTH_COOKIES.ACCESS_TOKEN] ? `Bearer ${req.cookies[AUTH_COOKIES.ACCESS_TOKEN]}` : undefined);
-
+   async registerSupplier(
+      @Body() dto: RegisterSupplierDto,
+      @Req() req: Request,
+      @CurrentUser() user?: JwtPayload,
+   ): Promise<SupplierItemDto> {
       const correlationId = (req.headers[CORRELATION_ID_HEADER] as string) || undefined;
 
       return this.suppliersService.registerSupplier(dto, {
-         authHeader,
          correlationId,
+         accountId: user?.sub,
+         roles: user?.roles,
+         permissions: user?.permissions,
+         email: user?.email,
       });
    }
 
@@ -98,16 +100,14 @@ export class SuppliersController {
    ])
    @ResponseMessage(SUPPLIER_RESPONSE_MESSAGES.GET_MY_SUPPLIER_SUCCESS)
    async getMySupplier(@Req() req: Request, @CurrentUser() user?: JwtPayload): Promise<MySupplierResponseDto> {
-      const authHeader =
-         req.headers.authorization ||
-         (req.cookies?.[AUTH_COOKIES.ACCESS_TOKEN] ? `Bearer ${req.cookies[AUTH_COOKIES.ACCESS_TOKEN]}` : undefined);
-
       const correlationId = (req.headers[CORRELATION_ID_HEADER] as string) || undefined;
 
       return this.suppliersService.getMySupplier({
-         authHeader,
          correlationId,
          accountId: user?.sub,
+         roles: user?.roles,
+         permissions: user?.permissions,
+         email: user?.email,
       });
    }
 }

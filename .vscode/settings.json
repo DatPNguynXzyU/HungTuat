@@ -48,14 +48,9 @@
    "[json]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode"
    },
-   "[proto]": {
-      "editor.tabSize": 2
-   },
-   "[proto3]": {
-      "editor.tabSize": 2
-   },
-   "[protobuf]": {
-      "editor.tabSize": 2
+   "[yaml]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.tabSize": 3
    },
    "cSpell.words": [
       "amqp",

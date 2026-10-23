@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package user.v1;
+
+message UserProfileProto {
+  string id = 1;
+  string userId = 2;
+  optional string displayName = 3;
+  optional string bio = 4;
+  optional string avatar = 5;
+  optional string coverImage = 6;
+  optional string website = 7;
+  optional string location = 8;
+  string createdAt = 9;
+  string updatedAt = 10;
+}
+
+message UserStatsProto {
+  string statsId = 1;
+  string userId = 2;
+  int32 followersCount = 3;
+  int32 followingCount = 4;
+  int32 postsCount = 5;
+  int32 recipesCount = 6;
+}
+
+message UserSettingsProto {
+  string settingsId = 1;
+  string userId = 2;
+  bool isVerified = 3;
+  bool isPrivate = 4;
+}
+
+message UserProto {
+  string id = 1;
+  string accountId = 2;
+  optional string username = 3;
+  string status = 4;
+  string createdAt = 5;
+  string updatedAt = 6;
+  optional string lastActiveAt = 7;
+  optional string lastUsernameChangedAt = 8;
+  optional UserProfileProto profile = 9;
+  optional UserStatsProto stats = 10;
+  optional UserSettingsProto settings = 11;
+  optional string displayName = 12;
+  optional string avatar = 13;
+  optional string bio = 14;
+}
+
+message UserSuggestionItemProto {
+  string id = 1;
+  optional string username = 2;
+  optional string displayName = 3;
+  optional string avatar = 4;
+  optional string bio = 5;
+  bool isVerified = 6;
+  int32 followersCount = 7;
+  int32 followingCount = 8;
+  int32 mutualCount = 9;
+  bool isFollowing = 10;
+  bool isFollower = 11;
+  string reason = 12;
+}

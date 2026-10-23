@@ -17,7 +17,9 @@ export class SecurityAuditLogProjection {
    async project(event: CreateAuditLogData): Promise<SecurityAuditLogEntity | null> {
       try {
          const result = await this.auditLogRepository.createAuditLog(event);
-         this.logger.debug?.(`Security audit log projected successfully for ${event.action} (${event.id || 'new'})`);
+         this.logger.debug?.(
+            `Security audit log projected successfully for ${event.action} (${event.auditLogId || 'new'})`,
+         );
          return result;
       } catch (error: unknown) {
          const err = error as Error;

@@ -5,7 +5,14 @@ import { RpcException } from '@nestjs/microservices';
 import { context as otelContext, propagation } from '@opentelemetry/api';
 import { AppException } from '@common/exceptions/app.exception';
 import { CORRELATION_ID_HEADER, REQUEST_ID_HEADER, SENSITIVE_LOG_KEYS } from '@common/logger/logger.constants';
-import type { IGrpcTraceContext } from '@common/interceptors/grpc-trace.storage';
+import { GrpcTraceStorage, type IGrpcTraceContext } from '@common/interceptors/grpc-trace.storage';
+import type { RoleCode } from '@common/constants/roles.constant';
+import type { PermissionCode } from '@common/constants/permissions.constant';
+import {
+   GRPC_CONTEXT_RESERVED_KEY_SET,
+   GRPC_METADATA_ALIASES,
+   GRPC_METADATA_KEYS,
+} from '@common/constants/grpc-metadata.constant';
 
 const SENSITIVE_KEYS = new Set(SENSITIVE_LOG_KEYS.map((k) => k.toLowerCase()));
 
@@ -51,11 +58,24 @@ function stringifyMetadataValue(value: unknown): string | undefined {
 }
 
 /**
+ * Helper to safely retrieve the first matching value from aliases in a lowercased header map.
+ */
+export function getFirstMatchingHeader(map: Record<string, string>, aliases: readonly string[]): string | undefined {
+   for (const alias of aliases) {
+      const val = map[alias];
+      if (val !== undefined && val !== '') {
+         return val;
+      }
+   }
+   return undefined;
+}
+
+/**
  * Extracts correlationId, caller service, and metadata map from gRPC ExecutionContext or ArgumentsHost.
  */
 export function extractGrpcMetadata(context: ArgumentsHost): IGrpcTraceContext {
    const rpcContext = context.switchToRpc();
-   const rawMetadata = rpcContext.getContext<unknown>();
+   const rawMetadata = rpcContext.getContext<Record<string, unknown>>();
    const metadataMap: Record<string, string> = {};
    let correlationId: string | undefined;
 
@@ -98,18 +118,12 @@ export function extractGrpcMetadata(context: ArgumentsHost): IGrpcTraceContext {
    }
 
    if (!correlationId) {
-      correlationId =
-         metadataMap[CORRELATION_ID_HEADER] ||
-         metadataMap[REQUEST_ID_HEADER] ||
-         metadataMap['correlationid'] ||
-         metadataMap['requestid'] ||
-         randomUUID();
+      correlationId = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.CORRELATION_ID) || randomUUID();
    }
 
-   const callerService =
-      metadataMap['x-caller-service'] || metadataMap['caller-service'] || metadataMap['callerservice'];
-   const userId = metadataMap['x-user-id'] || metadataMap['user-id'] || metadataMap['userid'];
-   const requestId = metadataMap[REQUEST_ID_HEADER] || metadataMap['requestid'];
+   const callerService = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.CALLER_SERVICE);
+   const userId = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.USER_ID);
+   const requestId = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.REQUEST_ID);
 
    return {
       correlationId,
@@ -121,15 +135,177 @@ export function extractGrpcMetadata(context: ArgumentsHost): IGrpcTraceContext {
 }
 
 /**
- * Constructs a gRPC Metadata instance containing tracing and contextual headers.
+ * Helper to convert various metadata objects (Metadata instance, ArgumentsHost, plain objects) into a lowercased string map.
  */
-export function createGrpcMetadata(context?: {
+export function parseMetadataToMap(rawMetadata: unknown): Record<string, string> {
+   const metadataMap: Record<string, string> = {};
+   if (!rawMetadata || typeof rawMetadata !== 'object') {
+      return metadataMap;
+   }
+
+   const metadataObj = rawMetadata as {
+      getMap?: () => Record<string, unknown>;
+      get?: (key: string) => unknown[];
+      [key: string]: unknown;
+   };
+
+   if (typeof metadataObj.getMap === 'function') {
+      const map = metadataObj.getMap();
+      for (const [k, v] of Object.entries(map)) {
+         const strVal = stringifyMetadataValue(v);
+         if (strVal !== undefined) {
+            metadataMap[k.toLowerCase()] = strVal;
+         }
+      }
+   } else {
+      for (const [k, v] of Object.entries(metadataObj)) {
+         const strVal = stringifyMetadataValue(v);
+         if (strVal !== undefined) {
+            metadataMap[k.toLowerCase()] = strVal;
+         }
+      }
+   }
+
+   return metadataMap;
+}
+
+/**
+ * Normalized user context extracted from gRPC Metadata, RabbitMQ message, or ExecutionContext.
+ */
+export interface IAuthUserContext {
+   userId: string;
+   email?: string;
+   roles: RoleCode[];
+   permissions: PermissionCode[];
+   sessionId?: string;
+   deviceId?: string;
+}
+
+function parseArrayField(val: unknown): string[] {
+   if (!val) {
+      return [];
+   }
+   if (Array.isArray(val)) {
+      return val.map(String);
+   }
+   if (typeof val === 'string') {
+      const trimmed = val.trim();
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+         try {
+            const parsed: unknown = JSON.parse(trimmed);
+            if (Array.isArray(parsed)) {
+               return (parsed as unknown[]).map((item) => String(item));
+            }
+         } catch {
+            // fallback to comma separated
+         }
+      }
+      return trimmed
+         .split(',')
+         .map((s) => s.trim())
+         .filter(Boolean);
+   }
+   return [];
+}
+
+/**
+ * Extracts normalized user context (userId, roles, permissions, etc.) from gRPC Metadata,
+ * execution context, service message, or AsyncLocalStorage trace storage.
+ */
+export function extractGrpcUser(source?: unknown): IAuthUserContext | undefined {
+   if (!source) {
+      const trace = GrpcTraceStorage.getTrace();
+      if (!trace?.metadata) {
+         return undefined;
+      }
+      return extractGrpcUser(trace.metadata);
+   }
+
+   // 1. If it's already an IAuthUserContext
+   if (
+      typeof source === 'object' &&
+      source !== null &&
+      'userId' in source &&
+      'roles' in source &&
+      Array.isArray((source as { roles: unknown }).roles)
+   ) {
+      const ctx = source as {
+         userId: string;
+         email?: string;
+         roles: string[];
+         permissions?: string[];
+         sessionId?: string;
+         deviceId?: string;
+      };
+      return {
+         userId: ctx.userId,
+         email: ctx.email,
+         roles: ctx.roles,
+         permissions: ctx.permissions || [],
+         sessionId: ctx.sessionId,
+         deviceId: ctx.deviceId,
+      };
+   }
+
+   // 2. If it's an IServiceMessage with .user
+   if (typeof source === 'object' && source !== null && 'user' in source) {
+      const user = (source as { user?: unknown }).user;
+      if (user) {
+         return extractGrpcUser(user);
+      }
+   }
+
+   // 3. If it's an ArgumentsHost / ExecutionContext
+   let rawMetadata = source;
+   if (
+      typeof source === 'object' &&
+      source !== null &&
+      'switchToRpc' in source &&
+      typeof (source as ArgumentsHost).switchToRpc === 'function'
+   ) {
+      rawMetadata = (source as ArgumentsHost).switchToRpc().getContext<Record<string, unknown>>();
+   }
+
+   const metadataMap = parseMetadataToMap(rawMetadata);
+
+   const userId = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.USER_ID);
+
+   if (!userId) {
+      return undefined;
+   }
+
+   const rawRoles = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.USER_ROLES);
+   const rawPermissions = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.USER_PERMISSIONS);
+   const email = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.USER_EMAIL);
+   const sessionId = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.SESSION_ID);
+   const deviceId = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.DEVICE_ID);
+
+   return {
+      userId,
+      email: email || undefined,
+      roles: parseArrayField(rawRoles),
+      permissions: parseArrayField(rawPermissions),
+      sessionId: sessionId || undefined,
+      deviceId: deviceId || undefined,
+   };
+}
+
+export interface GrpcMetadataOptions {
    correlationId?: string;
    requestId?: string;
    userId?: string;
+   accountId?: string;
    callerService?: string;
-   [key: string]: string | undefined;
-}): Metadata {
+   roles?: string[] | readonly string[] | string;
+   permissions?: string[] | readonly string[] | string;
+   email?: string;
+   [key: string]: unknown;
+}
+
+/**
+ * Constructs a gRPC Metadata instance containing tracing and contextual headers.
+ */
+export function createGrpcMetadata(context?: GrpcMetadataOptions): Metadata {
    const metadata = new Metadata();
    const correlationId = context?.correlationId || randomUUID();
    metadata.set(CORRELATION_ID_HEADER, correlationId);
@@ -146,18 +322,65 @@ export function createGrpcMetadata(context?: {
    if (context?.requestId) {
       metadata.set(REQUEST_ID_HEADER, context.requestId);
    }
-   if (context?.userId) {
-      metadata.set('x-user-id', context.userId);
+
+   const userObj =
+      context?.user && typeof context.user === 'object' ? (context.user as Record<string, unknown>) : undefined;
+
+   const resolvedUserId =
+      context?.userId ||
+      context?.accountId ||
+      (userObj?.userId as string) ||
+      (userObj?.accountId as string) ||
+      (userObj?.sub as string);
+   if (resolvedUserId) {
+      metadata.set(GRPC_METADATA_KEYS.USER_ID, String(resolvedUserId));
+   }
+   const resolvedAccountId = context?.accountId || (userObj?.accountId as string);
+   if (resolvedAccountId) {
+      metadata.set(GRPC_METADATA_KEYS.ACCOUNT_ID, String(resolvedAccountId));
    }
    if (context?.callerService) {
-      metadata.set('x-caller-service', context.callerService);
+      metadata.set(GRPC_METADATA_KEYS.CALLER_SERVICE, context.callerService);
+   }
+   const resolvedEmail = context?.email || (userObj?.email as string);
+   if (resolvedEmail) {
+      metadata.set(GRPC_METADATA_KEYS.USER_EMAIL, String(resolvedEmail));
+      metadata.set(GRPC_METADATA_KEYS.EMAIL, String(resolvedEmail));
+   }
+   const resolvedRoles =
+      context?.roles !== undefined ? context.roles : (userObj?.roles as string[] | string | undefined);
+   if (resolvedRoles !== undefined) {
+      const rolesStr = Array.isArray(resolvedRoles) ? JSON.stringify(resolvedRoles) : String(resolvedRoles);
+      metadata.set(GRPC_METADATA_KEYS.USER_ROLES, rolesStr);
+      metadata.set(GRPC_METADATA_KEYS.ROLES, rolesStr);
+   }
+   const resolvedPermissions =
+      context?.permissions !== undefined
+         ? context.permissions
+         : (userObj?.permissions as string[] | string | undefined);
+   if (resolvedPermissions !== undefined) {
+      const permissionsStr = Array.isArray(resolvedPermissions)
+         ? JSON.stringify(resolvedPermissions)
+         : String(resolvedPermissions);
+      metadata.set(GRPC_METADATA_KEYS.USER_PERMISSIONS, permissionsStr);
+      metadata.set(GRPC_METADATA_KEYS.PERMISSIONS, permissionsStr);
    }
 
    if (context) {
       for (const [key, value] of Object.entries(context)) {
-         if (value !== undefined && !['correlationId', 'requestId', 'userId', 'callerService'].includes(key)) {
+         if (value !== undefined && !GRPC_CONTEXT_RESERVED_KEY_SET.has(key)) {
             const headerKey = key.startsWith('x-') ? key.toLowerCase() : `x-${key.toLowerCase()}`;
-            metadata.set(headerKey, value);
+            let headerVal: string | undefined;
+            if (typeof value === 'string') {
+               headerVal = value;
+            } else if (typeof value === 'number' || typeof value === 'boolean') {
+               headerVal = String(value);
+            } else if (typeof value === 'object' && value !== null) {
+               headerVal = JSON.stringify(value);
+            }
+            if (headerVal !== undefined) {
+               metadata.set(headerKey, headerVal);
+            }
          }
       }
    }
@@ -183,8 +406,38 @@ export function mapHttpStatusToGrpc(httpStatus: HttpStatus): number {
          return GrpcStatus.ALREADY_EXISTS;
       case HttpStatus.TOO_MANY_REQUESTS:
          return GrpcStatus.RESOURCE_EXHAUSTED;
+      case HttpStatus.REQUEST_TIMEOUT:
+         return GrpcStatus.DEADLINE_EXCEEDED;
+      case HttpStatus.SERVICE_UNAVAILABLE:
+         return GrpcStatus.UNAVAILABLE;
       default:
          return GrpcStatus.INTERNAL;
+   }
+}
+
+/**
+ * Maps standard gRPC status codes to corresponding HTTP status codes.
+ */
+export function mapGrpcStatusToHttpStatus(grpcStatus: GrpcStatus): HttpStatus {
+   switch (grpcStatus) {
+      case GrpcStatus.INVALID_ARGUMENT:
+         return HttpStatus.BAD_REQUEST;
+      case GrpcStatus.UNAUTHENTICATED:
+         return HttpStatus.UNAUTHORIZED;
+      case GrpcStatus.PERMISSION_DENIED:
+         return HttpStatus.FORBIDDEN;
+      case GrpcStatus.NOT_FOUND:
+         return HttpStatus.NOT_FOUND;
+      case GrpcStatus.ALREADY_EXISTS:
+         return HttpStatus.CONFLICT;
+      case GrpcStatus.RESOURCE_EXHAUSTED:
+         return HttpStatus.TOO_MANY_REQUESTS;
+      case GrpcStatus.DEADLINE_EXCEEDED:
+         return HttpStatus.REQUEST_TIMEOUT;
+      case GrpcStatus.UNAVAILABLE:
+         return HttpStatus.SERVICE_UNAVAILABLE;
+      default:
+         return HttpStatus.INTERNAL_SERVER_ERROR;
    }
 }
 

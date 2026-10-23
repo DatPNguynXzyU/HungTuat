@@ -8,9 +8,11 @@ import {
    Patch,
    Post,
    Query,
+   Req,
    UploadedFile,
    UseInterceptors,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
    ApiBearerAuth,
@@ -28,8 +30,11 @@ import {
    ApiErrorResponses,
    BadRequestException,
    COMMON_ERROR_CODES,
+   CORRELATION_ID_HEADER,
    CurrentUser,
+   DEFAULT_ROLES,
    Public,
+   RequireRoles,
    ResponseMessage,
 } from '@common';
 import {
@@ -197,9 +202,11 @@ export class UsersController {
    @Get()
    @ApiCookieAuth()
    @ApiBearerAuth()
+   @RequireRoles(DEFAULT_ROLES.ADMIN)
    @ApiOperation({
       operationId: 'getAllUsers',
-      summary: 'Get list of users',
+      summary: 'Get list of users (Admin only)',
+      description: 'Retrieves paginated user accounts. Strictly restricted to users with the ADMIN role.',
    })
    @ApiQuery({ name: 'page', required: false, type: Number })
    @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -219,14 +226,21 @@ export class UsersController {
          description: 'Unauthorized access or invalid token',
          errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
       },
+      {
+         status: HttpStatus.FORBIDDEN,
+         description: 'Forbidden: Requires ADMIN role',
+         errorCodes: [COMMON_ERROR_CODES.FORBIDDEN, COMMON_ERROR_CODES.INSUFFICIENT_ROLES],
+      },
    ])
    @ResponseMessage(USER_RESPONSE_MESSAGES.GET_LIST_SUCCESS)
    async getAllUsers(
       @Query('page') page = '1',
       @Query('limit') limit = '10',
       @CurrentUser() user: JwtPayload,
+      @Req() req: Request,
    ): Promise<unknown> {
-      return this.usersService.getAllUsers(Number(page), Number(limit), user);
+      const correlationId = req?.headers?.[CORRELATION_ID_HEADER] as string | undefined;
+      return this.usersService.getAllUsers(Number(page), Number(limit), user, correlationId);
    }
 
    @Get('me')
@@ -286,8 +300,9 @@ export class UsersController {
       },
    ])
    @ResponseMessage(USER_RESPONSE_MESSAGES.GET_DATE_OF_BIRTH_SUCCESS)
-   async getMyDateOfBirth(@CurrentUser('userId') userId: string): Promise<UserDateOfBirthResponseDto> {
-      return this.usersService.getDateOfBirth(userId);
+   async getMyDateOfBirth(@CurrentUser() user: JwtPayload, @Req() req: Request): Promise<UserDateOfBirthResponseDto> {
+      const correlationId = req?.headers?.[CORRELATION_ID_HEADER] as string | undefined;
+      return this.usersService.getDateOfBirth(user.sub, user, correlationId);
    }
 
    @Patch('me/username')
@@ -675,6 +690,11 @@ export class UsersController {
          errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
       },
       {
+         status: HttpStatus.FORBIDDEN,
+         description: 'Forbidden: Requires resource ownership or Administrator role',
+         errorCodes: [COMMON_ERROR_CODES.FORBIDDEN, COMMON_ERROR_CODES.NOT_OWNER_OR_ADMIN],
+      },
+      {
          status: HttpStatus.NOT_FOUND,
          description: 'User profile not found in User Service.',
          errorCodes: [USER_ERROR_CODES.USER_NOT_FOUND],
@@ -682,8 +702,13 @@ export class UsersController {
       },
    ])
    @ResponseMessage(USER_RESPONSE_MESSAGES.GET_DATE_OF_BIRTH_SUCCESS)
-   async getUserDateOfBirth(@Param('userId') userId: string): Promise<UserDateOfBirthResponseDto> {
-      return this.usersService.getDateOfBirth(userId);
+   async getUserDateOfBirth(
+      @Param('userId') userId: string,
+      @CurrentUser() user: JwtPayload,
+      @Req() req: Request,
+   ): Promise<UserDateOfBirthResponseDto> {
+      const correlationId = req?.headers?.[CORRELATION_ID_HEADER] as string | undefined;
+      return this.usersService.getDateOfBirth(userId, user, correlationId);
    }
 
    @Get(':id')

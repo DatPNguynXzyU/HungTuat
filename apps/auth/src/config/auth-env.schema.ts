@@ -7,6 +7,7 @@ export const AUTH_ENV_KEYS = {
    ARGON2_SALT: 'ARGON2_SALT',
    PORT: 'PORT',
    GRPC_PORT: 'GRPC_PORT',
+   REFRESH_TOKEN_SECRET: 'REFRESH_TOKEN_SECRET',
 } as const;
 
 export type AuthEnvKey = (typeof AUTH_ENV_KEYS)[keyof typeof AUTH_ENV_KEYS];
@@ -23,6 +24,7 @@ export const authEnvSchema = sharedEnvSchema.extend({
    JWT_KEY_ID: z.string().default(DEFAULT_JWT_KEY_ID),
    ARGON2_SECRET: z.string().default('default-argon2-secret-key'),
    ARGON2_SALT: z.string().default('default-argon2-salt-key'),
+   REFRESH_TOKEN_SECRET: z.string().default('default-refresh-token-secret-must-be-changed-in-prod-32bytes'),
    PORT: z.coerce.number().int().positive().default(3001),
    GRPC_PORT: z.coerce.number().int().positive().default(50051),
 });

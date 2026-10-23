@@ -8,7 +8,6 @@ import {
    FixedBackoffStrategy,
    GrpcStatus,
    RetryPolicyRegistry,
-   SERVICES,
    ServiceUnavailableException,
    UnauthorizedException,
 } from '@common';
@@ -23,9 +22,6 @@ import { AuthService } from '@/modules/auth/auth.service';
 
 describe('AuthService (Gateway)', () => {
    let service: AuthService;
-   const mockAuthClient = {
-      send: jest.fn(),
-   };
    const mockAuthGrpcService = {
       checkEmail: jest.fn(),
       login: jest.fn(),
@@ -48,10 +44,6 @@ describe('AuthService (Gateway)', () => {
       const module: TestingModule = await Test.createTestingModule({
          providers: [
             AuthService,
-            {
-               provide: SERVICES.AUTH_SERVICE,
-               useValue: mockAuthClient,
-            },
             {
                provide: AUTH_V1_GRPC_CLIENT,
                useValue: mockAuthGrpcClient,
@@ -113,7 +105,7 @@ describe('AuthService (Gateway)', () => {
    describe('login gRPC & Circuit Breaker', () => {
       const mockLoginResponse: ILoginResponse = {
          user: {
-            id: 'user-123',
+            userId: 'user-123',
             email: 'login@example.com',
             roles: [DEFAULT_ROLES.USER],
             status: USER_STATUS.ACTIVE,
@@ -184,7 +176,7 @@ describe('AuthService (Gateway)', () => {
    describe('refreshToken gRPC & Circuit Breaker', () => {
       const mockRefreshResponse: ILoginResponse = {
          user: {
-            id: 'user-123',
+            userId: 'user-123',
             email: 'refresh@example.com',
             roles: [DEFAULT_ROLES.USER],
             status: USER_STATUS.ACTIVE,

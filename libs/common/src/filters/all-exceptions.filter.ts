@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
 import { IErrorResponse, IValidationErrorDetail } from '@common/interfaces/response.interface';
 import { CORRELATION_ID_HEADER, REQUEST_ID_HEADER } from '@common/logger/logger.constants';
+import { mapGrpcStatusToHttpStatus } from '@common/interceptors/grpc-interceptor.util';
 
 interface ExceptionResponseObject {
    message?: string | string[] | Record<string, unknown>;
@@ -147,15 +148,54 @@ export class AllExceptionsFilter implements ExceptionFilter {
             details = rpcObj.details;
             validationErrors = rpcObj.errors;
          } else {
-            try {
-               const parsed = JSON.parse(exception.message) as Record<string, unknown>;
-               if (typeof parsed === 'object' && parsed !== null && (parsed.statusCode || parsed.errorCode)) {
-                  status = (parsed.statusCode as number) || HttpStatus.BAD_REQUEST;
+            let parsed: Record<string, unknown> | null = null;
+            const rawMsg = exception.message || '';
+            const rawDetails = typeof expAny.details === 'string' ? expAny.details : '';
+
+            if (rawDetails) {
+               try {
+                  parsed = JSON.parse(rawDetails) as Record<string, unknown>;
+               } catch {
+                  // ignore
+               }
+            }
+
+            if (!parsed && rawMsg) {
+               try {
+                  parsed = JSON.parse(rawMsg) as Record<string, unknown>;
+               } catch {
+                  const start = rawMsg.indexOf('{');
+                  const end = rawMsg.lastIndexOf('}');
+                  if (start !== -1 && end > start) {
+                     try {
+                        parsed = JSON.parse(rawMsg.slice(start, end + 1)) as Record<string, unknown>;
+                     } catch {
+                        // ignore
+                     }
+                  }
+               }
+            }
+
+            if (parsed && typeof parsed === 'object') {
+               if (typeof parsed.message === 'string' && parsed.message.startsWith('{')) {
+                  try {
+                     const inner = JSON.parse(parsed.message) as Record<string, unknown>;
+                     parsed = { ...inner, ...parsed };
+                  } catch {
+                     // ignore
+                  }
+               }
+
+               if (parsed.statusCode || parsed.errorCode) {
+                  const grpcNumCode = typeof expAny.code === 'number' ? expAny.code : undefined;
+                  status =
+                     (parsed.statusCode as number) ||
+                     (grpcNumCode ? mapGrpcStatusToHttpStatus(grpcNumCode) : HttpStatus.BAD_REQUEST);
                   errorCode =
                      (parsed.errorCode as string) ||
                      (typeof parsed.message === 'string' && parsed.message !== '[object Object]'
                         ? parsed.message
-                        : COMMON_ERROR_CODES.INVALID_REQUEST);
+                        : this.getDefaultErrorCode(status));
                   message =
                      (typeof parsed.message === 'string' && parsed.message !== '[object Object]'
                         ? parsed.message
@@ -171,7 +211,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
                         : exception.message;
                   error = exception.name || 'Internal Server Error';
                }
-            } catch {
+            } else {
                message =
                   exception.message === '[object Object]'
                      ? COMMON_ERROR_CODES.INTERNAL_SERVER_ERROR

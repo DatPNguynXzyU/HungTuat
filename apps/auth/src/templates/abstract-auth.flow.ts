@@ -1,7 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { DEFAULT_ROLES } from '@common';
-import type { IDeviceInfo } from '@common';
+import { SYSTEM_ROLES, type IDeviceInfo } from '@common';
 import { USER_STATUS, type IAuthResult } from '@contracts/auth';
 import type { AccountEntity } from '@auth/entities';
 import { AuditLogBuilder } from '@auth/builders';
@@ -121,10 +120,10 @@ export abstract class AbstractAuthFlow<TDto, TSaga extends IAuthSaga = IAuthSaga
    // Concrete / Hook Operations (Overridable)
 
    /**
-    * Hook: Resolves the account roles, defaulting to [DEFAULT_ROLES.USER] if none present.
+    * Hook: Resolves the account roles, defaulting to [SYSTEM_ROLES.USER] if none present.
     */
    protected resolveRoles(account: AccountEntity): Promise<string[]> {
-      return Promise.resolve(account.roles && account.roles.length > 0 ? account.roles : [DEFAULT_ROLES.USER]);
+      return Promise.resolve(account.roles && account.roles.length > 0 ? account.roles : [SYSTEM_ROLES.USER]);
    }
 
    /**
@@ -208,7 +207,7 @@ export abstract class AbstractAuthFlow<TDto, TSaga extends IAuthSaga = IAuthSaga
       const { account, roles, tokens, lastLoginAt } = context;
       return {
          user: {
-            id: account.id,
+            userId: account.id,
             email: account.email,
             roles,
             status: account.status || USER_STATUS.ACTIVE,

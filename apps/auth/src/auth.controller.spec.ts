@@ -6,14 +6,18 @@ import {
    BloomFilterService,
    CommandBus,
    DEFAULT_ROLES,
-   PERMISSIONS,
    RbacCacheService,
    RedisService,
    RmqService,
    SERVICES,
    type ICommandHandler,
 } from '@common';
-import { DEFAULT_DEV_RSA_PRIVATE_KEY, DEFAULT_DEV_RSA_PUBLIC_KEY, DEFAULT_JWT_KEY_ID } from '@contracts/auth';
+import {
+   DEFAULT_DEV_RSA_PRIVATE_KEY,
+   DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_JWT_ALGORITHM,
+   DEFAULT_JWT_KEY_ID,
+} from '@contracts/auth';
 import { AuthController } from '@auth/auth.controller';
 import { NOTIFICATION_ADAPTER } from '@auth/adapters';
 import { AUTH_COMMAND_HANDLERS } from '@auth/commands';
@@ -73,6 +77,10 @@ interface MockUserRecord {
       };
    }>;
 }
+
+const TEST_PERMISSIONS = {
+   USERS_READ: 'users:read',
+} as const;
 
 describe('AuthController', () => {
    let authController: AuthController;
@@ -226,7 +234,7 @@ describe('AuthController', () => {
                   {
                      permission: {
                         id: 'perm-1',
-                        code: PERMISSIONS.USERS_READ,
+                        code: TEST_PERMISSIONS.USERS_READ,
                         name: 'Read Users',
                         description: null,
                      },
@@ -242,7 +250,7 @@ describe('AuthController', () => {
                   {
                      permission: {
                         id: 'perm-1',
-                        code: PERMISSIONS.USERS_READ,
+                        code: TEST_PERMISSIONS.USERS_READ,
                         name: 'Read Users',
                         description: null,
                      },
@@ -257,10 +265,10 @@ describe('AuthController', () => {
             id: 'role-user-id',
             code: DEFAULT_ROLES.USER,
             name: 'Standard User',
-            permissions: [PERMISSIONS.USERS_READ],
+            permissions: [TEST_PERMISSIONS.USERS_READ],
          }),
          setRole: jest.fn().mockResolvedValue(undefined),
-         getRolePermissions: jest.fn().mockResolvedValue([PERMISSIONS.USERS_READ]),
+         getRolePermissions: jest.fn().mockResolvedValue([TEST_PERMISSIONS.USERS_READ]),
          setRolePermissions: jest.fn().mockResolvedValue(undefined),
          invalidateRole: jest.fn().mockResolvedValue(undefined),
       };
@@ -474,6 +482,7 @@ describe('AuthController', () => {
                   jwtRefreshTokenExpiresIn: 604800,
                   jwtExpiresIn: 86400,
                   argon2Secret: 'test-argon2-secret',
+                  refreshTokenSecret: 'test-refresh-token-secret-for-unit-tests-only-32bytes',
                },
             },
             {
@@ -533,7 +542,7 @@ describe('AuthController', () => {
       expect(jwks).toBeDefined();
       expect(Array.isArray(jwks.keys)).toBe(true);
       expect(jwks.keys[0].kty).toBe('RSA');
-      expect(jwks.keys[0].alg).toBe('RS256');
+      expect(jwks.keys[0].alg).toBe(DEFAULT_JWT_ALGORITHM);
    });
 
    it('should handle sendRegisterOtp and verifyRegisterOtp message pattern', async () => {
@@ -673,14 +682,14 @@ describe('AuthController', () => {
       } as unknown as RmqContext;
 
       jest.spyOn(authCoreService, 'getEmail').mockResolvedValue({
-         id: 'account-123',
+         accountId: 'account-123',
          email: 'test@example.com',
          isEmailVerified: true,
       });
 
       const result = await authController.getEmail({ accountId: 'account-123' }, mockContext);
       expect(result).toEqual({
-         id: 'account-123',
+         accountId: 'account-123',
          email: 'test@example.com',
          isEmailVerified: true,
       });

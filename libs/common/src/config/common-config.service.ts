@@ -4,6 +4,7 @@ import { SharedEnvConfig } from '@common/config/shared-env.schema';
 import {
    DEFAULT_DEV_RSA_PRIVATE_KEY,
    DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_JWT_ALGORITHM,
    DEFAULT_JWT_KEY_ID,
 } from '@common/constants/jwt.constant';
 import { ENV_KEYS } from '@common/constants/env-keys.constant';
@@ -76,7 +77,7 @@ export class CommonConfigService {
    }
 
    get jwtAlgorithm(): string {
-      return this.configService.get(ENV_KEYS.JWT_ALGORITHM, { infer: true }) || 'RS256';
+      return this.configService.get(ENV_KEYS.JWT_ALGORITHM, { infer: true }) || DEFAULT_JWT_ALGORITHM;
    }
 
    get jwtSecret(): string {

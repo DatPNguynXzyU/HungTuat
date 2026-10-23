@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package media.v1;
+
+message MediaProto {
+  string id = 1;
+  string userId = 2;
+  string provider = 3;
+  string type = 4;
+  string status = 5;
+  string url = 6;
+  string key = 7;
+  string mimeType = 8;
+  int64 size = 9;
+  optional int32 width = 10;
+  optional int32 height = 11;
+  optional string metadataJson = 12;
+  string createdAt = 13;
+  string updatedAt = 14;
+}

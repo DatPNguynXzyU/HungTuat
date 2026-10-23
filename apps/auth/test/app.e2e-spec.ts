@@ -44,8 +44,8 @@ describe('AuthModule (e2e)', () => {
       });
 
       expect(user.user.email).toBe('e2e@example.com');
-      expect(user.user.id).toBeDefined();
-      expect(UUID_V7_REGEX.test(user.user.id)).toBe(true);
+      expect(user.user.userId).toBeDefined();
+      expect(UUID_V7_REGEX.test(user.user.userId)).toBe(true);
       expect(user.accessToken).toBeDefined();
 
       const validation = await authCoreService.validateToken(user.accessToken);

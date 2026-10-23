@@ -1,6 +1,5 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { DEFAULT_ROLES } from '@common';
-import type { IDeviceInfo } from '@common';
+import { SYSTEM_ROLES, type IDeviceInfo } from '@common';
 import { USER_STATUS } from '@contracts/auth';
 import type { AccountEntity } from '@auth/entities';
 import type { AuditLogService, ITokenLifecycleService } from '@auth/services/infrastructure';
@@ -52,7 +51,7 @@ describe('AbstractAuthFlow (Template Method Pattern)', () => {
       id: 'acc-123',
       email: 'test@example.com',
       passwordHash: '$argon2id$mockedpasswordhash',
-      roles: [DEFAULT_ROLES.USER],
+      roles: [SYSTEM_ROLES.USER],
       status: USER_STATUS.ACTIVE,
       isEmailVerified: true,
       lastLoginAt: '2026-10-01T00:00:00.000Z',
@@ -104,7 +103,7 @@ describe('AbstractAuthFlow (Template Method Pattern)', () => {
       expect(flow.authenticateOrProvisionMock).toHaveBeenCalledWith(dto, deviceInfo);
       // Step 2 & 3: Token generation & saga registration
       expect(mockTokenLifecycleService.generateTokenPair).toHaveBeenCalledWith(
-         { id: 'acc-123', email: 'test@example.com', roles: [DEFAULT_ROLES.USER] },
+         { id: 'acc-123', email: 'test@example.com', roles: [SYSTEM_ROLES.USER] },
          deviceInfo,
       );
       expect(mockSaga.setTokens).toHaveBeenCalledWith({
@@ -126,9 +125,9 @@ describe('AbstractAuthFlow (Template Method Pattern)', () => {
       // Step 7: IAuthResult structure
       expect(result).toEqual({
          user: {
-            id: 'acc-123',
+            userId: 'acc-123',
             email: 'test@example.com',
-            roles: [DEFAULT_ROLES.USER],
+            roles: [SYSTEM_ROLES.USER],
             status: USER_STATUS.ACTIVE,
             isEmailVerified: true,
             lastLoginAt: '2026-10-15T00:00:00.000Z',

@@ -44,6 +44,7 @@ export interface IUserProfileRepository {
    findByUsername(username: string): Promise<UserEntity | null>;
    findAllUsernames(): Promise<string[]>;
    findAll(skip?: number, take?: number): Promise<UserEntity[]>;
+   count(): Promise<number>;
    findByIds(userIds: string[], status?: UserStatus): Promise<UserEntity[]>;
    findTopUsers(limit?: number, excludeUserIds?: string[], status?: UserStatus): Promise<UserEntity[]>;
    update(userId: string, data: UpdateUserData, tx?: Prisma.TransactionClient): Promise<UserEntity>;

@@ -1,10 +1,12 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { Resend } from 'resend';
+import { CreateEmailOptions, Resend } from 'resend';
 import { AppException } from '@common';
 import {
+   NOTIFICATION_EMAIL_SUBJECTS,
    SendEmailDto,
    SendOtpEmailDto,
    SendResetPasswordEmailDto,
+   SendSupplierWelcomeEmailDto,
    SendVerificationEmailDto,
    SendWelcomeEmailDto,
    SendChangePasswordOtpEmailDto,
@@ -48,9 +50,30 @@ export class ResendService {
             ...(dto.bcc ? { bcc: dto.bcc } : {}),
          };
 
-         const payload = dto.html
-            ? { ...basePayload, html: dto.html, ...(dto.text ? { text: dto.text } : {}) }
-            : { ...basePayload, text: dto.text || '' };
+         let html = dto.html;
+         let text = dto.text;
+
+         // Dynamic Template Resolution (Design Pattern Strategy fallback)
+         if ((!html || !text) && dto.template) {
+            const templateData = dto.data || {};
+            const rendered = this.templateService.renderTemplate(dto.template, templateData, dto.locale);
+            html = html || rendered.html;
+            text = text || rendered.text;
+         }
+
+         // Fallback to avoid empty payload validation errors in email providers
+         const safeText = text && text.trim() !== '' ? text : dto.subject || 'OmniServices Notification';
+
+         const payload: CreateEmailOptions = html
+            ? {
+                 ...basePayload,
+                 html,
+                 ...(text ? { text } : {}),
+              }
+            : {
+                 ...basePayload,
+                 text: safeText,
+              };
 
          const { data, error } = await this.resend.emails.send(payload);
 
@@ -98,6 +121,24 @@ export class ResendService {
       return this.sendEmail({
          to: dto.to,
          subject: 'Welcome to OmniServices!',
+         html,
+         text,
+      });
+   }
+
+   async sendSupplierWelcomeEmail(dto: SendSupplierWelcomeEmailDto): Promise<SendEmailResult> {
+      const { html, text, subject } = this.templateService.renderSupplierWelcomeEmail(
+         {
+            fullName: dto.fullName,
+            supplierName: dto.supplierName,
+            actionUrl: dto.actionUrl,
+         },
+         dto.locale,
+      );
+
+      return this.sendEmail({
+         to: dto.to,
+         subject: subject || NOTIFICATION_EMAIL_SUBJECTS.SUPPLIER_WELCOME,
          html,
          text,
       });

@@ -14,6 +14,7 @@ export class SessionRepository implements ISessionRepository {
          id: session.sessionId,
          accountId: session.accountId,
          refreshTokenJti: session.refreshTokenJti,
+         refreshTokenHash: session.refreshTokenHash,
          deviceType: session.deviceType,
          deviceName: session.deviceName,
          browser: session.browser,
@@ -42,6 +43,7 @@ export class SessionRepository implements ISessionRepository {
             sessionId: id,
             accountId: data.accountId,
             refreshTokenJti: data.refreshTokenJti,
+            refreshTokenHash: data.refreshTokenHash,
             deviceType: data.deviceType,
             deviceName: data.deviceName,
             browser: data.browser,
@@ -102,6 +104,7 @@ export class SessionRepository implements ISessionRepository {
             where: { sessionId },
             data: {
                ...(data.refreshTokenJti ? { refreshTokenJti: data.refreshTokenJti } : {}),
+               ...(data.refreshTokenHash !== undefined ? { refreshTokenHash: data.refreshTokenHash } : {}),
                ...(data.deviceType !== undefined ? { deviceType: data.deviceType } : {}),
                ...(data.deviceName !== undefined ? { deviceName: data.deviceName } : {}),
                ...(data.browser !== undefined ? { browser: data.browser } : {}),
@@ -133,6 +136,7 @@ export class SessionRepository implements ISessionRepository {
             where: { refreshTokenJti },
             data: {
                ...(data.refreshTokenJti ? { refreshTokenJti: data.refreshTokenJti } : {}),
+               ...(data.refreshTokenHash !== undefined ? { refreshTokenHash: data.refreshTokenHash } : {}),
                ...(data.deviceType !== undefined ? { deviceType: data.deviceType } : {}),
                ...(data.deviceName !== undefined ? { deviceName: data.deviceName } : {}),
                ...(data.browser !== undefined ? { browser: data.browser } : {}),

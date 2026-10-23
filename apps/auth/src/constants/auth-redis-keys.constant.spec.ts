@@ -5,6 +5,7 @@ describe('AuthRedisKeys', () => {
       expect(AuthRedisKeys.refreshToken('acc-1', 'jti-123')).toBe(
          `${AUTH_REDIS_KEY_PREFIX.REFRESH_TOKEN}acc-1:jti-123`,
       );
+      expect(AuthRedisKeys.refreshTokenByJti('jti-123')).toBe(`${AUTH_REDIS_KEY_PREFIX.REFRESH_TOKEN_JTI}jti-123`);
       expect(AuthRedisKeys.refreshTokenPattern('acc-1')).toBe(`${AUTH_REDIS_KEY_PREFIX.REFRESH_TOKEN}acc-1:*`);
    });
 

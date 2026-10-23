@@ -1,29 +1,19 @@
-export const DEFAULT_ROLES = {
-   SUPER_ADMIN: 'SUPER_ADMIN',
-   ADMIN: 'ADMIN',
-   MODERATOR: 'MODERATOR',
-   CHEF: 'CHEF',
+export const SYSTEM_ROLES = {
    USER: 'USER',
+   ADMIN: 'ADMIN',
+   SUPER_ADMIN: 'SUPER_ADMIN',
+} as const;
 
-   // Supplier Roles
-   SUPPLIER: 'SUPPLIER',
-   SUPPLIER_ADMIN: 'SUPPLIER_ADMIN',
-   SUPPLIER_MANAGER: 'SUPPLIER_MANAGER',
-   SUPPLIER_STAFF: 'SUPPLIER_STAFF',
-   SUPPLIER_VIEWER: 'SUPPLIER_VIEWER',
+export type SystemRole = (typeof SYSTEM_ROLES)[keyof typeof SYSTEM_ROLES];
+
+export const DEFAULT_ROLES = {
+   ...SYSTEM_ROLES,
 } as const;
 
 export type DefaultRole = (typeof DEFAULT_ROLES)[keyof typeof DEFAULT_ROLES];
-export type RoleCode = DefaultRole;
+export type RoleCode = DefaultRole | (string & {});
 
-export const DEFAULT_ADMIN_ROLES = [DEFAULT_ROLES.ADMIN, DEFAULT_ROLES.SUPER_ADMIN] as const;
+export const DEFAULT_ADMIN_ROLES = [SYSTEM_ROLES.ADMIN, SYSTEM_ROLES.SUPER_ADMIN] as const;
 export type AdminRole = (typeof DEFAULT_ADMIN_ROLES)[number];
 
-export const DEFAULT_SUPPLIER_ROLES = [
-   DEFAULT_ROLES.SUPPLIER,
-   DEFAULT_ROLES.SUPPLIER_ADMIN,
-   DEFAULT_ROLES.SUPPLIER_MANAGER,
-   DEFAULT_ROLES.SUPPLIER_STAFF,
-   DEFAULT_ROLES.SUPPLIER_VIEWER,
-] as const;
-export type SupplierRole = (typeof DEFAULT_SUPPLIER_ROLES)[number];
+export const ROLES_KEY = 'roles';

@@ -2,6 +2,7 @@ import { JwtUtil, type JwtPayload } from '@common/utils/jwt.util';
 import {
    DEFAULT_DEV_RSA_PRIVATE_KEY,
    DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_JWT_ALGORITHM,
    DEFAULT_JWT_KEY_ID,
 } from '@common/constants/jwt.constant';
 
@@ -46,7 +47,7 @@ describe('JwtUtil (RS256)', () => {
 
          const key = jwks.keys[0];
          expect(key.kid).toBe(DEFAULT_JWT_KEY_ID);
-         expect(key.alg).toBe('RS256');
+         expect(key.alg).toBe(DEFAULT_JWT_ALGORITHM);
          expect(key.use).toBe('sig');
          expect(key.kty).toBe('RSA');
          expect(key.n).toBeDefined();

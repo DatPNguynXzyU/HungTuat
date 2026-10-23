@@ -7,6 +7,12 @@ import {
    getCommerceProtoLoaderOptions,
    getCommerceProtoPath,
 } from '@contracts/commerce';
+import {
+   SEARCH_V1_GRPC_CLIENT,
+   SEARCH_V1_GRPC_PACKAGE_NAME,
+   getSearchProtoLoaderOptions,
+   getSearchProtoPath,
+} from '@contracts/search';
 import { HEALTH_GRPC_PACKAGE_NAME, getHealthProtoPath } from '@contracts/health';
 import { GatewayConfigModule, GatewayConfigService } from '@/config';
 import { CommerceController } from '@/modules/commerce/commerce.controller';
@@ -16,9 +22,6 @@ import { CommerceService } from '@/modules/commerce/commerce.service';
    imports: [
       RmqModule.register({
          name: SERVICES.COMMERCE_SERVICE,
-      }),
-      RmqModule.register({
-         name: SERVICES.SEARCH_SERVICE,
       }),
       ClientsModule.registerAsync([
          {
@@ -34,6 +37,23 @@ import { CommerceService } from '@/modules/commerce/commerce.service';
                   loader: getCommerceProtoLoaderOptions(),
                   channelOptions: createGrpcRetryChannelOptions({
                      serviceNames: [COMMERCE_V1_GRPC_PACKAGE_NAME],
+                  }),
+               },
+            }),
+         },
+         {
+            name: SEARCH_V1_GRPC_CLIENT,
+            imports: [GatewayConfigModule],
+            inject: [GatewayConfigService],
+            useFactory: (configService: GatewayConfigService) => ({
+               transport: Transport.GRPC,
+               options: {
+                  package: [SEARCH_V1_GRPC_PACKAGE_NAME],
+                  protoPath: [getSearchProtoPath()],
+                  url: configService.searchGrpcUrl,
+                  loader: getSearchProtoLoaderOptions(),
+                  channelOptions: createGrpcRetryChannelOptions({
+                     serviceNames: [SEARCH_V1_GRPC_PACKAGE_NAME],
                   }),
                },
             }),

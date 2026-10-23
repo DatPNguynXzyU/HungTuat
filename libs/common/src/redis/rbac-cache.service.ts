@@ -1,7 +1,8 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom, timeout } from 'rxjs';
+import type { ClientGrpc, ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom, Observable, timeout } from 'rxjs';
 import { RbacRedisKeys, RBAC_REDIS_TTL } from '@common/constants/redis.constant';
+import { GRPC_CLIENTS, GRPC_SERVICE_NAMES } from '@common/constants/services.constant';
 import { RedisService } from '@common/redis/redis.service';
 import { RBAC_INTERNAL_PATTERNS, SERVICES } from '@common/rmq/rmq.constants';
 
@@ -17,6 +18,9 @@ export interface CachedRoleData {
 export class RbacCacheService {
    constructor(
       private readonly redisService: RedisService,
+      @Optional()
+      @Inject(GRPC_CLIENTS.AUTH_V1)
+      private readonly authGrpcClient?: ClientGrpc,
       @Optional()
       @Inject(SERVICES.AUTH_SERVICE)
       private readonly authClient?: ClientProxy,
@@ -53,7 +57,22 @@ export class RbacCacheService {
          return roleData.permissions;
       }
 
-      // Fallback via Auth Service RPC when Redis cache misses
+      // Fallback via Auth Service gRPC when Redis cache misses
+      if (this.authGrpcClient) {
+         try {
+            const service = this.authGrpcClient.getService<{
+               getRolePermissions(data: { roleCode: string }): Observable<{ permissions: string[] }>;
+            }>(GRPC_SERVICE_NAMES.AUTH);
+            const res = await firstValueFrom(service.getRolePermissions({ roleCode }).pipe(timeout(5000)));
+            if (res?.permissions) {
+               return res.permissions;
+            }
+         } catch {
+            // continue to fallback
+         }
+      }
+
+      // Fallback via Auth Service RMQ if gRPC unavailable
       if (this.authClient) {
          try {
             const permissions = await firstValueFrom(

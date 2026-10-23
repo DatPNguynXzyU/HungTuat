@@ -6,6 +6,7 @@ import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
 import { IAppExceptionPayload } from '@common/exceptions/exception.types';
 import { IValidationErrorDetail } from '@common/interfaces/response.interface';
 import { AllExceptionsFilter } from '@common/filters/all-exceptions.filter';
+import { mapHttpStatusToGrpc } from '@common/interceptors/grpc-interceptor.util';
 
 @Catch()
 export class AllRpcExceptionsFilter implements RpcExceptionFilter {
@@ -211,6 +212,13 @@ export class AllRpcExceptionsFilter implements RpcExceptionFilter {
          this.logger.warn(`RPC Exception caught: [${payload.statusCode}] ${payload.errorCode}`);
       }
 
-      return throwError(() => new RpcException(payload));
+      const rpcException = new RpcException(payload);
+      const grpcCode = mapHttpStatusToGrpc(payload.statusCode);
+      const serialized = JSON.stringify(payload);
+      Object.assign(rpcException, {
+         code: grpcCode,
+         details: serialized,
+      });
+      return throwError(() => rpcException);
    }
 }

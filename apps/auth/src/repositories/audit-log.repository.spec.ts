@@ -67,7 +67,7 @@ describe('AuditLogRepository', () => {
          metadata: { password: 'secretPassword', safe: 'data' },
       });
 
-      expect(result.id).toBe('audit-id-1');
+      expect(result.auditLogId).toBe('audit-id-1');
       expect(result.action).toBe('AUTH.LOGIN_SUCCESS');
       expect(mockSecurityAuditLogCreate).toHaveBeenCalled();
    });
@@ -93,7 +93,7 @@ describe('AuditLogRepository', () => {
 
       const result = await repository.findById('audit-id-1');
 
-      expect(result?.id).toBe('audit-id-1');
+      expect(result?.auditLogId).toBe('audit-id-1');
       expect(mockSecurityAuditLogFindUnique).toHaveBeenCalledWith({
          where: { auditLogId: 'audit-id-1' },
       });

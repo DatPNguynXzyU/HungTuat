@@ -4,6 +4,7 @@ export interface SessionEntity {
    id: string;
    accountId: string;
    refreshTokenJti: string;
+   refreshTokenHash?: string | null;
    deviceType?: string | null;
    deviceName?: string | null;
    browser?: string | null;

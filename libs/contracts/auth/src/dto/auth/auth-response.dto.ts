@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsObject, ValidateNested, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsObject, ValidateNested, IsOptional, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AuthTokensDto {
@@ -36,7 +36,8 @@ export class AuthTokensDto {
 export class AuthUserDto {
    @ApiProperty({ description: 'User ID', example: '123e4567-e89b-12d3-a456-426614174000' })
    @IsString()
-   id!: string;
+   @IsUUID()
+   userId!: string;
 
    @ApiProperty({ description: 'User email', example: 'user@example.com' })
    @IsString()

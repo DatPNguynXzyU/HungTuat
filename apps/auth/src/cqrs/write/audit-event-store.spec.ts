@@ -48,7 +48,7 @@ describe('AuditEventStore', () => {
       it('should append an audit event and emit AUDIT_CQRS_EVENTS.EVENT_APPENDED', async () => {
          const now = new Date();
          const data: CreateAuditLogData = {
-            id: 'event-uuid-1',
+            auditLogId: 'event-uuid-1',
             accountId: 'acc-123',
             actorEmail: 'test@example.com',
             action: AUDIT_ACTIONS.AUTH_LOGIN_SUCCESS,

@@ -52,7 +52,7 @@ export class AuditProjectionRebuildService {
             const auditData = event.data as unknown as CreateAuditLogData;
             const logData: CreateAuditLogData = {
                ...auditData,
-               id: event.eventId,
+               auditLogId: event.eventId,
                createdAt: event.createdAt.toISOString(),
             };
 

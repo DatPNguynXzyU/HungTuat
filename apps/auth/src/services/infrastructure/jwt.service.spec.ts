@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { DEFAULT_DEV_RSA_PRIVATE_KEY, type JwtPayload } from '@common';
-import { DEFAULT_DEV_RSA_PUBLIC_KEY, DEFAULT_JWT_KEY_ID, JWT_TOKEN_TYPE } from '@contracts/auth';
+import { DEFAULT_DEV_RSA_PUBLIC_KEY, DEFAULT_JWT_ALGORITHM, DEFAULT_JWT_KEY_ID, JWT_TOKEN_TYPE } from '@contracts/auth';
 import { AuthConfigService } from '@auth/config';
 import { JwtService } from '@auth/services/infrastructure/jwt.service';
 
@@ -46,7 +46,7 @@ describe('JwtService', () => {
          expect(Array.isArray(jwks.keys)).toBe(true);
          expect(jwks.keys[0].kty).toBe('RSA');
          expect(jwks.keys[0].kid).toBe(DEFAULT_JWT_KEY_ID);
-         expect(jwks.keys[0].alg).toBe('RS256');
+         expect(jwks.keys[0].alg).toBe(DEFAULT_JWT_ALGORITHM);
          expect(jwks.keys[0].use).toBe('sig');
       });
    });

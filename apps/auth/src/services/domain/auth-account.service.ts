@@ -16,7 +16,7 @@ export class AuthAccountService {
       }
 
       return {
-         id: account.id,
+         accountId: account.id,
          email: account.email,
          isEmailVerified: account.isEmailVerified ?? false,
       };

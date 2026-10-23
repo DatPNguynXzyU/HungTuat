@@ -8,6 +8,7 @@ describe('validateAuthEnv', () => {
       expect(result.POSTGRES_PORT).toBe(5433);
       expect(result.JWT_ACCESS_TOKEN_EXPIRES_IN).toBe(900);
       expect(result.JWT_REFRESH_TOKEN_EXPIRES_IN).toBe(604800);
+      expect(result.REFRESH_TOKEN_SECRET).toBe('default-refresh-token-secret-must-be-changed-in-prod-32bytes');
    });
 
    it('should coerce string numbers correctly', () => {

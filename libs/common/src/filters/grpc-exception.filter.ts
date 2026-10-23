@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch, HttpStatus, Logger, type RpcExceptionFilter } from '@nestjs/common';
+import { ArgumentsHost, Catch, HttpException, HttpStatus, Logger, type RpcExceptionFilter } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { status as GrpcStatus } from '@grpc/grpc-js';
 import { Observable, throwError } from 'rxjs';
@@ -17,6 +17,7 @@ export class GrpcExceptionFilter implements RpcExceptionFilter {
 
    catch(exception: unknown, host?: ArgumentsHost): Observable<never> {
       let code: number = GrpcStatus.INTERNAL;
+      let statusCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
       let errorCode: string = COMMON_ERROR_CODES.INTERNAL_SERVER_ERROR;
       let message: string = COMMON_ERROR_CODES.INTERNAL_SERVER_ERROR;
       let params: Record<string, unknown> | undefined = undefined;
@@ -37,14 +38,37 @@ export class GrpcExceptionFilter implements RpcExceptionFilter {
 
       if (exception instanceof AppException) {
          const payload = exception.getPayload();
+         statusCode = payload.statusCode;
          code = this.mapHttpStatusToGrpc(payload.statusCode);
          errorCode = payload.errorCode;
          message = payload.message || payload.errorCode;
          params = payload.params;
+      } else if (exception instanceof HttpException) {
+         statusCode = exception.getStatus();
+         code = this.mapHttpStatusToGrpc(statusCode);
+         const res = exception.getResponse();
+         if (typeof res === 'object' && res !== null) {
+            const resObj = res as Record<string, unknown>;
+            errorCode =
+               (resObj.errorCode as string) ||
+               (typeof resObj.message === 'string' && resObj.message !== '[object Object]'
+                  ? resObj.message
+                  : COMMON_ERROR_CODES.INVALID_REQUEST);
+            message =
+               typeof resObj.message === 'string' && resObj.message !== '[object Object]' ? resObj.message : errorCode;
+            params = resObj.params as Record<string, unknown> | undefined;
+         } else if (typeof res === 'string') {
+            errorCode = res;
+            message = res;
+         }
       } else if (exception instanceof RpcException) {
          const error = exception.getError();
          if (typeof error === 'object' && error !== null) {
             const errObj = error as Record<string, unknown>;
+            if (typeof errObj.statusCode === 'number') {
+               statusCode = errObj.statusCode;
+               code = this.mapHttpStatusToGrpc(statusCode);
+            }
             if (typeof errObj.code === 'number') {
                code = errObj.code;
             }
@@ -61,27 +85,77 @@ export class GrpcExceptionFilter implements RpcExceptionFilter {
                correlationId = errObj.correlationId;
             }
          } else if (typeof error === 'string') {
-            message = error;
-            errorCode = error;
+            try {
+               const parsed = JSON.parse(error) as Record<string, unknown>;
+               if (typeof parsed.statusCode === 'number') {
+                  statusCode = parsed.statusCode;
+                  code = this.mapHttpStatusToGrpc(statusCode);
+               }
+               if (typeof parsed.errorCode === 'string') {
+                  errorCode = parsed.errorCode;
+               }
+               if (typeof parsed.message === 'string') {
+                  message = parsed.message;
+               }
+               if (typeof parsed.params === 'object' && parsed.params !== null) {
+                  params = parsed.params as Record<string, unknown>;
+               }
+            } catch {
+               message = error;
+               errorCode = error;
+            }
          }
       } else if (exception instanceof Error) {
-         message = exception.message;
+         const expAny = exception as unknown as Record<string, unknown>;
+         if (typeof expAny.statusCode === 'number') {
+            statusCode = expAny.statusCode;
+            code = this.mapHttpStatusToGrpc(statusCode);
+         } else if (typeof expAny.status === 'number') {
+            statusCode = expAny.status;
+            code = this.mapHttpStatusToGrpc(statusCode);
+         }
+
+         try {
+            const parsed = JSON.parse(exception.message) as Record<string, unknown>;
+            if (typeof parsed.statusCode === 'number') {
+               statusCode = parsed.statusCode;
+               code = this.mapHttpStatusToGrpc(statusCode);
+            }
+            if (typeof parsed.errorCode === 'string') {
+               errorCode = parsed.errorCode;
+            }
+            if (typeof parsed.message === 'string') {
+               message = parsed.message;
+            }
+            if (typeof parsed.params === 'object' && parsed.params !== null) {
+               params = parsed.params as Record<string, unknown>;
+            }
+         } catch {
+            message = exception.message;
+         }
       }
 
-      this.logger.warn(`gRPC Exception: [${correlationId}] [code=${code}] ${errorCode}`);
+      const serializedPayload = JSON.stringify({
+         statusCode,
+         errorCode,
+         message,
+         params,
+         correlationId,
+      });
 
-      return throwError(
-         () =>
-            new RpcException({
-               code,
-               message: JSON.stringify({
-                  errorCode,
-                  message,
-                  params,
-                  correlationId,
-               }),
-            }),
-      );
+      this.logger.warn(`gRPC Exception: [${correlationId}] [code=${code}] [status=${statusCode}] ${errorCode}`);
+
+      const rpcError = new RpcException({
+         code,
+         message: serializedPayload,
+      });
+      Object.assign(rpcError, {
+         code,
+         details: serializedPayload,
+         message: serializedPayload,
+      });
+
+      return throwError(() => rpcError);
    }
 
    protected mapHttpStatusToGrpc(httpStatus: HttpStatus): number {

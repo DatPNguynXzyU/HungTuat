@@ -3,17 +3,22 @@ import fs from 'node:fs';
 import path from 'node:path';
 import jwt, { type SignOptions, type VerifyOptions } from 'jsonwebtoken';
 import {
+   AUTH_ERROR_REASONS,
    DEFAULT_DEV_RSA_PRIVATE_KEY,
    DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_JWT_ALGORITHM,
    DEFAULT_JWT_KEY_ID,
    type JwtTokenType,
 } from '@common/constants/jwt.constant';
+import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
+import { UnauthorizedException } from '@common/exceptions/http.exceptions';
 import type { IJwksResponse, IJsonWebKey } from '@common/interfaces/jwt.interface';
 
 export interface JwtPayload {
    sub: string;
    email: string;
    roles?: string[];
+   permissions?: string[];
    tokenType?: JwtTokenType;
    jti?: string;
    iat?: number;
@@ -100,7 +105,7 @@ export class JwtUtil {
    static generateJwks(
       publicKeyPem: string = DEFAULT_DEV_RSA_PUBLIC_KEY,
       keyId: string = DEFAULT_JWT_KEY_ID,
-      alg: string = 'RS256',
+      alg: string = DEFAULT_JWT_ALGORITHM,
       use: string = 'sig',
    ): IJwksResponse {
       const formattedKey = this.formatPemKey(publicKeyPem) || DEFAULT_DEV_RSA_PUBLIC_KEY;
@@ -132,7 +137,7 @@ export class JwtUtil {
       const formattedKey = typeof privateKey === 'string' ? this.formatPemKey(privateKey) : privateKey;
 
       const signOptions: SignOptions = {
-         algorithm: 'RS256',
+         algorithm: DEFAULT_JWT_ALGORITHM,
          keyid: options?.keyid || DEFAULT_JWT_KEY_ID,
          expiresIn: expiresInSeconds,
          ...options,
@@ -145,13 +150,15 @@ export class JwtUtil {
       const formattedKey = typeof publicKey === 'string' ? this.formatPemKey(publicKey) : publicKey;
 
       const verifyOptions: VerifyOptions = {
-         algorithms: ['RS256'],
+         algorithms: [DEFAULT_JWT_ALGORITHM],
          ...options,
       };
 
       const decoded = jwt.verify(token, formattedKey, verifyOptions);
       if (typeof decoded === 'string' || !decoded) {
-         throw new Error('Invalid payload');
+         throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
+            params: { reason: AUTH_ERROR_REASONS.TOKEN_INVALID_OR_EXPIRED },
+         });
       }
       return decoded as JwtPayload;
    }

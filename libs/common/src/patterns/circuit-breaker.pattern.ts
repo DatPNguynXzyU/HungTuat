@@ -3,7 +3,7 @@ import { defer, firstValueFrom, from, isObservable, Observable, type MonoTypeOpe
 import { status as GrpcStatus } from '@grpc/grpc-js';
 import { AppException } from '@common/exceptions/app.exception';
 import { ServiceUnavailableException, TimeoutException } from '@common/exceptions/http.exceptions';
-import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
+import { CLIENT_COMMON_ERROR_CODES, COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
 import { type IAppExceptionOptions } from '@common/exceptions/exception.types';
 
 /**
@@ -14,6 +14,21 @@ export const HTTP_STATUS_THRESHOLDS = {
    SERVER_ERROR_MIN: 500,
    REQUEST_TIMEOUT: 408,
 } as const;
+
+/**
+ * Non-retryable gRPC status codes (business validation, auth failure, permanent errors).
+ * These represent normal client-side business outcomes rather than infrastructure outages.
+ */
+export const NON_RETRYABLE_GRPC_STATUS_CODES: readonly number[] = [
+   GrpcStatus.INVALID_ARGUMENT, // 3: Bad Request
+   GrpcStatus.NOT_FOUND, // 5: Entity not found
+   GrpcStatus.ALREADY_EXISTS, // 6: Conflict
+   GrpcStatus.PERMISSION_DENIED, // 7: Forbidden
+   GrpcStatus.UNAUTHENTICATED, // 16: Unauthorized
+   GrpcStatus.FAILED_PRECONDITION, // 9: Precondition failed
+   GrpcStatus.OUT_OF_RANGE, // 11: Out of range
+   GrpcStatus.UNIMPLEMENTED, // 12: Not implemented
+] as const;
 
 export enum CircuitState {
    CLOSED = 'CLOSED',
@@ -148,16 +163,50 @@ export const defaultIsFailure = (error: unknown): boolean => {
       return true;
    }
 
+   // gRPC client status codes (4xx equivalent) are normal business outcomes -> NOT failures
+   if (typeof grpcCode === 'number' && NON_RETRYABLE_GRPC_STATUS_CODES.includes(grpcCode)) {
+      return false;
+   }
+
    // Raw Node network error codes
    const errorCode = (error as { code?: string }).code;
    if (typeof errorCode === 'string' && (NETWORK_ERROR_CODES as readonly string[]).includes(errorCode)) {
       return true;
    }
 
+   // Extract parsed status/errorCode from serialized gRPC details or message
+   const detailsStr =
+      typeof (error as { details?: unknown }).details === 'string' ? (error as { details: string }).details : undefined;
+   const msgStr = error instanceof Error ? error.message : '';
+   const jsonCandidate =
+      detailsStr ||
+      (msgStr.includes('{') && msgStr.includes('}')
+         ? msgStr.slice(msgStr.indexOf('{'), msgStr.lastIndexOf('}') + 1)
+         : undefined);
+
+   let parsedStatusCode: number | undefined = undefined;
+   let parsedErrorCode: string | undefined = undefined;
+
+   if (jsonCandidate) {
+      try {
+         const parsed = JSON.parse(jsonCandidate) as { statusCode?: number; errorCode?: string };
+         if (typeof parsed.statusCode === 'number') {
+            parsedStatusCode = parsed.statusCode;
+         }
+         if (typeof parsed.errorCode === 'string') {
+            parsedErrorCode = parsed.errorCode;
+         }
+      } catch {
+         // ignore
+      }
+   }
+
    // Check HTTP status code
-   const rawStatus = (error as { getStatus?: () => number; statusCode?: number; status?: number }).getStatus
-      ? (error as { getStatus: () => number }).getStatus()
-      : (error as { statusCode?: number; status?: number }).statusCode || (error as { status?: number }).status;
+   const rawStatus =
+      parsedStatusCode ??
+      ((error as { getStatus?: () => number; statusCode?: number; status?: number }).getStatus
+         ? (error as { getStatus: () => number }).getStatus()
+         : (error as { statusCode?: number; status?: number }).statusCode || (error as { status?: number }).status);
 
    if (typeof rawStatus === 'number') {
       if (
@@ -169,6 +218,11 @@ export const defaultIsFailure = (error: unknown): boolean => {
       if (rawStatus >= HTTP_STATUS_THRESHOLDS.CLIENT_ERROR_MIN && rawStatus < HTTP_STATUS_THRESHOLDS.SERVER_ERROR_MIN) {
          return false;
       }
+   }
+
+   // Known standard client business error codes are not failures
+   if (parsedErrorCode && (CLIENT_COMMON_ERROR_CODES as readonly string[]).includes(parsedErrorCode)) {
+      return false;
    }
 
    // gRPC error message heuristics

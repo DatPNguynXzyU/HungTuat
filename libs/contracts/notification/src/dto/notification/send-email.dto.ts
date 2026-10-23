@@ -63,4 +63,27 @@ export class SendEmailDto {
    @IsOptional()
    @IsArray()
    bcc?: string[];
+
+   @ApiPropertyOptional({
+      example: 'WELCOME_EMAIL',
+      description: 'Template identifier to render dynamically',
+   })
+   @IsOptional()
+   @IsString()
+   template?: string;
+
+   @ApiPropertyOptional({
+      example: { fullName: 'John Doe' },
+      description: 'Dynamic data to interpolate into the template',
+   })
+   @IsOptional()
+   data?: Record<string, unknown>;
+
+   @ApiPropertyOptional({
+      example: 'en',
+      description: 'Preferred language/locale (e.g. en, vi)',
+   })
+   @IsOptional()
+   @IsString()
+   locale?: string;
 }

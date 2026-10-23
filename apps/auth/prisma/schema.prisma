@@ -110,6 +110,7 @@ model AccountSession {
   sessionId       String   @id @default(uuid()) @map("session_id")
   accountId       String   @map("account_id")
   refreshTokenJti String   @unique @map("refresh_token_jti")
+  refreshTokenHash String? @map("refresh_token_hash")
   deviceType      String?  @map("device_type")
   deviceName      String?  @map("device_name")
   browser         String?

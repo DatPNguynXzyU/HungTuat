@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package notification.v1;
+
+message NotificationItemProto {
+  string notificationId = 1;
+  string userId = 2;
+  string type = 3;
+  string title = 4;
+  string content = 5;
+  bool isRead = 6;
+  optional string metadataJson = 7;
+  string createdAt = 8;
+  string updatedAt = 9;
+}

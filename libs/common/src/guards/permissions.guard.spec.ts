@@ -1,10 +1,16 @@
 import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { DEFAULT_ROLES, PERMISSIONS } from '@common/constants';
+import { DEFAULT_ROLES } from '@common/constants';
 import { IS_PUBLIC_KEY } from '@common/decorators/public.decorator';
 import { ForbiddenException, UnauthorizedException } from '@common/exceptions/http.exceptions';
 import { PermissionsGuard } from '@common/guards/permissions.guard';
 import { RbacCacheService } from '@common/redis/rbac-cache.service';
+
+const TEST_PERMISSIONS = {
+   READ: 'TEST_USER:READ',
+   UPDATE: 'TEST_USER:UPDATE',
+   DELETE: 'TEST_USER:DELETE',
+} as const;
 
 describe('PermissionsGuard', () => {
    let guard: PermissionsGuard;
@@ -28,7 +34,7 @@ describe('PermissionsGuard', () => {
    it('should allow access if route is public', async () => {
       mockGetAllAndOverride.mockImplementation((key) => {
          if (key === IS_PUBLIC_KEY) return true;
-         return [PERMISSIONS.USERS_READ];
+         return [TEST_PERMISSIONS.READ];
       });
       const context = {
          getHandler: () => {},
@@ -56,7 +62,7 @@ describe('PermissionsGuard', () => {
    it('should throw UnauthorizedException if request has no user', async () => {
       mockGetAllAndOverride.mockImplementation((key) => {
          if (key === IS_PUBLIC_KEY) return false;
-         return [PERMISSIONS.USERS_READ];
+         return [TEST_PERMISSIONS.READ];
       });
       const context = {
          getHandler: () => {},
@@ -72,7 +78,7 @@ describe('PermissionsGuard', () => {
    it('should allow SUPER_ADMIN to bypass permission checks', async () => {
       mockGetAllAndOverride.mockImplementation((key) => {
          if (key === IS_PUBLIC_KEY) return false;
-         return [PERMISSIONS.USERS_DELETE];
+         return [TEST_PERMISSIONS.DELETE];
       });
       const context = {
          getHandler: () => {},
@@ -96,9 +102,9 @@ describe('PermissionsGuard', () => {
    it('should allow user if role contains required permissions', async () => {
       mockGetAllAndOverride.mockImplementation((key) => {
          if (key === IS_PUBLIC_KEY) return false;
-         return [PERMISSIONS.USERS_READ];
+         return [TEST_PERMISSIONS.READ];
       });
-      mockGetRolePermissions.mockResolvedValue([PERMISSIONS.USERS_READ, PERMISSIONS.USERS_UPDATE]);
+      mockGetRolePermissions.mockResolvedValue([TEST_PERMISSIONS.READ, TEST_PERMISSIONS.UPDATE]);
 
       const context = {
          getHandler: () => {},
@@ -122,9 +128,9 @@ describe('PermissionsGuard', () => {
    it('should throw ForbiddenException if user lacks required permissions', async () => {
       mockGetAllAndOverride.mockImplementation((key) => {
          if (key === IS_PUBLIC_KEY) return false;
-         return [PERMISSIONS.USERS_DELETE];
+         return [TEST_PERMISSIONS.DELETE];
       });
-      mockGetRolePermissions.mockResolvedValue([PERMISSIONS.USERS_READ]);
+      mockGetRolePermissions.mockResolvedValue([TEST_PERMISSIONS.READ]);
 
       const context = {
          getHandler: () => {},
@@ -146,7 +152,7 @@ describe('PermissionsGuard', () => {
    it('should throw ForbiddenException if user has no roles', async () => {
       mockGetAllAndOverride.mockImplementation((key) => {
          if (key === IS_PUBLIC_KEY) return false;
-         return [PERMISSIONS.USERS_READ];
+         return [TEST_PERMISSIONS.READ];
       });
 
       const context = {

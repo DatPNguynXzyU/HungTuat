@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { DEFAULT_ROLES, RedisService, UnauthorizedException } from '@common';
+import { RedisService, SYSTEM_ROLES, UnauthorizedException } from '@common';
 import { USER_STATUS } from '@contracts/auth';
 import { AUTH_LOCKOUT_VALUE } from '@auth/constants';
 import { AUTH_DOMAIN_EVENTS } from '@auth/domain/events';
@@ -23,7 +23,7 @@ describe('AuthLoginService', () => {
    };
 
    const mockAuthRbacService = {
-      getOrCacheRole: jest.fn().mockResolvedValue({ id: 'r1', code: DEFAULT_ROLES.USER, permissions: [] }),
+      getOrCacheRole: jest.fn().mockResolvedValue({ id: 'r1', code: SYSTEM_ROLES.USER, permissions: [] }),
    };
 
    const mockPasswordHasher = {
@@ -109,7 +109,7 @@ describe('AuthLoginService', () => {
          id: 'user-id-1',
          email: 'test@example.com',
          passwordHash: '$argon2id$v=19$m=65536,t=3,p=4$dummyhash',
-         roles: [DEFAULT_ROLES.USER],
+         roles: [SYSTEM_ROLES.USER],
          status: USER_STATUS.ACTIVE,
          isEmailVerified: true,
          lastLoginAt: '2026-10-12T00:00:00.000Z',
@@ -130,7 +130,7 @@ describe('AuthLoginService', () => {
       it('should successfully login, generate tokens first, update db, clear redis, and record audit log', async () => {
          const result = await service.login({ email: 'test@example.com', password: 'password123' });
 
-         expect(result.user.id).toBe('user-id-1');
+         expect(result.user.userId).toBe('user-id-1');
          expect(result.accessToken).toBe('mock-access-token');
          expect(result.refreshToken).toBe('mock-refresh-token');
 
@@ -165,7 +165,7 @@ describe('AuthLoginService', () => {
 
          const result = await service.login({ email: 'test@example.com', password: 'password123' });
 
-         expect(result.user.id).toBe('user-id-1');
+         expect(result.user.userId).toBe('user-id-1');
          expect(result.accessToken).toBe('mock-access-token');
       });
 

@@ -1,18 +1,16 @@
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
-import type { ClientGrpc, ClientProxy } from '@nestjs/microservices';
-import { defer, firstValueFrom, timeout } from 'rxjs';
+import type { ClientGrpc } from '@nestjs/microservices';
+import { defer, firstValueFrom } from 'rxjs';
 import {
    CircuitBreakerRegistry,
-   COMMON_ERROR_CODES,
    createGrpcMetadata,
    handleGrpcError,
-   InternalServerException,
+   type JwtPayload,
    RetryPolicyRegistry,
-   SERVICES,
    SERVICE_NAMES,
    withGrpcRetry,
 } from '@common';
-import { SEARCH_PATTERNS } from '@contracts/search';
+import { SEARCH_V1_GRPC_CLIENT, SEARCH_V1_GRPC_SERVICE_NAME, type ISearchV1GrpcService } from '@contracts/search';
 import {
    COMMERCE_V1_GRPC_CLIENT,
    COMMERCE_V1_GRPC_SERVICE_NAME,
@@ -33,6 +31,7 @@ import type { ISupplierProto, SupplierItemDto, SupplierStatusType } from '@contr
 @Injectable()
 export class CommerceService implements OnModuleInit {
    private commerceGrpcService!: ICommerceV1GrpcService;
+   private searchGrpcService!: ISearchV1GrpcService;
    private readonly commerceGrpcBreaker = CircuitBreakerRegistry.getOrCreate(COMMERCE_V1_GRPC_SERVICE_NAME, {
       timeout: 3000,
       failureThreshold: 5,
@@ -44,15 +43,27 @@ export class CommerceService implements OnModuleInit {
       multiplier: 2,
       maxDelayMs: 2000,
    });
+   private readonly searchGrpcBreaker = CircuitBreakerRegistry.getOrCreate(SEARCH_V1_GRPC_SERVICE_NAME, {
+      timeout: 5000,
+      failureThreshold: 5,
+      resetTimeout: 10000,
+   });
+   private readonly searchGrpcRetryPolicy = RetryPolicyRegistry.getOrCreate(SEARCH_V1_GRPC_SERVICE_NAME, {
+      maxAttempts: 3,
+      initialDelayMs: 100,
+      multiplier: 2,
+      maxDelayMs: 2000,
+   });
 
    constructor(
       @Inject(COMMERCE_V1_GRPC_CLIENT) private readonly commerceGrpcClient: ClientGrpc,
-      @Inject(SERVICES.SEARCH_SERVICE) private readonly searchClient: ClientProxy,
+      @Inject(SEARCH_V1_GRPC_CLIENT) private readonly searchGrpcClient: ClientGrpc,
    ) {}
 
    onModuleInit(): void {
       this.commerceGrpcService =
          this.commerceGrpcClient.getService<ICommerceV1GrpcService>(COMMERCE_V1_GRPC_SERVICE_NAME);
+      this.searchGrpcService = this.searchGrpcClient.getService<ISearchV1GrpcService>(SEARCH_V1_GRPC_SERVICE_NAME);
    }
 
    private mapProtoToSupplierDto(supp: ISupplierProto): SupplierItemDto {
@@ -74,13 +85,17 @@ export class CommerceService implements OnModuleInit {
 
    async searchIngredients(dto: SearchIngredientsDto): Promise<SearchIngredientsResponseDto> {
       try {
-         const res = await firstValueFrom(
-            this.searchClient
-               .send<SearchIngredientsResponseDto, SearchIngredientsDto>(
-                  { cmd: SEARCH_PATTERNS.SEARCH_INGREDIENTS },
-                  dto,
-               )
-               .pipe(timeout(5000)),
+         const res = await this.searchGrpcBreaker.execute(() =>
+            firstValueFrom(
+               defer(() =>
+                  this.searchGrpcService.searchIngredients({
+                     query: dto.query,
+                     categoryId: dto.categoryId,
+                     limit: dto.limit,
+                     offset: dto.offset,
+                  }),
+               ).pipe(withGrpcRetry(this.searchGrpcRetryPolicy)),
+            ),
          );
 
          return {
@@ -105,9 +120,7 @@ export class CommerceService implements OnModuleInit {
             offset: res?.offset ?? dto.offset ?? 0,
          };
       } catch (error: unknown) {
-         throw new InternalServerException(COMMON_ERROR_CODES.INTERNAL_SERVER_ERROR, {
-            cause: error instanceof Error ? error : new Error(String(error)),
-         });
+         return handleGrpcError(error);
       }
    }
 
@@ -242,11 +255,22 @@ export class CommerceService implements OnModuleInit {
       }
    }
 
-   async createIngredient(dto: CreateIngredientDto, correlationId?: string): Promise<IngredientItemDto> {
+   async createIngredient(
+      dto: CreateIngredientDto,
+      options?: { correlationId?: string; user?: JwtPayload },
+   ): Promise<IngredientItemDto> {
       try {
          const metadata = createGrpcMetadata({
-            correlationId,
+            correlationId: options?.correlationId,
             callerService: SERVICE_NAMES.GATEWAY,
+            user: options?.user
+               ? {
+                    userId: options.user.sub,
+                    accountId: options.user.sub,
+                    roles: options.user.roles,
+                    email: options.user.email,
+                 }
+               : undefined,
          });
 
          return await this.commerceGrpcBreaker.execute(async () => {
@@ -288,11 +312,22 @@ export class CommerceService implements OnModuleInit {
       }
    }
 
-   async createProductOffer(dto: CreateProductOfferDto, correlationId?: string): Promise<SupplierProductOfferDto> {
+   async createProductOffer(
+      dto: CreateProductOfferDto,
+      options?: { correlationId?: string; user?: JwtPayload },
+   ): Promise<SupplierProductOfferDto> {
       try {
          const metadata = createGrpcMetadata({
-            correlationId,
+            correlationId: options?.correlationId,
             callerService: SERVICE_NAMES.GATEWAY,
+            user: options?.user
+               ? {
+                    userId: options.user.sub,
+                    accountId: options.user.sub,
+                    roles: options.user.roles,
+                    email: options.user.email,
+                 }
+               : undefined,
          });
 
          return await this.commerceGrpcBreaker.execute(async () => {

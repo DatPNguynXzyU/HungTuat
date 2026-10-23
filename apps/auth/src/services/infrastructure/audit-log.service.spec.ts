@@ -88,7 +88,7 @@ describe('AuditLogService', () => {
          });
 
          expect(result).toEqual({
-            id: 'audit-id-1',
+            auditLogId: 'audit-id-1',
             accountId: 'user-id-1',
             actorEmail: 'test@example.com',
             action: AUDIT_ACTIONS.AUTH_LOGIN_SUCCESS,
@@ -142,7 +142,7 @@ describe('AuditLogService', () => {
          const result = await service.record(builder);
 
          expect(result).not.toBeNull();
-         expect(result?.id).toBe('audit-builder-1');
+         expect(result?.auditLogId).toBe('audit-builder-1');
          expect(mockEventStore.appendEvent).toHaveBeenCalledWith(
             expect.objectContaining({
                action: AUDIT_ACTIONS.AUTH_LOGIN_SUCCESS,

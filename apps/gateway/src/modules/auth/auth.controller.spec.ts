@@ -8,7 +8,12 @@ import {
    JwtUtil,
    UnauthorizedException,
 } from '@common';
-import { DEFAULT_DEV_RSA_PRIVATE_KEY, DEFAULT_DEV_RSA_PUBLIC_KEY, DEFAULT_JWT_KEY_ID } from '@contracts/auth';
+import {
+   DEFAULT_DEV_RSA_PRIVATE_KEY,
+   DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_JWT_ALGORITHM,
+   DEFAULT_JWT_KEY_ID,
+} from '@contracts/auth';
 import { GatewayConfigService } from '@/config';
 import { AuthController } from '@/modules/auth/auth.controller';
 import { AuthService } from '@/modules/auth/auth.service';
@@ -160,7 +165,7 @@ describe('Gateway AuthController', () => {
                {
                   kty: 'RSA',
                   use: 'sig',
-                  alg: 'RS256',
+                  alg: DEFAULT_JWT_ALGORITHM,
                   kid: 'test-kid',
                   n: 'test-n',
                   e: 'AQAB',
@@ -181,7 +186,7 @@ describe('Gateway AuthController', () => {
          expect(result).toBeDefined();
          expect(Array.isArray(result.keys)).toBe(true);
          expect(result.keys[0].kty).toBe('RSA');
-         expect(result.keys[0].alg).toBe('RS256');
+         expect(result.keys[0].alg).toBe(DEFAULT_JWT_ALGORITHM);
          expect(result.keys[0].kid).toBe(DEFAULT_JWT_KEY_ID);
       });
 
@@ -191,7 +196,7 @@ describe('Gateway AuthController', () => {
                {
                   kty: 'RSA',
                   use: 'sig',
-                  alg: 'RS256',
+                  alg: DEFAULT_JWT_ALGORITHM,
                   kid: 'alias-kid',
                   n: 'alias-n',
                   e: 'AQAB',

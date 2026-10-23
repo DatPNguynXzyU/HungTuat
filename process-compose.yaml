@@ -1,0 +1,41 @@
+version: '0.5'
+
+processes:
+   # Core Services
+   gateway:
+      command: pnpm run start:nowatch:gateway
+      availability:
+         restart: on_failure
+
+   # Business Services
+   auth:
+      command: pnpm run start:nowatch:auth
+      disabled: true
+
+   user:
+      command: pnpm run start:nowatch:user
+      disabled: true
+
+   post:
+      command: pnpm run start:nowatch:post
+      disabled: true
+
+   notification:
+      command: pnpm run start:nowatch:notification
+      disabled: true
+
+   search:
+      command: pnpm run start:nowatch:search
+      disabled: true
+
+   media:
+      command: pnpm run start:nowatch:media
+      disabled: true
+
+   commerce:
+      command: pnpm run start:nowatch:commerce
+      disabled: true
+
+   supplier:
+      command: pnpm run start:nowatch:supplier
+      disabled: true

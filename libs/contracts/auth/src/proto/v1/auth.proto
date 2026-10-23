@@ -8,4 +8,29 @@ service AuthService {
   rpc CheckEmail (CheckEmailRequest) returns (CheckEmailResponse);
   rpc Login (LoginRequest) returns (LoginResponse);
   rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse);
+
+  rpc SendRegisterOtp (SendRegisterOtpRequest) returns (SendRegisterOtpResponse);
+  rpc VerifyRegisterOtp (VerifyRegisterOtpRequest) returns (VerifyRegisterOtpResponse);
+  rpc Register (RegisterRequest) returns (LoginResponse);
+  rpc RegisterSupplier (RegisterSupplierRequest) returns (LoginResponse);
+
+  // Session Management & Token Revocation
+  rpc GetSessions (GetSessionsRequest) returns (GetSessionsResponse);
+  rpc RevokeSession (RevokeSessionRequest) returns (RevokeTokenResponse);
+  rpc RevokeOtherSessions (RevokeOtherSessionsRequest) returns (RevokeOtherSessionsResponse);
+  rpc RevokeToken (RevokeTokenRequest) returns (RevokeTokenResponse);
+  rpc RevokeAllUserTokens (RevokeAllUserTokensRequest) returns (RevokeTokenResponse);
+  rpc LogoutAll (LogoutAllRequest) returns (RevokeTokenResponse);
+  rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  rpc ChangePassword (ChangePasswordRequest) returns (ChangePasswordResponse);
+  rpc VerifyChangePasswordOtp (VerifyChangePasswordOtpRequest) returns (VerifyChangePasswordOtpResponse);
+
+  rpc GetUserAuditLogs (GetUserAuditLogsRequest) returns (AuditLogListResponse);
+  rpc GetAuditLogs (QueryAuditLogsRequest) returns (AuditLogListResponse);
+  rpc GetAuditLogById (GetAuditLogByIdRequest) returns (GetAuditLogByIdResponse);
+  rpc GetJwks (GetJwksRequest) returns (GetJwksResponse);
+  rpc GetEmail (GetEmailRequest) returns (GetEmailResponse);
+  rpc GetRolePermissions (GetRolePermissionsRequest) returns (GetRolePermissionsResponse);
+  rpc RegisterServicePermissions (RegisterServicePermissionsRequest) returns (RegisterServicePermissionsResponse);
 }

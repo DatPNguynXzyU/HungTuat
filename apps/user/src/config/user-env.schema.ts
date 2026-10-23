@@ -15,6 +15,8 @@ export const USER_ENV_KEYS = {
    NEBULA_USERNAME: 'NEBULA_USERNAME',
    NEBULA_PASSWORD: 'NEBULA_PASSWORD',
    NEBULA_SPACE: 'NEBULA_SPACE',
+   SEARCH_GRPC_URL: 'SEARCH_GRPC_URL',
+   MEDIA_GRPC_URL: 'MEDIA_GRPC_URL',
 } as const;
 
 export type UserEnvKey = (typeof USER_ENV_KEYS)[keyof typeof USER_ENV_KEYS];
@@ -33,6 +35,8 @@ export const userEnvSchema = sharedEnvSchema.extend({
    NEBULA_USERNAME: z.string().default('root'),
    NEBULA_PASSWORD: z.string().default('nebula'),
    NEBULA_SPACE: z.string().default('social_graph'),
+   SEARCH_GRPC_URL: z.string().default('localhost:50056'),
+   MEDIA_GRPC_URL: z.string().default('localhost:50055'),
 });
 
 export type UserEnvConfig = z.infer<typeof userEnvSchema>;

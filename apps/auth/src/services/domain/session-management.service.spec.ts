@@ -97,7 +97,7 @@ describe('SessionManagementService', () => {
 
          expect(result).toHaveLength(2);
          expect(result[0]).toEqual({
-            id: 'session-1',
+            sessionId: 'session-1',
             deviceType: 'desktop',
             deviceName: 'MacBook Pro',
             browser: 'Chrome 120',

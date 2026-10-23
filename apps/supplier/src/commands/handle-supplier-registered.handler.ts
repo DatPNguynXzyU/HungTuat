@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { CommandHandler, DEFAULT_ROLES, type ICommandHandler } from '@common';
-import { SUPPLIER_MEMBER_STATUS } from '@contracts/supplier';
+import { CommandHandler, type ICommandHandler } from '@common';
+import { SUPPLIER_MEMBER_STATUS, SUPPLIER_ROLES } from '@contracts/supplier';
 import type { SupplierMemberEntity } from '@supplier/entities';
 import { SUPPLIER_MEMBER_REPOSITORY, type ISupplierMemberRepository } from '@supplier/repositories';
 import { HandleSupplierRegisteredCommand } from '@supplier/commands/handle-supplier-registered.command';
@@ -33,7 +33,7 @@ export class HandleSupplierRegisteredHandler implements ICommandHandler<
          return existing;
       }
 
-      const resolvedRole = role ?? DEFAULT_ROLES.SUPPLIER_ADMIN;
+      const resolvedRole = role ?? SUPPLIER_ROLES.SUPPLIER_ADMIN;
       this.logger.log(`Provisioning supplier member for account ${accountId} (${email}) with role ${resolvedRole}`);
       return this.supplierMemberRepository.create({
          accountId,

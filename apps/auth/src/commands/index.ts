@@ -12,6 +12,7 @@ import {
    LoginHandler,
    LogoutAllHandler,
    RefreshTokenHandler,
+   RegisterServicePermissionsHandler,
    RevokeAllAccountTokensHandler,
    RevokeTokenHandler,
    ValidateTokenHandler,
@@ -49,6 +50,7 @@ export const AUTH_COMMAND_HANDLERS = [
    ValidateTokenHandler,
    GetRolePermissionsHandler,
    GetEmailHandler,
+   RegisterServicePermissionsHandler,
 
    // Session Handlers
    GetSessionsHandler,

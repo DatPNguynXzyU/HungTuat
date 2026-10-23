@@ -20,6 +20,24 @@ export interface WelcomeEmailTranslations {
    signoff: string;
 }
 
+export interface SupplierWelcomeEmailTranslations {
+   subject?: string;
+   preview: string;
+   badge: string;
+   heading: string;
+   body1: string;
+   body2: string;
+   step1Title: string;
+   step1Desc: string;
+   step2Title: string;
+   step2Desc: string;
+   step3Title: string;
+   step3Desc: string;
+   ctaButton: string;
+   supportText: string;
+   signoff: string;
+}
+
 export interface OtpEmailTranslations {
    preview: string;
    badge: string;
@@ -74,6 +92,7 @@ export interface ChangePasswordOtpEmailTranslations {
 export interface BaseTranslations {
    common: CommonTranslations;
    welcome: WelcomeEmailTranslations;
+   supplierWelcome: SupplierWelcomeEmailTranslations;
    otp: OtpEmailTranslations;
    verification: VerificationEmailTranslations;
    resetPassword: ResetPasswordEmailTranslations;

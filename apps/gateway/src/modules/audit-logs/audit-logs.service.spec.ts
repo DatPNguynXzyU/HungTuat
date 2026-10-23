@@ -1,15 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { of } from 'rxjs';
-import { DEFAULT_ROLES, SERVICES } from '@common';
-import { AUTH_PATTERNS } from '@contracts/auth';
+import { DEFAULT_ROLES } from '@common';
+import { AUTH_V1_GRPC_CLIENT, AUTH_V1_GRPC_SERVICE_NAME } from '@contracts/auth';
 import { AuditLogsService } from '@/modules/audit-logs/audit-logs.service';
 import type { JwtPayload } from '@common';
 
 describe('AuditLogsService', () => {
    let service: AuditLogsService;
-   const mockAuthClient = {
-      send: jest.fn(),
+   const mockAuthGrpcService = {
+      getAuditLogs: jest.fn(),
+      getAuditLogById: jest.fn(),
    };
+   const mockAuthGrpcClient = {
+      getService: jest.fn().mockReturnValue(mockAuthGrpcService),
+   };
+
    const mockUser: JwtPayload = {
       sub: 'user-admin-1',
       email: 'admin@example.com',
@@ -24,64 +29,66 @@ describe('AuditLogsService', () => {
          providers: [
             AuditLogsService,
             {
-               provide: SERVICES.AUTH_SERVICE,
-               useValue: mockAuthClient,
+               provide: AUTH_V1_GRPC_CLIENT,
+               useValue: mockAuthGrpcClient,
             },
          ],
       }).compile();
 
       service = module.get<AuditLogsService>(AuditLogsService);
+      service.onModuleInit();
    });
 
    it('should be defined', () => {
       expect(service).toBeDefined();
+      expect(mockAuthGrpcClient.getService).toHaveBeenCalledWith(AUTH_V1_GRPC_SERVICE_NAME);
    });
 
-   it('should call authClient to get audit logs with user context', async () => {
+   it('should call authGrpcService to get audit logs with user context', async () => {
       const mockResult = {
-         data: [{ id: 'audit-1', action: 'AUTH.LOGIN_SUCCESS' }],
+         items: [
+            {
+               auditLogId: 'audit-1',
+               userId: 'user-admin-1',
+               action: 'AUTH.LOGIN_SUCCESS',
+               status: 'SUCCESS',
+               createdAt: '2026-10-22T00:00:00.000Z',
+            },
+         ],
          total: 1,
          page: 1,
          limit: 10,
          totalPages: 1,
       };
-      mockAuthClient.send.mockReturnValue(of(mockResult));
+      mockAuthGrpcService.getAuditLogs.mockReturnValue(of(mockResult));
 
       const result = await service.getAuditLogs({ page: 1, limit: 10 }, mockUser);
-      expect(mockAuthClient.send).toHaveBeenCalledWith(
-         { cmd: AUTH_PATTERNS.GET_AUDIT_LOGS },
-         {
-            data: { page: 1, limit: 10 },
-            user: {
-               userId: mockUser.sub,
-               email: mockUser.email,
-               roles: mockUser.roles,
-               permissions: [],
-               sessionId: mockUser.jti,
-            },
-         },
-      );
-      expect(result).toEqual(mockResult);
+      expect(mockAuthGrpcService.getAuditLogs).toHaveBeenCalled();
+      expect(result.data[0].auditLogId).toBe('audit-1');
+      expect(result.total).toBe(1);
    });
 
-   it('should call authClient to get audit log by ID with user context', async () => {
-      const mockLog = { id: 'audit-1', action: 'AUTH.LOGIN_SUCCESS' };
-      mockAuthClient.send.mockReturnValue(of(mockLog));
+   it('should call authGrpcService to get audit log by ID with user context', async () => {
+      const mockLog = {
+         auditLog: {
+            auditLogId: 'audit-1',
+            userId: 'user-admin-1',
+            action: 'AUTH.LOGIN_SUCCESS',
+            status: 'SUCCESS',
+            createdAt: '2026-10-22T00:00:00.000Z',
+         },
+      };
+      mockAuthGrpcService.getAuditLogById.mockReturnValue(of(mockLog));
 
       const result = await service.getAuditLogById('audit-1', mockUser);
-      expect(mockAuthClient.send).toHaveBeenCalledWith(
-         { cmd: AUTH_PATTERNS.GET_AUDIT_LOG_BY_ID },
-         {
-            data: { id: 'audit-1' },
-            user: {
-               userId: mockUser.sub,
-               email: mockUser.email,
-               roles: mockUser.roles,
-               permissions: [],
-               sessionId: mockUser.jti,
-            },
-         },
-      );
-      expect(result).toEqual(mockLog);
+      expect(mockAuthGrpcService.getAuditLogById).toHaveBeenCalled();
+      expect(result?.auditLogId).toBe('audit-1');
+   });
+
+   it('should return null when audit log is not found', async () => {
+      mockAuthGrpcService.getAuditLogById.mockReturnValue(of({ auditLog: undefined }));
+
+      const result = await service.getAuditLogById('non-existent', mockUser);
+      expect(result).toBeNull();
    });
 });

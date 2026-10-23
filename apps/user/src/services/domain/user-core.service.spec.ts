@@ -27,6 +27,7 @@ describe('UserCoreService (Facade)', () => {
       postsCount: 0,
       recipesCount: 0,
       lastActiveAt: null,
+      lastUsernameChangedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       deletedAt: null,

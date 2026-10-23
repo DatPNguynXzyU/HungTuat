@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, DEFAULT_ROLES, type JwtPayload } from '@common';
+import type { Request } from 'express';
 import { GenderDto } from '@contracts/user';
 import { UsersController } from '@/modules/users/users.controller';
 import { UsersService } from '@/modules/users/users.service';
 
 describe('UsersController', () => {
    let controller: UsersController;
+   const mockReq = { headers: {} } as unknown as Request;
    const mockUsersService = {
       checkUsername: jest.fn(),
       createProfile: jest.fn(),
@@ -83,8 +85,8 @@ describe('UsersController', () => {
    it('should get all users with user context', async () => {
       mockUsersService.getAllUsers.mockResolvedValue([{ id: 'u1' }]);
 
-      const result = await controller.getAllUsers('1', '10', mockUser);
-      expect(mockUsersService.getAllUsers).toHaveBeenCalledWith(1, 10, mockUser);
+      const result = await controller.getAllUsers('1', '10', mockUser, mockReq);
+      expect(mockUsersService.getAllUsers).toHaveBeenCalledWith(1, 10, mockUser, undefined);
       expect(result).toEqual([{ id: 'u1' }]);
    });
 
@@ -152,8 +154,8 @@ describe('UsersController', () => {
       };
       mockUsersService.getDateOfBirth.mockResolvedValue(mockDobRes);
 
-      const result = await controller.getMyDateOfBirth('user-1');
-      expect(mockUsersService.getDateOfBirth).toHaveBeenCalledWith('user-1');
+      const result = await controller.getMyDateOfBirth(mockUser, mockReq);
+      expect(mockUsersService.getDateOfBirth).toHaveBeenCalledWith('user-1', mockUser, undefined);
       expect(result).toEqual(mockDobRes);
    });
 
@@ -165,8 +167,8 @@ describe('UsersController', () => {
       };
       mockUsersService.getDateOfBirth.mockResolvedValue(mockDobRes);
 
-      const result = await controller.getUserDateOfBirth('other-user-99');
-      expect(mockUsersService.getDateOfBirth).toHaveBeenCalledWith('other-user-99');
+      const result = await controller.getUserDateOfBirth('other-user-99', mockUser, mockReq);
+      expect(mockUsersService.getDateOfBirth).toHaveBeenCalledWith('other-user-99', mockUser, undefined);
       expect(result).toEqual(mockDobRes);
    });
 

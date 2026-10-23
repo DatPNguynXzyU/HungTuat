@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { DEFAULT_ROLES, DEFAULT_SUPPLIER_ROLES, type SupplierRole } from '@common';
+import {
+   DEFAULT_SUPPLIER_ROLES,
+   SUPPLIER_ROLES,
+   type SupplierRole,
+} from '@contracts/supplier/constants/supplier-roles.constant';
 import { SUPPLIER_MEMBER_STATUS, type SupplierMemberStatusType } from '@contracts/supplier/constants/status.constant';
 import { SupplierItemDto } from '@contracts/supplier/dto/supplier-item.dto';
 
@@ -20,7 +24,7 @@ export class MySupplierResponseDto {
    @ApiPropertyOptional({
       description: 'Role of the member within the supplier store',
       enum: DEFAULT_SUPPLIER_ROLES,
-      example: DEFAULT_ROLES.SUPPLIER_ADMIN,
+      example: SUPPLIER_ROLES.SUPPLIER_ADMIN,
    })
    role?: SupplierRole;
 

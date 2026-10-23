@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Injectable, Optional } from '@nestjs/com
 import { Reflector } from '@nestjs/core';
 import type { Metadata } from '@grpc/grpc-js';
 import { CommonConfigService } from '@common/config/common-config.service';
-import { AUTH_ERROR_REASONS } from '@common/constants/jwt.constant';
+import { AUTH_ERROR_REASONS, JWT_TOKEN_TYPE } from '@common/constants/jwt.constant';
 import { AuthRevocationRedisKeys } from '@common/constants/redis.constant';
 import { IS_PUBLIC_KEY } from '@common/decorators/public.decorator';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
@@ -48,7 +48,7 @@ export class GrpcJwtAuthGuard implements CanActivate {
 
       try {
          const payload = JwtUtil.verify(token, this.config.jwtPublicKey);
-         if (payload.tokenType && payload.tokenType !== 'access') {
+         if (payload.tokenType && payload.tokenType !== JWT_TOKEN_TYPE.ACCESS) {
             throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
                params: { reason: AUTH_ERROR_REASONS.INVALID_TOKEN_TYPE },
             });

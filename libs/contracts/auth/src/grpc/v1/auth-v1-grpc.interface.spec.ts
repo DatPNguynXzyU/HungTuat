@@ -34,12 +34,12 @@ describe('Auth V1 Modular gRPC Contracts', () => {
       expect(directDevice.deviceId).toBe('device-123');
 
       const user: IAuthUserProto = {
-         id: 'user-123',
+         userId: 'user-123',
          email: 'test@example.com',
          roles: ['USER'],
          createdAt: '2026-10-21T00:00:00.000Z',
       };
-      expect(user.id).toBe('user-123');
+      expect(user.userId).toBe('user-123');
 
       const tokens: IAuthTokensProto = {
          accessToken: 'access-token',
@@ -66,7 +66,7 @@ describe('Auth V1 Modular gRPC Contracts', () => {
 
       const loginRes: ILoginResponse = {
          user: {
-            id: 'u-1',
+            userId: 'u-1',
             email: 'test@example.com',
             roles: ['USER'],
             createdAt: '2026-10-21T00:00:00.000Z',
@@ -83,7 +83,7 @@ describe('Auth V1 Modular gRPC Contracts', () => {
 
       const refreshRes: IRefreshTokenResponse = {
          user: {
-            id: 'u-1',
+            userId: 'u-1',
             email: 'test@example.com',
             roles: ['USER'],
             createdAt: '2026-10-21T00:00:00.000Z',

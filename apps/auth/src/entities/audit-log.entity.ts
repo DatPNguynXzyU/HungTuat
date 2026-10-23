@@ -2,7 +2,7 @@ import type { SetOptional } from '@common';
 import { AuditStatus } from '@auth/prisma-client';
 
 export interface SecurityAuditLogEntity {
-   id: string;
+   auditLogId: string;
    accountId?: string | null;
    actorEmail?: string | null;
    action: string;
@@ -20,6 +20,6 @@ export interface SecurityAuditLogEntity {
    createdAt: string;
 }
 
-export type CreateAuditLogData = SetOptional<SecurityAuditLogEntity, 'id' | 'createdAt' | 'status'>;
+export type CreateAuditLogData = SetOptional<SecurityAuditLogEntity, 'auditLogId' | 'createdAt' | 'status'>;
 
 export { AuditStatus };

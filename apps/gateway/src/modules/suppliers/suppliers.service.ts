@@ -7,7 +7,6 @@ import {
    handleGrpcError,
    RetryPolicyRegistry,
    SERVICE_NAMES,
-   type SupplierRole,
    withGrpcRetry,
 } from '@common';
 import {
@@ -21,8 +20,18 @@ import {
    type RegisterSupplierDto,
    type SupplierItemDto,
    type SupplierMemberStatusType,
+   type SupplierRole,
    type SupplierStatusType,
 } from '@contracts/supplier';
+
+export interface SupplierCallOptions {
+   authHeader?: string;
+   correlationId?: string;
+   accountId?: string;
+   roles?: string[];
+   permissions?: string[];
+   email?: string;
+}
 
 @Injectable()
 export class SuppliersService implements OnModuleInit {
@@ -65,22 +74,20 @@ export class SuppliersService implements OnModuleInit {
 
    /**
     * Registers a new supplier in the Supplier Microservice via gRPC.
-    * Forwards caller context and authorization header so that auth is verified at the Supplier Service.
+    * Forwards verified caller context (userId, accountId, roles) through gRPC metadata.
     */
-   async registerSupplier(
-      dto: RegisterSupplierDto,
-      options?: { authHeader?: string; correlationId?: string },
-   ): Promise<SupplierItemDto> {
+   async registerSupplier(dto: RegisterSupplierDto, options?: SupplierCallOptions): Promise<SupplierItemDto> {
       try {
+         const accountId = options?.accountId;
          const metadata = createGrpcMetadata({
             correlationId: options?.correlationId,
             callerService: SERVICE_NAMES.GATEWAY,
+            userId: accountId,
+            accountId,
+            roles: options?.roles,
+            permissions: options?.permissions,
+            email: options?.email,
          });
-
-         if (options?.authHeader) {
-            metadata.set('authorization', options.authHeader);
-            metadata.set('x-authorization', options.authHeader);
-         }
 
          return await this.supplierGrpcBreaker.execute(async () => {
             const request: IRegisterSupplierRequest = {
@@ -109,25 +116,22 @@ export class SuppliersService implements OnModuleInit {
    /**
     * Retrieves the current authenticated supplier profile and onboarding state.
     */
-   async getMySupplier(options?: {
-      authHeader?: string;
-      correlationId?: string;
-      accountId?: string;
-   }): Promise<MySupplierResponseDto> {
+   async getMySupplier(options?: SupplierCallOptions): Promise<MySupplierResponseDto> {
       try {
+         const accountId = options?.accountId;
          const metadata = createGrpcMetadata({
             correlationId: options?.correlationId,
             callerService: SERVICE_NAMES.GATEWAY,
+            userId: accountId,
+            accountId,
+            roles: options?.roles,
+            permissions: options?.permissions,
+            email: options?.email,
          });
-
-         if (options?.authHeader) {
-            metadata.set('authorization', options.authHeader);
-            metadata.set('x-authorization', options.authHeader);
-         }
 
          return await this.supplierGrpcBreaker.execute(async () => {
             const request: IGetMySupplierRequest = {
-               accountId: options?.accountId || '',
+               accountId: accountId || '',
             };
 
             const res = await firstValueFrom(

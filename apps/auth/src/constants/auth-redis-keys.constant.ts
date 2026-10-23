@@ -2,6 +2,7 @@ import { OTP_TTL, RATE_LIMIT_WINDOW } from '@common';
 
 export const AUTH_REDIS_KEY_PREFIX = {
    REFRESH_TOKEN: 'auth:refresh_token:',
+   REFRESH_TOKEN_JTI: 'auth:refresh_jti:',
    USER_SESSIONS: 'auth:account_sessions:',
    ACCOUNT_SESSIONS: 'auth:account_sessions:',
    REVOKED_TOKEN: 'auth:revoked_token:',
@@ -64,6 +65,18 @@ export const AuthRedisKeys = {
     */
    refreshToken: (accountId: string, jti: string): string =>
       `${AUTH_REDIS_KEY_PREFIX.REFRESH_TOKEN}${accountId}:${jti}`,
+
+   /**
+    * Redis JSON key storing the active refresh token session indexed by JTI for O(1) direct lookup.
+    *
+    * Pattern: `auth:refresh_jti:<jti>`
+    * @example
+    * ```ts
+    * AuthRedisKeys.refreshTokenByJti('jti_987654')
+    * // => "auth:refresh_jti:jti_987654"
+    * ```
+    */
+   refreshTokenByJti: (jti: string): string => `${AUTH_REDIS_KEY_PREFIX.REFRESH_TOKEN_JTI}${jti}`,
 
    /**
     * Redis scan/delete pattern matching all active refresh tokens belonging to an account.

@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CommandBus, DEFAULT_ROLES, GrpcJwtAuthGuard } from '@common';
-import { SUPPLIER_MEMBER_STATUS, SUPPLIER_STATUS, type SupplierItemDto } from '@contracts/supplier';
+import { CommandBus, createGrpcMetadata, UnauthorizedException } from '@common';
+import { SUPPLIER_MEMBER_STATUS, SUPPLIER_ROLES, SUPPLIER_STATUS, type SupplierItemDto } from '@contracts/supplier';
 import { SupplierGrpcController } from '@supplier/adapters/grpc/supplier-grpc.controller';
-import { RegisterSupplierCommand } from '@supplier/commands';
+import { SUPPLIER_MEMBER_REPOSITORY } from '@supplier/repositories';
 import { firstValueFrom } from 'rxjs';
 
 describe('SupplierGrpcController', () => {
@@ -29,18 +29,36 @@ describe('SupplierGrpcController', () => {
          execute: jest.fn(),
       } as unknown as jest.Mocked<CommandBus>;
 
+      const mockSupplierMemberRepository = {
+         findByAccountId: jest.fn(),
+      };
+
       const module: TestingModule = await Test.createTestingModule({
          controllers: [SupplierGrpcController],
-         providers: [{ provide: CommandBus, useValue: mockCommandBus }],
-      })
-         .overrideGuard(GrpcJwtAuthGuard)
-         .useValue({ canActivate: () => true })
-         .compile();
+         providers: [
+            { provide: CommandBus, useValue: mockCommandBus },
+            { provide: SUPPLIER_MEMBER_REPOSITORY, useValue: mockSupplierMemberRepository },
+         ],
+      }).compile();
 
       controller = module.get<SupplierGrpcController>(SupplierGrpcController);
    });
 
-   it('should execute RegisterSupplierCommand when registering supplier', async () => {
+   it('should throw UnauthorizedException when registering supplier without user metadata', () => {
+      const request = {
+         supplierName: 'Mega Market',
+         supplierCode: 'SUPP-MM',
+         contactEmail: 'contact@megamarket.vn',
+         contactPhone: '0901234567',
+         address: 'An Phu',
+         city: 'Ho Chi Minh',
+         supplierLogoUrl: 'https://example.com/logo.png',
+      };
+
+      expect(() => controller.registerSupplier(request)).toThrow(UnauthorizedException);
+   });
+
+   it('should extract accountId from metadata when registering supplier', async () => {
       mockCommandBus.execute.mockResolvedValue(mockSupplier);
 
       const request = {
@@ -53,19 +71,25 @@ describe('SupplierGrpcController', () => {
          supplierLogoUrl: 'https://example.com/logo.png',
       };
 
-      const response$ = controller.registerSupplier(request);
+      const mockMetadata = createGrpcMetadata({ userId: 'user-meta-123' });
+
+      const response$ = controller.registerSupplier(request, mockMetadata);
       const result = await firstValueFrom(response$);
 
-      expect(mockCommandBus.execute).toHaveBeenCalledWith(expect.any(RegisterSupplierCommand));
+      expect(mockCommandBus.execute).toHaveBeenCalledWith(
+         expect.objectContaining({
+            userId: 'user-meta-123',
+         }),
+      );
       expect(result.supplier.supplierId).toBe(mockSupplier.supplierId);
       expect(result.supplier.supplierName).toBe(mockSupplier.supplierName);
    });
 
-   it('should execute GetMySupplierQuery when calling getMySupplier', async () => {
+   it('should execute GetMySupplierQuery when calling getMySupplier with accountId in request', async () => {
       mockCommandBus.execute.mockResolvedValue({
          hasSupplier: true,
          supplier: mockSupplier,
-         role: DEFAULT_ROLES.SUPPLIER_ADMIN,
+         role: SUPPLIER_ROLES.SUPPLIER_ADMIN,
          memberStatus: SUPPLIER_MEMBER_STATUS.ACTIVE,
       });
 
@@ -75,6 +99,33 @@ describe('SupplierGrpcController', () => {
 
       expect(result.hasSupplier).toBe(true);
       expect(result.supplier?.supplierId).toBe(mockSupplier.supplierId);
-      expect(result.role).toBe(DEFAULT_ROLES.SUPPLIER_ADMIN);
+      expect(result.role).toBe(SUPPLIER_ROLES.SUPPLIER_ADMIN);
+   });
+
+   it('should extract accountId from metadata when calling getMySupplier without accountId in request', async () => {
+      mockCommandBus.execute.mockResolvedValue({
+         hasSupplier: true,
+         supplier: mockSupplier,
+         role: SUPPLIER_ROLES.SUPPLIER_ADMIN,
+         memberStatus: SUPPLIER_MEMBER_STATUS.ACTIVE,
+      });
+
+      const mockMetadata = createGrpcMetadata({ accountId: 'acc-from-metadata' });
+
+      const request = {};
+      const response$ = controller.getMySupplier(request, mockMetadata);
+      const result = await firstValueFrom(response$);
+
+      expect(result.hasSupplier).toBe(true);
+      expect(mockCommandBus.execute).toHaveBeenCalledWith(
+         expect.objectContaining({
+            accountId: 'acc-from-metadata',
+         }),
+      );
+   });
+
+   it('should throw UnauthorizedException when calling getMySupplier without accountId or metadata', () => {
+      const request = {};
+      expect(() => controller.getMySupplier(request)).toThrow(UnauthorizedException);
    });
 });

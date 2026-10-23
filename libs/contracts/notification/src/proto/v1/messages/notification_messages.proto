@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package notification.v1;
+
+import "models/notification_inbox.proto";
+
+message GetUserNotificationsRequest {
+  string userId = 1;
+  optional int32 limit = 2;
+  optional int32 offset = 3;
+  optional bool unreadOnly = 4;
+}
+
+message GetUserNotificationsResponse {
+  repeated NotificationItemProto items = 1;
+  int32 total = 2;
+  int32 unreadCount = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message GetUnreadCountRequest {
+  string userId = 1;
+}
+
+message GetUnreadCountResponse {
+  string userId = 1;
+  int32 unreadCount = 2;
+}
+
+message MarkAsReadRequest {
+  string notificationId = 1;
+  string userId = 2;
+}
+
+message MarkAsReadResponse {
+  string notificationId = 1;
+  bool success = 2;
+}
+
+message MarkAllAsReadRequest {
+  string userId = 1;
+}
+
+message MarkAllAsReadResponse {
+  string userId = 1;
+  int32 updatedCount = 2;
+  bool success = 3;
+}

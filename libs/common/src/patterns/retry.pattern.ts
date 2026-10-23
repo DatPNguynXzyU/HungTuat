@@ -5,6 +5,7 @@ import { IBuilder } from '@common/patterns/builder.pattern';
 import {
    CircuitBreakerOpenException,
    NETWORK_ERROR_CODES,
+   NON_RETRYABLE_GRPC_STATUS_CODES,
    SERVICE_FAILURE_KEYWORDS,
 } from '@common/patterns/circuit-breaker.pattern';
 import { AppException } from '@common/exceptions/app.exception';
@@ -170,19 +171,7 @@ export const RETRYABLE_GRPC_STATUS_CODES: readonly number[] = [
    GrpcStatus.ABORTED, // 10: Concurrency conflict / transaction aborted
 ] as const;
 
-/**
- * Non-retryable gRPC status codes (business validation, auth failure, permanent errors).
- */
-export const NON_RETRYABLE_GRPC_STATUS_CODES: readonly number[] = [
-   GrpcStatus.INVALID_ARGUMENT, // 3: Bad Request
-   GrpcStatus.NOT_FOUND, // 5: Entity not found
-   GrpcStatus.ALREADY_EXISTS, // 6: Conflict
-   GrpcStatus.PERMISSION_DENIED, // 7: Forbidden
-   GrpcStatus.UNAUTHENTICATED, // 16: Unauthorized
-   GrpcStatus.FAILED_PRECONDITION, // 9: Precondition failed
-   GrpcStatus.OUT_OF_RANGE, // 11: Out of range
-   GrpcStatus.UNIMPLEMENTED, // 12: Not implemented
-] as const;
+export { NON_RETRYABLE_GRPC_STATUS_CODES };
 
 export const RETRYABLE_HTTP_STATUS_CODES = [
    HttpStatus.REQUEST_TIMEOUT, // 408

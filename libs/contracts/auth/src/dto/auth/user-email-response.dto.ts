@@ -10,7 +10,7 @@ export class UserEmailResponseDto {
    @IsString()
    @IsUUID()
    @IsNotEmpty()
-   id!: string;
+   accountId!: string;
 
    @ApiProperty({
       description: 'Account registered email address',

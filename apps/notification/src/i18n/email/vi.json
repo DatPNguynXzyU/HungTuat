@@ -16,6 +16,23 @@
       "supportText": "Nếu bạn có bất kỳ câu hỏi nào, đội ngũ hỗ trợ của chúng tôi luôn sẵn sàng giúp đỡ.",
       "signoff": "Trân trọng,\n**Đội ngũ OmniServices**"
    },
+   "supplierWelcome": {
+      "subject": "Chào mừng đối tác đến với OmniServices!",
+      "preview": "Chào mừng đối tác đến với Mạng lưới Nhà Cung Cấp OmniServices, {fullName}!",
+      "badge": "CHÀO MỪNG ĐỐI TÁC",
+      "heading": "Chào mừng đối tác, {fullName}!",
+      "body1": "Chúc mừng bạn đã đăng ký thành công tài khoản nhà cung cấp trên hệ thống OmniServices. Chúng tôi rất vinh hạnh được đồng hành cùng doanh nghiệp của bạn.",
+      "body2": "Tài khoản đối tác của bạn đã được kích hoạt. Hãy thực hiện các bước sau để bắt đầu kinh doanh và quản lý danh mục trên OmniServices:",
+      "step1Title": "1. Hoàn tất hồ sơ doanh nghiệp",
+      "step1Desc": "Cung cấp thông tin công ty, mã số thuế và tài khoản ngân hàng để xác thực thanh toán.",
+      "step2Title": "2. Thiết lập danh mục sản phẩm",
+      "step2Desc": "Đăng tải sản phẩm, cấu hình kho hàng và thiết lập chính sách giá bán.",
+      "step3Title": "3. Bắt đầu nhận đơn hàng",
+      "step3Desc": "Quản lý đơn hàng, theo dõi giao vận và xem báo cáo doanh thu trực tiếp từ Kênh Người Bán.",
+      "ctaButton": "Truy Cập Kênh Người Bán",
+      "supportText": "Bạn cần hỗ trợ trong quá trình thiết lập? Đội ngũ Hỗ trợ Đối tác của chúng tôi luôn sẵn sàng đồng hành cùng bạn.",
+      "signoff": "Trân trọng,\n**Đội ngũ Hỗ trợ Đối tác OmniServices**"
+   },
    "otp": {
       "preview": "Mã xác minh OmniServices của bạn: {otpCode}",
       "badge": "XÁC MINH BẢO MẬT",

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package search.v1;
+
+import "messages/search_messages.proto";
+
+service SearchService {
+  rpc SearchUsers (SearchUsersRequest) returns (SearchUsersResponse);
+  rpc SearchIngredients (SearchIngredientsRequest) returns (SearchIngredientsResponse);
+  rpc GlobalSearch (GlobalSearchRequest) returns (GlobalSearchResponse);
+}

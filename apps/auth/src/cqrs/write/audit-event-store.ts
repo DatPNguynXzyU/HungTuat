@@ -31,7 +31,7 @@ export class AuditEventStore implements IAuditEventStore {
 
    async appendEvent(data: CreateAuditLogData): Promise<AuditEvent> {
       const streamId = `audit-${data.accountId || 'system'}`;
-      const eventId = data.id || uuidv7();
+      const eventId = data.auditLogId || uuidv7();
 
       const sanitizedMeta = data.metadata
          ? (AuditSanitizerUtil.sanitize(data.metadata) as Prisma.InputJsonValue)

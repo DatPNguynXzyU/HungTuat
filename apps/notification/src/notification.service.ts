@@ -6,6 +6,7 @@ import {
    SendEmailDto,
    SendOtpEmailDto,
    SendResetPasswordEmailDto,
+   SendSupplierWelcomeEmailDto,
    SendVerificationEmailDto,
    SendWelcomeEmailDto,
    SendChangePasswordOtpEmailDto,
@@ -99,6 +100,17 @@ export class NotificationService {
          NOTIFICATION_TEMPLATES.WELCOME_EMAIL,
          dto as unknown as Record<string, unknown>,
          () => this.resendService.sendWelcomeEmail(dto),
+         eventId,
+      );
+   }
+
+   async sendSupplierWelcomeEmail(dto: SendSupplierWelcomeEmailDto, eventId?: string): Promise<SendEmailResult> {
+      this.logger.log(`Processing supplier welcome email notification for: ${dto.to}`);
+      return this.logNotification(
+         dto.to,
+         NOTIFICATION_TEMPLATES.SUPPLIER_WELCOME_EMAIL,
+         dto as unknown as Record<string, unknown>,
+         () => this.resendService.sendSupplierWelcomeEmail(dto),
          eventId,
       );
    }

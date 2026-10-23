@@ -90,4 +90,20 @@ export class GrpcSupplierAdapter implements ISupplierAdapter, OnModuleInit {
 
       return map;
    }
+
+   async getMySupplier(accountId: string): Promise<{ hasSupplier: boolean; supplierId?: string }> {
+      try {
+         return await this.breaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() => this.supplierGrpcService.getMySupplier({ accountId })).pipe(withGrpcRetry(this.retryPolicy)),
+            );
+            return {
+               hasSupplier: res.hasSupplier,
+               supplierId: res.supplier?.supplierId,
+            };
+         });
+      } catch {
+         return { hasSupplier: false };
+      }
+   }
 }

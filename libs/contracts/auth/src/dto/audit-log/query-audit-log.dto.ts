@@ -4,10 +4,10 @@ import { AUDIT_STATUS } from '@contracts/auth/constants/audit-log.constant';
 import { PaginationQueryDto } from '@common';
 
 export class QueryAuditLogDto extends PaginationQueryDto {
-   @ApiPropertyOptional({ description: 'Filter by user ID' })
+   @ApiPropertyOptional({ description: 'Filter by account ID' })
    @IsOptional()
    @IsString()
-   userId?: string;
+   accountId?: string;
 
    @ApiPropertyOptional({ description: 'Filter by actor email' })
    @IsOptional()

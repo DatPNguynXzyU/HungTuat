@@ -8,6 +8,8 @@ export const SEARCH_ENV_KEYS = {
    ELASTICSEARCH_USERNAME: 'ELASTICSEARCH_USERNAME',
    ELASTICSEARCH_PASSWORD: 'ELASTICSEARCH_PASSWORD',
    SEARCH_HTTP_PORT: 'SEARCH_HTTP_PORT',
+   GRPC_PORT: 'GRPC_PORT',
+   GRPC_URL: 'GRPC_URL',
 } as const;
 
 export type SearchEnvKey = (typeof SEARCH_ENV_KEYS)[keyof typeof SEARCH_ENV_KEYS];
@@ -19,6 +21,8 @@ export const searchEnvSchema = sharedEnvSchema.extend({
    ELASTICSEARCH_USERNAME: z.string().optional(),
    ELASTICSEARCH_PASSWORD: z.string().optional(),
    SEARCH_HTTP_PORT: z.coerce.number().int().positive().default(3003),
+   GRPC_PORT: z.coerce.number().int().positive().default(50056),
+   GRPC_URL: z.string().default('0.0.0.0:50056'),
 });
 
 export type SearchEnvConfig = z.infer<typeof searchEnvSchema>;

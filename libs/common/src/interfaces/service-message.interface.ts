@@ -11,7 +11,7 @@ export interface IServiceMessageUser {
    /**
     * User email
     */
-   email: string;
+   email?: string;
 
    /**
     * User roles for authorization

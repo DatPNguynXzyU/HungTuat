@@ -3,7 +3,7 @@ syntax = "proto3";
 package auth.v1;
 
 message AuthUserProto {
-  string id = 1;
+  string userId = 1;
   string email = 2;
   repeated string roles = 3;
   string status = 4;

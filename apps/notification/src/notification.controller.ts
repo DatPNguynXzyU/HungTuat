@@ -7,6 +7,7 @@ import {
    SendEmailDto,
    SendOtpEmailDto,
    SendResetPasswordEmailDto,
+   SendSupplierWelcomeEmailDto,
    SendVerificationEmailDto,
    SendWelcomeEmailDto,
    SendChangePasswordOtpEmailDto,
@@ -40,6 +41,19 @@ export class NotificationController {
       this.logger.log(`Received sendWelcomeEmail message for: ${data.to}`);
       try {
          const result = await this.notificationService.sendWelcomeEmail(data);
+         this.rmqService.ack(context);
+         return result;
+      } catch (error) {
+         this.rmqService.ack(context);
+         throw error;
+      }
+   }
+
+   @EventPattern(NOTIFICATION_PATTERNS.SEND_SUPPLIER_WELCOME_EMAIL)
+   async sendSupplierWelcomeEmail(@Payload() data: SendSupplierWelcomeEmailDto, @Ctx() context: RmqContext) {
+      this.logger.log(`Received sendSupplierWelcomeEmail message for: ${data.to}`);
+      try {
+         const result = await this.notificationService.sendSupplierWelcomeEmail(data);
          this.rmqService.ack(context);
          return result;
       } catch (error) {
@@ -115,6 +129,37 @@ export class NotificationController {
          this.rmqService.ack(context);
          const message = error instanceof Error ? error.message : String(error);
          this.logger.error(`Failed to handle USER_REGISTERED for ${data?.email}: ${message}`);
+         throw error;
+      }
+   }
+
+   @EventPattern(NOTIFICATION_EVENTS.SUPPLIER_REGISTERED)
+   async handleSupplierRegistered(
+      @Payload()
+      data: {
+         email: string;
+         accountId?: string;
+         role?: string;
+         supplierName?: string;
+         fullName?: string;
+      },
+      @Ctx() context: RmqContext,
+   ) {
+      this.logger.log(`Received SUPPLIER_REGISTERED event for account ${data?.accountId} (${data?.email})`);
+      try {
+         const displayName = data.fullName || data.supplierName || data.email?.split('@')[0] || 'Partner';
+         const result = await this.notificationService.sendSupplierWelcomeEmail({
+            to: data.email,
+            fullName: displayName,
+            supplierName: data.supplierName,
+         });
+         this.rmqService.ack(context);
+         this.logger.log(`Successfully dispatched supplier welcome email for: ${data?.email}`);
+         return result;
+      } catch (error) {
+         this.rmqService.ack(context);
+         const message = error instanceof Error ? error.message : String(error);
+         this.logger.error(`Failed to handle SUPPLIER_REGISTERED for ${data?.email}: ${message}`);
          throw error;
       }
    }

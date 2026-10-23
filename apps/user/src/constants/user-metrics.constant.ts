@@ -76,6 +76,13 @@ export const USER_METRICS_SEARCH_OPERATIONS = {
 export type UserMetricSearchOperation =
    (typeof USER_METRICS_SEARCH_OPERATIONS)[keyof typeof USER_METRICS_SEARCH_OPERATIONS];
 
+export const USER_GRPC_ADAPTER_OPERATIONS = {
+   SEARCH_USERS: 'GrpcSearchAdapter.searchUsers',
+   UPLOAD_AVATAR: 'GrpcMediaAdapter.uploadAvatar',
+   GET_AVATAR_SIGNATURE: 'GrpcMediaAdapter.getAvatarUploadSignature',
+} as const;
+export type UserGrpcAdapterOperation = (typeof USER_GRPC_ADAPTER_OPERATIONS)[keyof typeof USER_GRPC_ADAPTER_OPERATIONS];
+
 export const USER_METRICS_NOTIFICATION_OPERATIONS = {
    USER_FOLLOWED: 'user_followed',
    FOLLOW_ACCEPTED: 'follow_accepted',

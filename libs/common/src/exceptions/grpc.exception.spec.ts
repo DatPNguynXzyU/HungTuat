@@ -119,6 +119,46 @@ describe('handleGrpcError', () => {
       expect(() => handleGrpcError(error)).toThrow(TimeoutException);
    });
 
+   it('should parse real gRPC error with status prefix and throw UnauthorizedException', () => {
+      const error = {
+         code: GrpcStatus.UNKNOWN,
+         message:
+            '2 UNKNOWN: {"errorCode":"COMMON.UNAUTHORIZED","message":"COMMON.UNAUTHORIZED","params":{"reason":"token_invalid_or_expired"},"correlationId":"corr-123"}',
+      };
+
+      expect(() => handleGrpcError(error)).toThrow(UnauthorizedException);
+      try {
+         handleGrpcError(error);
+      } catch (e) {
+         expect(e).toBeInstanceOf(UnauthorizedException);
+         const unauth = e as UnauthorizedException;
+         expect(unauth.getPayload().errorCode).toBe(COMMON_ERROR_CODES.UNAUTHORIZED);
+         expect(unauth.getPayload().params).toEqual({ reason: 'token_invalid_or_expired' });
+      }
+   });
+
+   it('should parse real gRPC error with details property and statusCode', () => {
+      const error = {
+         code: GrpcStatus.UNAUTHENTICATED,
+         details:
+            '{"statusCode":401,"errorCode":"COMMON.UNAUTHORIZED","message":"COMMON.UNAUTHORIZED","params":{"reason":"token_invalid_or_expired"}}',
+         message:
+            '16 UNAUTHENTICATED: {"statusCode":401,"errorCode":"COMMON.UNAUTHORIZED","message":"COMMON.UNAUTHORIZED"}',
+      };
+
+      expect(() => handleGrpcError(error)).toThrow(UnauthorizedException);
+   });
+
+   it('should parse gRPC error with AUTH.REFRESH_TOKEN_INVALID and map to UnauthorizedException', () => {
+      const error = {
+         code: GrpcStatus.UNAUTHENTICATED,
+         message:
+            '16 UNAUTHENTICATED: {"statusCode":401,"errorCode":"AUTH.REFRESH_TOKEN_INVALID","message":"AUTH.REFRESH_TOKEN_INVALID","correlationId":"corr-456"}',
+      };
+
+      expect(() => handleGrpcError(error)).toThrow(UnauthorizedException);
+   });
+
    it('should rethrow non-grpc or unparsable errors', () => {
       const error = new Error('Raw unhandled error');
       expect(() => handleGrpcError(error)).toThrow('Raw unhandled error');

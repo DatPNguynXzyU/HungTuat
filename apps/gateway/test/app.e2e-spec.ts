@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { DEFAULT_DEV_RSA_PRIVATE_KEY, DEFAULT_ROLES, JwtUtil, SERVICES } from '@common';
-import { AUTH_PATTERNS } from '@contracts/auth';
+import { AUTH_PATTERNS, DEFAULT_JWT_ALGORITHM, DEFAULT_JWT_KEY_ID } from '@contracts/auth';
 import { GatewayConfigService } from '@/config';
 import { GatewayModule } from '@/gateway.module';
 import { App } from 'supertest/types';
@@ -21,8 +21,8 @@ describe('GatewayController (e2e)', () => {
                   {
                      kty: 'RSA',
                      use: 'sig',
-                     alg: 'RS256',
-                     kid: 'omni-auth-key-1',
+                     alg: DEFAULT_JWT_ALGORITHM,
+                     kid: DEFAULT_JWT_KEY_ID,
                      n: 'mock_n',
                      e: 'AQAB',
                   },
@@ -114,7 +114,7 @@ describe('GatewayController (e2e)', () => {
       expect(body.keys).toBeDefined();
       expect(body.keys.length).toBeGreaterThan(0);
       expect(body.keys[0].kty).toBe('RSA');
-      expect(body.keys[0].alg).toBe('RS256');
+      expect(body.keys[0].alg).toBe(DEFAULT_JWT_ALGORITHM);
    });
 
    it('/auth/jwks.json (GET) - public JWKS alias endpoint should return key set', async () => {

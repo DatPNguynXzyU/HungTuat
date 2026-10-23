@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package media.v1;
+
+import "messages/media_messages.proto";
+
+service MediaService {
+  rpc GetUploadUrl (GetUploadUrlRequest) returns (GetUploadUrlResponse);
+  rpc UploadFile (UploadFileRequest) returns (UploadFileResponse);
+  rpc ConfirmUpload (ConfirmUploadRequest) returns (ConfirmUploadResponse);
+  rpc GetMediaById (GetMediaByIdRequest) returns (GetMediaByIdResponse);
+  rpc DeleteMedia (DeleteMediaRequest) returns (DeleteMediaResponse);
+}

@@ -196,7 +196,7 @@ export class SessionManagementService {
     */
    private toSessionInfo(session: SessionEntity, currentJti?: string): IUserSessionInfo {
       return {
-         id: session.id,
+         sessionId: session.id,
          deviceType: session.deviceType,
          deviceName: session.deviceName,
          browser: session.browser,

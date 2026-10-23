@@ -49,6 +49,10 @@ export class AuthConfigService extends CommonConfigService {
       );
    }
 
+   get refreshTokenSecret(): string {
+      return this.configService.get(AUTH_ENV_KEYS.REFRESH_TOKEN_SECRET, { infer: true });
+   }
+
    get port(): number {
       return this.configService.get(AUTH_ENV_KEYS.PORT, { infer: true });
    }

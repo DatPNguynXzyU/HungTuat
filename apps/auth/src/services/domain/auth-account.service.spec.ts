@@ -42,7 +42,7 @@ describe('AuthAccountService', () => {
          const result = await service.getEmail('acc-1');
 
          expect(result).toEqual({
-            id: 'acc-1',
+            accountId: 'acc-1',
             email: 'user@example.com',
             isEmailVerified: true,
          });

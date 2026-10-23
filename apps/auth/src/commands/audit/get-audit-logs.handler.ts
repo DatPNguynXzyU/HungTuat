@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { CommandHandler, DEFAULT_ROLES, checkRoles, type ICommandHandler } from '@common';
-import type { IAuditLogListResult } from '@contracts/auth';
+import { CommandHandler, checkPermissions, isActorAdmin, type ICommandHandler } from '@common';
+import { AUTH_PERMISSIONS, type IAuditLogListResult } from '@contracts/auth';
 import { AuditLogService } from '@auth/services/infrastructure';
 import { GetAuditLogsCommand } from '@auth/commands/audit/get-audit-logs.command';
 
@@ -10,7 +10,9 @@ export class GetAuditLogsHandler implements ICommandHandler<GetAuditLogsCommand,
    constructor(private readonly auditLogService: AuditLogService) {}
 
    async execute(command: GetAuditLogsCommand): Promise<IAuditLogListResult> {
-      checkRoles(command.message, [DEFAULT_ROLES.ADMIN]);
+      if (!isActorAdmin(command.message)) {
+         checkPermissions(command.message, [AUTH_PERMISSIONS.AUDIT_LOGS_READ]);
+      }
       return this.auditLogService.getAuditLogs(command.message.data);
    }
 }

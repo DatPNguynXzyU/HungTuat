@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { CustomThrottlerGuard, JwtAuthGuard, RedisModule, RmqModule, SERVICES } from '@common';
+import { CustomThrottlerGuard, JwtAuthGuard, RedisModule } from '@common';
 import { GatewayConfigModule, GatewayConfigService } from '@/config';
 import { GatewayLoggerModule } from '@/logger';
 import { AuditLogsModule } from '@/modules/audit-logs/audit-logs.module';
@@ -18,9 +18,6 @@ import { SuppliersModule } from '@/modules/suppliers/suppliers.module';
       GatewayConfigModule,
       GatewayLoggerModule,
       RedisModule,
-      RmqModule.register({
-         name: SERVICES.AUTH_SERVICE,
-      }),
       ThrottlerModule.forRootAsync({
          imports: [GatewayConfigModule],
          inject: [GatewayConfigService],

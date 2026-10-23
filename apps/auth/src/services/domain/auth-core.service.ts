@@ -61,4 +61,11 @@ export class AuthCoreService {
    async getEmail(accountId: string): Promise<UserEmailResponseDto> {
       return this.authAccountService.getEmail(accountId);
    }
+
+   async registerServicePermissions(
+      serviceName: string,
+      permissions: Array<{ code: string; name: string; description?: string }>,
+   ): Promise<number> {
+      return this.authRbacService.registerServicePermissions(serviceName, permissions);
+   }
 }

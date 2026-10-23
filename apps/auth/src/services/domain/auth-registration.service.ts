@@ -1,13 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-   BadRequestException,
-   DEFAULT_ROLES,
-   OtpUtil,
-   RedisService,
-   RbacCacheService,
-   UnauthorizedException,
-} from '@common';
+import { BadRequestException, OtpUtil, RedisService, RbacCacheService, UnauthorizedException } from '@common';
 import {
    AUDIT_ACTIONS,
    AUTH_AGGREGATES,
@@ -23,9 +16,10 @@ import {
    type VerifyRegisterOtpResponseDto,
    type IAuthResult,
 } from '@contracts/auth';
+import { SUPPLIER_ROLES } from '@contracts/supplier';
 import { NOTIFICATION_EVENTS } from '@contracts/notification';
 import { NOTIFICATION_ADAPTER, type INotificationAdapter } from '@auth/adapters';
-import type { IDeviceInfo } from '@common';
+import { SYSTEM_ROLES, type IDeviceInfo } from '@common';
 import { ACCOUNT_REPOSITORY, type IAccountRepository, RBAC_REPOSITORY, type IRbacRepository } from '@auth/repositories';
 import { AuditLogBuilder } from '@auth/builders/audit-log.builder';
 import { AuthConfigService } from '@auth/config';
@@ -333,7 +327,7 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
       return this.execute(
          {
             ...dto,
-            targetRole: DEFAULT_ROLES.USER,
+            targetRole: SYSTEM_ROLES.USER,
             outboxEventType: NOTIFICATION_EVENTS.USER_REGISTERED,
          },
          deviceInfo,
@@ -348,7 +342,7 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
       return this.execute(
          {
             ...dto,
-            targetRole: DEFAULT_ROLES.SUPPLIER_ADMIN,
+            targetRole: SUPPLIER_ROLES.SUPPLIER_ADMIN,
             outboxEventType: NOTIFICATION_EVENTS.SUPPLIER_REGISTERED,
          },
          deviceInfo,
@@ -406,7 +400,7 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
          const existing = await this.accountRepository.findByEmail(normalizedEmail);
          if (existing) {
             const auditAction =
-               dto.targetRole === DEFAULT_ROLES.SUPPLIER_ADMIN
+               dto.targetRole === SUPPLIER_ROLES.SUPPLIER_ADMIN
                   ? AUDIT_ACTIONS.AUTH_REGISTER_SUPPLIER
                   : AUDIT_ACTIONS.AUTH_REGISTER;
             await this.auditLogService.record(
@@ -423,7 +417,7 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
          }
       }
 
-      const targetRoleName = dto.targetRole ?? DEFAULT_ROLES.USER;
+      const targetRoleName = dto.targetRole ?? SYSTEM_ROLES.USER;
       const [defaultRole, passwordHash] = await Promise.all([
          this.getOrCacheRole(targetRoleName),
          password.hash(this.passwordHasher),
@@ -493,7 +487,7 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
     * Hook: Dispatches structured audit log with context-aware action identifier.
     */
    protected override recordAudit(context: AuthFlowContext<RegistrationFlowDto, RegisterSaga>): void {
-      const isSupplier = context.dto.targetRole === DEFAULT_ROLES.SUPPLIER_ADMIN;
+      const isSupplier = context.dto.targetRole === SUPPLIER_ROLES.SUPPLIER_ADMIN;
       this.auditLogService
          .record(
             AuditLogBuilder.create()
@@ -513,7 +507,7 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
     * Primitive step: Emits domain event for registration.
     */
    protected emitSuccessEvent(context: AuthFlowContext<RegistrationFlowDto, RegisterSaga>): void {
-      const isSupplier = context.dto.targetRole === DEFAULT_ROLES.SUPPLIER_ADMIN;
+      const isSupplier = context.dto.targetRole === SUPPLIER_ROLES.SUPPLIER_ADMIN;
       this.eventEmitter.emit(
          isSupplier ? AUTH_DOMAIN_EVENTS.SUPPLIER_REGISTERED : AUTH_DOMAIN_EVENTS.USER_REGISTERED,
          new UserRegisteredEvent(context.account.id, context.account.email, new Date(), context.deviceInfo),
@@ -525,7 +519,7 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
     */
    protected emitFailureEvent(error: unknown, dto: RegistrationFlowDto, deviceInfo?: IDeviceInfo): void {
       const reason = this.extractFailureReason(error);
-      const isSupplier = dto.targetRole === DEFAULT_ROLES.SUPPLIER_ADMIN;
+      const isSupplier = dto.targetRole === SUPPLIER_ROLES.SUPPLIER_ADMIN;
       this.eventEmitter.emit(
          isSupplier ? AUTH_DOMAIN_EVENTS.SUPPLIER_REGISTRATION_FAILED : AUTH_DOMAIN_EVENTS.USER_REGISTRATION_FAILED,
          new UserRegistrationFailedEvent(dto.email, reason, new Date(), deviceInfo),

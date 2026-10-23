@@ -1,6 +1,7 @@
 export const NOTIFICATION_PATTERNS = {
    SEND_EMAIL: 'notification.send_email',
    SEND_WELCOME_EMAIL: 'notification.send_welcome_email',
+   SEND_SUPPLIER_WELCOME_EMAIL: 'notification.send_supplier_welcome_email',
    SEND_VERIFICATION_EMAIL: 'notification.send_verification_email',
    SEND_RESET_PASSWORD_EMAIL: 'notification.send_reset_password_email',
    SEND_OTP_EMAIL: 'notification.send_otp_email',
@@ -26,6 +27,7 @@ export const NOTIFICATION_CHANNELS = {
 export const NOTIFICATION_TEMPLATES = {
    CUSTOM_EMAIL: 'CUSTOM_EMAIL',
    WELCOME_EMAIL: 'WELCOME_EMAIL',
+   SUPPLIER_WELCOME_EMAIL: 'SUPPLIER_WELCOME_EMAIL',
    VERIFICATION_EMAIL: 'VERIFICATION_EMAIL',
    RESET_PASSWORD_EMAIL: 'RESET_PASSWORD_EMAIL',
    OTP_EMAIL: 'OTP_EMAIL',
@@ -36,6 +38,7 @@ export const NOTIFICATION_TEMPLATES = {
 
 export const NOTIFICATION_EMAIL_SUBJECTS = {
    WELCOME: 'Welcome to OmniServices!',
+   SUPPLIER_WELCOME: 'Welcome to OmniServices Partner Network!',
    VERIFICATION: 'Verify Your Email Address - OmniServices',
    RESET_PASSWORD: 'Reset Your Password - OmniServices',
    ACCOUNT_LOCKED: 'Security Alert: Account Temporarily Locked',

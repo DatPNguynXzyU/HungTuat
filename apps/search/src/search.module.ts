@@ -8,6 +8,7 @@ import { HealthModule } from '@search/core/health';
 import { MetricsModule } from '@search/core/metrics';
 import { UserSearchModule } from '@search/domains/user-search';
 import { IngredientSearchModule } from '@search/domains/ingredient-search';
+import { SearchGrpcController } from '@search/adapters/grpc/search-grpc.controller';
 import { SearchService } from '@search/search.service';
 
 @Module({
@@ -22,6 +23,7 @@ import { SearchService } from '@search/search.service';
       UserSearchModule,
       IngredientSearchModule,
    ],
+   controllers: [SearchGrpcController],
    providers: [SearchService],
    exports: [SearchService, UserSearchModule, IngredientSearchModule, QueueModule, ElasticsearchModule],
 })

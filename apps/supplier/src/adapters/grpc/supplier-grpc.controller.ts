@@ -1,15 +1,22 @@
-import { Controller, UseFilters, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Inject, UseFilters, UseInterceptors } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
+import type { Metadata } from '@grpc/grpc-js';
 import { from, type Observable } from 'rxjs';
 import {
+   checkRoles,
+   COMMON_ERROR_CODES,
    CommandBus,
+   DEFAULT_ROLES,
+   extractGrpcUser,
+   ForbiddenException,
    GrpcExceptionFilter,
-   GrpcJwtAuthGuard,
    GrpcLoggingInterceptor,
    GrpcMetricsInterceptor,
-   type JwtPayload,
+   isActorAdmin,
+   UnauthorizedException,
 } from '@common';
 import {
+   SUPPLIER_MEMBER_STATUS,
    SUPPLIER_V1_GRPC_METHODS,
    SUPPLIER_V1_GRPC_SERVICE_NAME,
    type IGetMySupplierRequest,
@@ -37,12 +44,26 @@ import {
    GetSuppliersByIdsQuery,
    ListSuppliersQuery,
 } from '@supplier/queries';
+import { SUPPLIER_MEMBER_REPOSITORY, type ISupplierMemberRepository } from '@supplier/repositories';
 
 @Controller()
 @UseFilters(new GrpcExceptionFilter())
 @UseInterceptors(GrpcLoggingInterceptor, GrpcMetricsInterceptor)
 export class SupplierGrpcController implements ISupplierV1GrpcService {
-   constructor(private readonly commandBus: CommandBus) {}
+   constructor(
+      private readonly commandBus: CommandBus,
+      @Inject(SUPPLIER_MEMBER_REPOSITORY)
+      private readonly supplierMemberRepository: ISupplierMemberRepository,
+   ) {}
+
+   private extractAccountId(metadata?: Metadata, fallbackAccountId?: string): string {
+      const user = extractGrpcUser(metadata);
+      const resolved = user?.userId || fallbackAccountId;
+      if (!resolved) {
+         throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED);
+      }
+      return resolved;
+   }
 
    private mapSupplierToProto(supplier: SupplierItemDto): ISupplierProto {
       return {
@@ -98,10 +119,10 @@ export class SupplierGrpcController implements ISupplierV1GrpcService {
       );
    }
 
-   @UseGuards(GrpcJwtAuthGuard)
    @GrpcMethod(SUPPLIER_V1_GRPC_SERVICE_NAME, SUPPLIER_V1_GRPC_METHODS.REGISTER_SUPPLIER)
-   registerSupplier(data: IRegisterSupplierRequest): Observable<IRegisterSupplierResponse> {
-      const user = (data as unknown as { user?: JwtPayload }).user;
+   registerSupplier(data: IRegisterSupplierRequest, metadata?: Metadata): Observable<IRegisterSupplierResponse> {
+      const accountId = this.extractAccountId(metadata);
+
       return from(
          this.commandBus
             .execute(
@@ -115,7 +136,7 @@ export class SupplierGrpcController implements ISupplierV1GrpcService {
                      city: data.city,
                      supplierLogoUrl: data.supplierLogoUrl,
                   },
-                  user?.sub,
+                  accountId,
                ),
             )
             .then((supplier) => ({
@@ -124,11 +145,10 @@ export class SupplierGrpcController implements ISupplierV1GrpcService {
       );
    }
 
-   @UseGuards(GrpcJwtAuthGuard)
    @GrpcMethod(SUPPLIER_V1_GRPC_SERVICE_NAME, SUPPLIER_V1_GRPC_METHODS.GET_MY_SUPPLIER)
-   getMySupplier(data: IGetMySupplierRequest): Observable<IGetMySupplierResponse> {
-      const user = (data as unknown as { user?: JwtPayload }).user;
-      const accountId = data.accountId || user?.sub || '';
+   getMySupplier(data: IGetMySupplierRequest, metadata?: Metadata): Observable<IGetMySupplierResponse> {
+      const accountId = this.extractAccountId(metadata, data.accountId);
+
       return from(
          this.commandBus.execute(new GetMySupplierQuery(accountId)).then((result) => ({
             hasSupplier: result.hasSupplier,
@@ -140,10 +160,25 @@ export class SupplierGrpcController implements ISupplierV1GrpcService {
    }
 
    @GrpcMethod(SUPPLIER_V1_GRPC_SERVICE_NAME, SUPPLIER_V1_GRPC_METHODS.UPDATE_SUPPLIER)
-   updateSupplier(data: IUpdateSupplierRequest): Observable<IUpdateSupplierResponse> {
+   updateSupplier(data: IUpdateSupplierRequest, metadata?: Metadata): Observable<IUpdateSupplierResponse> {
       return from(
-         this.commandBus
-            .execute(
+         (async () => {
+            if (!isActorAdmin(metadata)) {
+               const user = extractGrpcUser(metadata);
+               if (!user) {
+                  throw new UnauthorizedException(COMMON_ERROR_CODES.MISSING_USER_CONTEXT);
+               }
+               const member = await this.supplierMemberRepository.findByAccountId(user.userId);
+               if (
+                  !member ||
+                  member.supplierId !== data.supplierId ||
+                  member.memberStatus !== SUPPLIER_MEMBER_STATUS.ACTIVE
+               ) {
+                  throw new ForbiddenException(COMMON_ERROR_CODES.NOT_OWNER_OR_ADMIN);
+               }
+            }
+
+            const supplier = await this.commandBus.execute(
                new UpdateSupplierCommand(data.supplierId, {
                   supplierName: data.supplierName,
                   contactEmail: data.contactEmail,
@@ -153,15 +188,19 @@ export class SupplierGrpcController implements ISupplierV1GrpcService {
                   supplierLogoUrl: data.supplierLogoUrl,
                   supplierStatus: data.supplierStatus as never,
                }),
-            )
-            .then((supplier) => ({
+            );
+
+            return {
                supplier: this.mapSupplierToProto(supplier),
-            })),
+            };
+         })(),
       );
    }
 
    @GrpcMethod(SUPPLIER_V1_GRPC_SERVICE_NAME, SUPPLIER_V1_GRPC_METHODS.VERIFY_SUPPLIER)
-   verifySupplier(data: IVerifySupplierRequest): Observable<IVerifySupplierResponse> {
+   verifySupplier(data: IVerifySupplierRequest, metadata?: Metadata): Observable<IVerifySupplierResponse> {
+      checkRoles(metadata, [DEFAULT_ROLES.ADMIN]);
+
       return from(
          this.commandBus.execute(new VerifySupplierCommand(data.supplierId, data.isVerified)).then((supplier) => ({
             supplier: this.mapSupplierToProto(supplier),

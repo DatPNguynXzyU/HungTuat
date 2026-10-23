@@ -1,8 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsUUID } from 'class-validator';
 
 export class DeviceSessionResponseDto {
+   @IsString()
+   @IsUUID()
    @ApiProperty({ example: '8f6b219e-9764-4e2b-bbd8-f682f6e913a8', description: 'Session unique ID' })
-   id: string;
+   sessionId: string;
 
    @ApiPropertyOptional({ example: 'desktop', description: 'Device type (desktop, mobile, tablet, bot)' })
    deviceType?: string | null;

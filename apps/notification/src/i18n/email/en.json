@@ -16,6 +16,23 @@
       "supportText": "If you have any questions, our support team is always here to help.",
       "signoff": "Best regards,\n**The OmniServices Team**"
    },
+   "supplierWelcome": {
+      "subject": "Welcome to OmniServices Partner Network!",
+      "preview": "Welcome to OmniServices Partner Network, {fullName}!",
+      "badge": "SUPPLIER ONBOARDING",
+      "heading": "Welcome to the Partner Network, {fullName}!",
+      "body1": "Congratulations on successfully registering your supplier account with OmniServices. We are thrilled to partner with your business.",
+      "body2": "Your supplier account is now active. Follow these next steps to start selling and managing your catalog on OmniServices:",
+      "step1Title": "1. Complete Company Profile",
+      "step1Desc": "Provide your business details, tax information, and banking details for verified payouts.",
+      "step2Title": "2. Set Up Your Catalog",
+      "step2Desc": "Upload your products, configure inventory, and define pricing tiers.",
+      "step3Title": "3. Start Receiving Orders",
+      "step3Desc": "Manage orders, monitor fulfillments, and track analytics from your Supplier Portal.",
+      "ctaButton": "Go to Supplier Portal",
+      "supportText": "Need assistance with onboarding? Our dedicated Partner Support team is here to guide you every step of the way.",
+      "signoff": "Best regards,\n**The OmniServices Partner Team**"
+   },
    "otp": {
       "preview": "Your OmniServices verification code: {otpCode}",
       "badge": "SECURITY VERIFICATION",

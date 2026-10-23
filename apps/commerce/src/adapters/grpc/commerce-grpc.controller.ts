@@ -1,7 +1,20 @@
-import { Controller, UseFilters, UseInterceptors } from '@nestjs/common';
+import { Controller, Inject, UseFilters, UseInterceptors } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
+import type { Metadata } from '@grpc/grpc-js';
 import { from, type Observable } from 'rxjs';
-import { CommandBus, GrpcExceptionFilter, GrpcLoggingInterceptor, GrpcMetricsInterceptor } from '@common';
+import {
+   checkRoles,
+   COMMON_ERROR_CODES,
+   CommandBus,
+   DEFAULT_ROLES,
+   extractGrpcUser,
+   ForbiddenException,
+   GrpcExceptionFilter,
+   GrpcLoggingInterceptor,
+   GrpcMetricsInterceptor,
+   isActorAdmin,
+   UnauthorizedException,
+} from '@common';
 import {
    COMMERCE_V1_GRPC_METHODS,
    COMMERCE_V1_GRPC_SERVICE_NAME,
@@ -30,12 +43,17 @@ import {
 import type { SupplierItemDto } from '@contracts/supplier';
 import { GetIngredientDetailQuery, GetSuppliersByIngredientQuery, ListCategoriesQuery } from '@commerce/queries';
 import { CreateIngredientCommand, CreateProductOfferCommand, ValidateIngredientsCommand } from '@commerce/commands';
+import { SUPPLIER_ADAPTER, type ISupplierAdapter } from '@commerce/adapters/supplier';
 
 @Controller()
 @UseFilters(new GrpcExceptionFilter())
 @UseInterceptors(GrpcLoggingInterceptor, GrpcMetricsInterceptor)
 export class CommerceGrpcController implements ICommerceV1GrpcService {
-   constructor(private readonly commandBus: CommandBus) {}
+   constructor(
+      private readonly commandBus: CommandBus,
+      @Inject(SUPPLIER_ADAPTER)
+      private readonly supplierAdapter: ISupplierAdapter,
+   ) {}
 
    private mapIngredientToProto(item: IngredientItemDto): IIngredientProto {
       return {
@@ -148,7 +166,9 @@ export class CommerceGrpcController implements ICommerceV1GrpcService {
    }
 
    @GrpcMethod(COMMERCE_V1_GRPC_SERVICE_NAME, COMMERCE_V1_GRPC_METHODS.CREATE_INGREDIENT)
-   createIngredient(data: ICreateIngredientRequest): Observable<ICreateIngredientResponse> {
+   createIngredient(data: ICreateIngredientRequest, metadata?: Metadata): Observable<ICreateIngredientResponse> {
+      checkRoles(metadata, [DEFAULT_ROLES.ADMIN]);
+
       return from(
          this.commandBus
             .execute(
@@ -167,12 +187,26 @@ export class CommerceGrpcController implements ICommerceV1GrpcService {
    }
 
    @GrpcMethod(COMMERCE_V1_GRPC_SERVICE_NAME, COMMERCE_V1_GRPC_METHODS.CREATE_SUPPLIER_PRODUCT)
-   createSupplierProduct(data: ICreateSupplierProductRequest): Observable<ICreateSupplierProductResponse> {
+   createSupplierProduct(
+      data: ICreateSupplierProductRequest,
+      metadata?: Metadata,
+   ): Observable<ICreateSupplierProductResponse> {
       const currency = isValidCurrency(data.currency ?? '') ? (data.currency as CurrencyEnum) : CurrencyEnum.VND;
 
       return from(
-         this.commandBus
-            .execute(
+         (async () => {
+            if (!isActorAdmin(metadata)) {
+               const user = extractGrpcUser(metadata);
+               if (!user) {
+                  throw new UnauthorizedException(COMMON_ERROR_CODES.MISSING_USER_CONTEXT);
+               }
+               const mySupplier = await this.supplierAdapter.getMySupplier(user.userId);
+               if (!mySupplier.hasSupplier || mySupplier.supplierId !== data.supplierId) {
+                  throw new ForbiddenException(COMMON_ERROR_CODES.NOT_OWNER_OR_ADMIN);
+               }
+            }
+
+            const product = await this.commandBus.execute(
                new CreateProductOfferCommand({
                   supplierId: data.supplierId,
                   ingredientId: data.ingredientId,
@@ -186,10 +220,12 @@ export class CommerceGrpcController implements ICommerceV1GrpcService {
                   productUrl: data.productUrl,
                   productImageUrl: data.productImageUrl,
                }),
-            )
-            .then((product) => ({
+            );
+
+            return {
                product: this.mapOfferToProto(product),
-            })),
+            };
+         })(),
       );
    }
 }

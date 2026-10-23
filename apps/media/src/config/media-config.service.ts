@@ -59,4 +59,12 @@ export class MediaConfigService {
          publicUrl: this.configService.get(MEDIA_ENV_KEYS.R2_PUBLIC_URL, { infer: true }) || '',
       };
    }
+
+   get grpcPort(): number {
+      return this.configService.get(MEDIA_ENV_KEYS.GRPC_PORT, { infer: true }) || 50055;
+   }
+
+   get grpcUrl(): string {
+      return this.configService.get(MEDIA_ENV_KEYS.GRPC_URL, { infer: true }) || '0.0.0.0:50055';
+   }
 }

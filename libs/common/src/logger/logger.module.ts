@@ -5,7 +5,7 @@ import { IncomingMessage, ServerResponse } from 'http';
 import { ReqId } from 'pino-http';
 import { isSpanContextValid, trace } from '@opentelemetry/api';
 import { AppConfigModule, AppConfigService } from '@common/config';
-import { CORRELATION_ID_HEADER, REQUEST_ID_HEADER } from '@common/logger/logger.constants';
+import { CORRELATION_ID_HEADER, DEFAULT_PINO_REDACT_OPTIONS, REQUEST_ID_HEADER } from '@common/logger/logger.constants';
 import { AppLogger } from '@common/logger/logger.service';
 
 interface ExtendedRequest extends IncomingMessage {
@@ -47,12 +47,25 @@ interface ExtendedError extends Error {
             const logLevel = config.logLevel;
 
             return {
+               forRoutes: ['*'],
                pinoHttp: {
                   level: logLevel,
                   // Base attributes attached to every log line
                   base: {
                      service: serviceName,
                      env: nodeEnv,
+                  },
+                  autoLogging: {
+                     ignore: (req: IncomingMessage) => {
+                        const url = req.url ? req.url.split('?')[0] : '';
+                        return (
+                           url === '/' ||
+                           url === '/health' ||
+                           url.startsWith('/health/') ||
+                           url === '/api/v1/health' ||
+                           url.startsWith('/api/v1/health/')
+                        );
+                     },
                   },
                   mixin: () => {
                      const span = trace.getActiveSpan();
@@ -77,6 +90,7 @@ interface ExtendedError extends Error {
                      const incomingId = req.headers[CORRELATION_ID_HEADER] || req.headers[REQUEST_ID_HEADER];
                      const traceId =
                         (Array.isArray(incomingId) ? incomingId[0] : incomingId) || activeTraceId || randomUUID();
+                     req.headers[CORRELATION_ID_HEADER] = traceId;
                      res.setHeader(CORRELATION_ID_HEADER, traceId);
                      res.setHeader(REQUEST_ID_HEADER, traceId);
                      return traceId;
@@ -127,37 +141,7 @@ interface ExtendedError extends Error {
                      return error.message || `HTTP ${extendedReq.method || 'GET'} ${extendedReq.url || '/'} failed`;
                   },
                   timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
-                  redact: {
-                     paths: [
-                        'req.headers.authorization',
-                        'req.headers.cookie',
-                        'req.headers["set-cookie"]',
-                        'req.headers["x-api-key"]',
-                        'req.body.password',
-                        'req.body.currentPassword',
-                        'req.body.newPassword',
-                        'req.body.confirmPassword',
-                        'req.body.token',
-                        'req.body.refreshToken',
-                        'req.body.accessToken',
-                        'req.body.secret',
-                        'req.body.apiKey',
-                        'req.body.creditCard',
-                        'req.body.cvv',
-                        'req.body.otp',
-                        'body.password',
-                        'body.currentPassword',
-                        'body.newPassword',
-                        'body.confirmPassword',
-                        'body.token',
-                        'body.refreshToken',
-                        'body.accessToken',
-                        'body.secret',
-                        'body.apiKey',
-                        'body.otp',
-                     ],
-                     censor: '***REDACTED***',
-                  },
+                  redact: DEFAULT_PINO_REDACT_OPTIONS,
                   transport: !isProduction
                      ? {
                           target: 'pino-pretty',

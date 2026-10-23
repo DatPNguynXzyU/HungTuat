@@ -35,4 +35,11 @@ export class AuthRbacService {
       const role = await this.getOrCacheRole(roleCode);
       return role?.permissions || [];
    }
+
+   async registerServicePermissions(
+      serviceName: string,
+      permissions: Array<{ code: string; name: string; description?: string }>,
+   ): Promise<number> {
+      return this.rbacRepository.upsertPermissions(permissions);
+   }
 }

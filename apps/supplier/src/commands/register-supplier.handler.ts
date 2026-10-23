@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CommandHandler, ConflictException, DEFAULT_ROLES, type ICommandHandler } from '@common';
+import { CommandHandler, ConflictException, type ICommandHandler } from '@common';
 import {
    SUPPLIER_ERROR_CODES,
    SUPPLIER_MEMBER_STATUS,
+   SUPPLIER_ROLES,
    type SupplierItemDto,
    type SupplierStatusType,
 } from '@contracts/supplier';
@@ -42,7 +43,7 @@ export class RegisterSupplierHandler implements ICommandHandler<RegisterSupplier
                accountId: command.userId,
                supplierId: created.supplierId,
                email: created.contactEmail || '',
-               role: DEFAULT_ROLES.SUPPLIER_ADMIN,
+               role: SUPPLIER_ROLES.SUPPLIER_ADMIN,
                memberStatus: SUPPLIER_MEMBER_STATUS.ACTIVE,
                joinedAt: new Date(),
             });

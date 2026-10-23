@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package search.v1;
+
+message IngredientSearchHitProto {
+  string ingredientId = 1;
+  string ingredientName = 2;
+  string normalizedName = 3;
+  string ingredientSlug = 4;
+  string ingredientDescription = 5;
+  string ingredientImageUrl = 6;
+  string categoryId = 7;
+  string categoryName = 8;
+  string defaultUnit = 9;
+  string ingredientStatus = 10;
+  int32 supplierCount = 11;
+  double minPrice = 12;
+  double maxPrice = 13;
+  string currency = 14;
+  string createdAt = 15;
+  string updatedAt = 16;
+}

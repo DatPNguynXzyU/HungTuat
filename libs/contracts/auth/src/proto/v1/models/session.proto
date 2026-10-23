@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package auth.v1;
+
+message UserSessionProto {
+  string sessionId = 1;
+  string deviceType = 2;
+  string deviceName = 3;
+  string browser = 4;
+  string os = 5;
+  string ipAddress = 6;
+  string city = 7;
+  string region = 8;
+  string country = 9;
+  string countryCode = 10;
+  string userAgent = 11;
+  bool isCurrent = 12;
+  string lastActiveAt = 13;
+  string expiresAt = 14;
+  string createdAt = 15;
+}

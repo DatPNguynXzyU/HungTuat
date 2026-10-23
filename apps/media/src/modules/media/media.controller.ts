@@ -11,6 +11,12 @@ import {
 import { RmqService, type IServiceMessage, UnauthorizedException } from '@common';
 import { MediaService } from '@media/modules/media/media.service';
 
+/**
+ * RabbitMQ Inbound Adapter for Media Microservice.
+ * @deprecated Synchronous RPC calls over RabbitMQ are deprecated. All client operations
+ * (getUploadUrl, uploadFile, confirmUpload, getMediaById, deleteMedia) are handled via MediaGrpcController.
+ * This controller is preserved temporarily for backward compatibility.
+ */
 @Controller()
 export class MediaController {
    constructor(

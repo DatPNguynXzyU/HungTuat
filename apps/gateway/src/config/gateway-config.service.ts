@@ -96,4 +96,12 @@ export class GatewayConfigService extends CommonConfigService {
    get supplierGrpcUrl(): string {
       return this.configService.get(ENV_KEYS.SUPPLIER_GRPC_URL, { infer: true }) || 'localhost:50054';
    }
+
+   get mediaGrpcUrl(): string {
+      return this.configService.get(ENV_KEYS.MEDIA_GRPC_URL, { infer: true }) || 'localhost:50055';
+   }
+
+   get searchGrpcUrl(): string {
+      return this.configService.get(ENV_KEYS.SEARCH_GRPC_URL, { infer: true }) || 'localhost:50056';
+   }
 }

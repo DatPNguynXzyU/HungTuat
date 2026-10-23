@@ -155,6 +155,12 @@ export class UserProfileRepository implements IUserProfileRepository {
       return users.map((user) => this.toEntity(user));
    }
 
+   async count(): Promise<number> {
+      return this.prisma.user.count({
+         where: { deletedAt: null },
+      });
+   }
+
    async findByIds(userIds: string[], status?: UserStatus): Promise<UserEntity[]> {
       if (!userIds || userIds.length === 0) {
          return [];

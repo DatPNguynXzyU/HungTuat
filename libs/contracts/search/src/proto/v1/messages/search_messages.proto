@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package search.v1;
+
+import "models/user_search.proto";
+import "models/ingredient_search.proto";
+
+message SearchUsersRequest {
+  string query = 1;
+  optional int32 limit = 2;
+  optional string cursor = 3;
+}
+
+message SearchUsersResponse {
+  repeated UserSearchHitProto items = 1;
+  optional string nextCursor = 2;
+  bool hasMore = 3;
+  int32 total = 4;
+}
+
+message SearchIngredientsRequest {
+  optional string query = 1;
+  optional string categoryId = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+
+message SearchIngredientsResponse {
+  repeated IngredientSearchHitProto items = 1;
+  int32 total = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message GlobalSearchRequest {
+  string query = 1;
+  optional int32 limit = 2;
+  optional string type = 3;
+}
+
+message GlobalSearchResponse {
+  repeated UserSearchHitProto users = 1;
+  repeated IngredientSearchHitProto ingredients = 2;
+  int32 total = 3;
+}

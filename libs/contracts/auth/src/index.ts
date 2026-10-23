@@ -7,3 +7,5 @@ export * from '@contracts/auth/interfaces/auth.interface';
 export * from '@contracts/auth/interfaces/audit-log.interface';
 export * from '@contracts/auth/dto/auth';
 export * from '@contracts/auth/dto/audit-log';
+export * from '@contracts/auth/constants/auth-permissions.constant';
+export * from '@contracts/auth/constants/auth-roles.constant';

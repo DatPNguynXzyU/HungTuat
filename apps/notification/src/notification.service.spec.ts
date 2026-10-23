@@ -8,6 +8,7 @@ describe('NotificationService', () => {
    let service: NotificationService;
    let mockSendEmail: jest.Mock;
    let mockSendWelcomeEmail: jest.Mock;
+   let mockSendSupplierWelcomeEmail: jest.Mock;
    let mockSendVerificationEmail: jest.Mock;
    let mockSendResetPasswordEmail: jest.Mock;
    let mockSendOtpEmail: jest.Mock;
@@ -21,6 +22,9 @@ describe('NotificationService', () => {
    beforeEach(async () => {
       mockSendEmail = jest.fn().mockResolvedValue({ id: 'msg_1', to: 'a@b.com', subject: 'test' });
       mockSendWelcomeEmail = jest.fn().mockResolvedValue({ id: 'msg_2', to: 'a@b.com', subject: 'welcome' });
+      mockSendSupplierWelcomeEmail = jest
+         .fn()
+         .mockResolvedValue({ id: 'msg_sup', to: 'sup@b.com', subject: 'supplier welcome' });
       mockSendVerificationEmail = jest.fn().mockResolvedValue({ id: 'msg_3', to: 'a@b.com', subject: 'verify' });
       mockSendResetPasswordEmail = jest.fn().mockResolvedValue({ id: 'msg_4', to: 'a@b.com', subject: 'reset' });
       mockSendOtpEmail = jest.fn().mockResolvedValue({ id: 'msg_5', to: 'a@b.com', subject: 'otp' });
@@ -35,6 +39,7 @@ describe('NotificationService', () => {
       const mockResendService = {
          sendEmail: mockSendEmail,
          sendWelcomeEmail: mockSendWelcomeEmail,
+         sendSupplierWelcomeEmail: mockSendSupplierWelcomeEmail,
          sendVerificationEmail: mockSendVerificationEmail,
          sendResetPasswordEmail: mockSendResetPasswordEmail,
          sendOtpEmail: mockSendOtpEmail,
@@ -93,6 +98,22 @@ describe('NotificationService', () => {
                eventId: 'evt-1',
                recipient: 'a@b.com',
                template: NOTIFICATION_TEMPLATES.WELCOME_EMAIL,
+            }) as unknown,
+         }) as unknown,
+      );
+   });
+
+   it('should forward sendSupplierWelcomeEmail to ResendService and log', async () => {
+      const dto = { to: 'sup@b.com', fullName: 'Supplier', supplierName: 'Biz LLC' };
+      const res = await service.sendSupplierWelcomeEmail(dto, 'evt-sup-1');
+      expect(res.id).toBe('msg_sup');
+      expect(mockSendSupplierWelcomeEmail).toHaveBeenCalledWith(dto);
+      expect(mockPrisma.notificationLog.create).toHaveBeenCalledWith(
+         expect.objectContaining({
+            data: expect.objectContaining({
+               eventId: 'evt-sup-1',
+               recipient: 'sup@b.com',
+               template: NOTIFICATION_TEMPLATES.SUPPLIER_WELCOME_EMAIL,
             }) as unknown,
          }) as unknown,
       );

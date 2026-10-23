@@ -26,6 +26,31 @@ export const USER_V1_GRPC_CLIENT = 'USER_V1_GRPC_CLIENT';
 
 export const USER_V1_GRPC_METHODS = {
    CHECK_USERNAME: 'CheckUsername',
+   GET_USER_BY_ID: 'GetUserById',
+   GET_MY_PROFILE: 'GetMyProfile',
+   GET_ALL_USERS: 'GetAllUsers',
+   CREATE_PROFILE: 'CreateProfile',
+   UPDATE_USER_PROFILE: 'UpdateUserProfile',
+   UPDATE_USERNAME: 'UpdateUsername',
+   DELETE_USER: 'DeleteUser',
+   UPLOAD_AVATAR: 'UploadAvatar',
+   GET_AVATAR_UPLOAD_SIGNATURE: 'GetAvatarUploadSignature',
+   FOLLOW_USER: 'FollowUser',
+   UNFOLLOW_USER: 'UnfollowUser',
+   GET_FOLLOW_SUGGESTIONS: 'GetFollowSuggestions',
+   GET_DATE_OF_BIRTH: 'GetDateOfBirth',
+   SEARCH_USERS: 'SearchUsers',
+   GET_FOLLOWERS: 'GetFollowers',
+   GET_FOLLOWING: 'GetFollowing',
+   GET_FOLLOWERS_COUNT: 'GetFollowersCount',
+   GET_FOLLOWING_COUNT: 'GetFollowingCount',
+   GET_MUTUAL_FOLLOWERS: 'GetMutualFollowers',
+   ACCEPT_FOLLOW_REQUEST: 'AcceptFollowRequest',
+   REJECT_FOLLOW_REQUEST: 'RejectFollowRequest',
+   GET_USER_BY_ACCOUNT_ID: 'GetUserByAccountId',
+   GET_USER_BY_USERNAME: 'GetUserByUsername',
+   RESTORE_USER: 'RestoreUser',
+   GET_USER_STATS: 'GetUserStats',
 } as const;
 
 export type UserV1GrpcMethod = (typeof USER_V1_GRPC_METHODS)[keyof typeof USER_V1_GRPC_METHODS];
@@ -50,4 +75,44 @@ export function getUserProtoPath(version: ProtoVersion = DEFAULT_PROTO_VERSION):
    }
 
    return candidates[0];
+}
+
+/**
+ * Proto loader options interface matching @grpc/proto-loader configuration
+ */
+export interface UserProtoLoaderOptions {
+   keepCase?: boolean;
+   alternateCommentMode?: boolean;
+   longs?: (value: unknown) => unknown;
+   enums?: (value: unknown) => unknown;
+   bytes?: (value: unknown) => unknown;
+   defaults?: boolean;
+   arrays?: boolean;
+   objects?: boolean;
+   oneofs?: boolean;
+   json?: boolean;
+   includeDirs?: string[];
+}
+
+/**
+ * Returns the resolved directory path to the proto folder for the specified version (defaults to v1),
+ * supporting both runtime dist and source locations for loader.includeDirs.
+ */
+export function getUserProtoDir(version: ProtoVersion = DEFAULT_PROTO_VERSION): string {
+   const protoPath = getUserProtoPath(version);
+   return path.dirname(protoPath);
+}
+
+/**
+ * Returns standard proto loader options configured with includeDirs for modular proto resolution.
+ */
+export function getUserProtoLoaderOptions(version: ProtoVersion = DEFAULT_PROTO_VERSION): UserProtoLoaderOptions {
+   return {
+      keepCase: true,
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
+      includeDirs: [getUserProtoDir(version)],
+   };
 }

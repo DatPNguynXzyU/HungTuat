@@ -37,7 +37,7 @@ describe('SuppliersController', () => {
       controller = module.get<SuppliersController>(SuppliersController);
    });
 
-   it('should extract auth header and delegate registerSupplier to SuppliersService', async () => {
+   it('should extract user context and delegate registerSupplier to SuppliersService', async () => {
       mockSuppliersService.registerSupplier.mockResolvedValue(mockSupplier);
 
       const dto = {
@@ -47,22 +47,28 @@ describe('SuppliersController', () => {
 
       const mockRequest = {
          headers: {
-            authorization: 'Bearer jwt-token-xyz',
             'x-correlation-id': 'corr-456',
          },
-         cookies: {},
       } as unknown as Request;
 
-      const result = await controller.registerSupplier(dto, mockRequest);
+      const mockUser = {
+         sub: 'acc-123',
+         email: 'test@example.com',
+         roles: [DEFAULT_ROLES.SUPPLIER_ADMIN],
+      } as never;
+
+      const result = await controller.registerSupplier(dto, mockRequest, mockUser);
 
       expect(mockSuppliersService.registerSupplier).toHaveBeenCalledWith(dto, {
-         authHeader: 'Bearer jwt-token-xyz',
          correlationId: 'corr-456',
+         accountId: 'acc-123',
+         roles: [DEFAULT_ROLES.SUPPLIER_ADMIN],
+         email: 'test@example.com',
       });
       expect(result).toEqual(mockSupplier);
    });
 
-   it('should extract auth header and delegate getMySupplier to SuppliersService', async () => {
+   it('should extract user context and delegate getMySupplier to SuppliersService', async () => {
       const mockMySupplier = {
          hasSupplier: true,
          supplier: mockSupplier,
@@ -73,20 +79,23 @@ describe('SuppliersController', () => {
 
       const mockRequest = {
          headers: {
-            authorization: 'Bearer jwt-token-xyz',
             'x-correlation-id': 'corr-456',
          },
-         cookies: {},
       } as unknown as Request;
 
-      const mockUser = { sub: 'acc-123', email: 'test@example.com' } as never;
+      const mockUser = {
+         sub: 'acc-123',
+         email: 'test@example.com',
+         roles: [DEFAULT_ROLES.SUPPLIER_ADMIN],
+      } as never;
 
       const result = await controller.getMySupplier(mockRequest, mockUser);
 
       expect(mockSuppliersService.getMySupplier).toHaveBeenCalledWith({
-         authHeader: 'Bearer jwt-token-xyz',
          correlationId: 'corr-456',
          accountId: 'acc-123',
+         roles: [DEFAULT_ROLES.SUPPLIER_ADMIN],
+         email: 'test@example.com',
       });
       expect(result).toEqual(mockMySupplier);
    });

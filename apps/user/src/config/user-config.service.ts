@@ -40,4 +40,12 @@ export class UserConfigService extends CommonConfigService {
          space: this.configService.get(USER_ENV_KEYS.NEBULA_SPACE, { infer: true }) || 'social_graph',
       };
    }
+
+   get searchGrpcUrl(): string {
+      return this.configService.get(USER_ENV_KEYS.SEARCH_GRPC_URL, { infer: true }) || 'localhost:50056';
+   }
+
+   get mediaGrpcUrl(): string {
+      return this.configService.get(USER_ENV_KEYS.MEDIA_GRPC_URL, { infer: true }) || 'localhost:50055';
+   }
 }

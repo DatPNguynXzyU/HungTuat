@@ -1,8 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type IDeviceInfo, type JwtPayload, RedisService, UnauthorizedException, uuidv7 } from '@common';
 import { AUTH_ERROR_CODES, JWT_TOKEN_TYPE } from '@contracts/auth';
-import { SESSION_REPOSITORY, type ISessionRepository } from '@auth/repositories';
 import { AuthRedisKeys, TOKEN_REVOCATION_VALUE } from '@auth/constants';
+import { SESSION_REPOSITORY, type ISessionRepository } from '@auth/repositories';
+import { AuthConfigService } from '@auth/config';
+import { OpaqueTokenUtil } from '@auth/utils';
 import type {
    IJwtService,
    ITokenAccountPayload,
@@ -10,6 +12,16 @@ import type {
    TokenPair,
 } from '@auth/services/infrastructure/token.service.interface';
 import { JWT_SERVICE } from '@auth/services/infrastructure/token.service.interface';
+
+interface IRefreshTokenCacheData {
+   accountId: string;
+   email?: string;
+   roles?: string[];
+   jti: string;
+   hash: string;
+   createdAt: string;
+   expiresAt: string;
+}
 
 @Injectable()
 export class TokenLifecycleService implements ITokenLifecycleService {
@@ -19,10 +31,15 @@ export class TokenLifecycleService implements ITokenLifecycleService {
       private readonly redisService: RedisService,
       @Inject(SESSION_REPOSITORY)
       private readonly sessionRepository: ISessionRepository,
+      private readonly configService: AuthConfigService,
    ) {}
 
    async generateTokenPair(account: ITokenAccountPayload, deviceInfo?: IDeviceInfo): Promise<TokenPair> {
-      const [accessTokenJti, refreshTokenJti] = [uuidv7(), uuidv7()];
+      const accessTokenJti = uuidv7();
+      const refreshTokenJti = uuidv7();
+      const secret = OpaqueTokenUtil.generateSecret();
+      const hash = OpaqueTokenUtil.hashSecret(secret, this.configService.refreshTokenSecret);
+      const refreshToken = OpaqueTokenUtil.format(refreshTokenJti, secret);
 
       const accessToken = this.jwtService.sign(
          {
@@ -35,36 +52,31 @@ export class TokenLifecycleService implements ITokenLifecycleService {
          this.jwtService.accessTokenExpiresIn,
       );
 
-      const refreshToken = this.jwtService.sign(
-         {
-            sub: account.id,
-            email: account.email,
-            roles: account.roles,
-            tokenType: JWT_TOKEN_TYPE.REFRESH,
-            jti: refreshTokenJti,
-         },
-         this.jwtService.refreshTokenExpiresIn,
-      );
-
       const refreshRedisKey = AuthRedisKeys.refreshToken(account.id, refreshTokenJti);
+      const refreshJtiKey = AuthRedisKeys.refreshTokenByJti(refreshTokenJti);
       const sessionsKey = AuthRedisKeys.sessions(account.id);
+      const nowIso = new Date().toISOString();
       const expiresAt = new Date(Date.now() + this.jwtService.refreshTokenExpiresIn * 1000).toISOString();
 
+      const sessionCacheData: IRefreshTokenCacheData = {
+         accountId: account.id,
+         email: account.email,
+         roles: account.roles,
+         jti: refreshTokenJti,
+         hash,
+         createdAt: nowIso,
+         expiresAt,
+      };
+
       await Promise.all([
-         this.redisService.setJson(
-            refreshRedisKey,
-            {
-               accountId: account.id,
-               jti: refreshTokenJti,
-               createdAt: new Date().toISOString(),
-            },
-            this.jwtService.refreshTokenExpiresIn,
-         ),
+         this.redisService.setJson(refreshRedisKey, sessionCacheData, this.jwtService.refreshTokenExpiresIn),
+         this.redisService.setJson(refreshJtiKey, sessionCacheData, this.jwtService.refreshTokenExpiresIn),
          this.redisService.sadd(sessionsKey, accessTokenJti, refreshTokenJti),
          this.redisService.expire(sessionsKey, this.jwtService.refreshTokenExpiresIn),
          this.sessionRepository.createSession({
             accountId: account.id,
             refreshTokenJti,
+            refreshTokenHash: hash,
             deviceType: deviceInfo?.deviceType,
             deviceName: deviceInfo?.deviceName,
             browser: deviceInfo?.browser,
@@ -91,7 +103,11 @@ export class TokenLifecycleService implements ITokenLifecycleService {
       deviceInfo?: IDeviceInfo,
       remainingTtl?: number,
    ): Promise<TokenPair> {
-      const [accessTokenJti, refreshTokenJti] = [uuidv7(), uuidv7()];
+      const accessTokenJti = uuidv7();
+      const refreshTokenJti = uuidv7();
+      const secret = OpaqueTokenUtil.generateSecret();
+      const hash = OpaqueTokenUtil.hashSecret(secret, this.configService.refreshTokenSecret);
+      const refreshToken = OpaqueTokenUtil.format(refreshTokenJti, secret);
 
       const accessToken = this.jwtService.sign(
          {
@@ -104,29 +120,20 @@ export class TokenLifecycleService implements ITokenLifecycleService {
          this.jwtService.accessTokenExpiresIn,
       );
 
-      const refreshToken = this.jwtService.sign(
-         {
-            sub: account.id,
-            email: account.email,
-            roles: account.roles,
-            tokenType: JWT_TOKEN_TYPE.REFRESH,
-            jti: refreshTokenJti,
-         },
-         this.jwtService.refreshTokenExpiresIn,
-      );
-
       const refreshRedisKey = AuthRedisKeys.refreshToken(account.id, refreshTokenJti);
+      const refreshJtiKey = AuthRedisKeys.refreshTokenByJti(refreshTokenJti);
       const sessionsKey = AuthRedisKeys.sessions(account.id);
       const expiresAt = new Date(Date.now() + this.jwtService.refreshTokenExpiresIn * 1000).toISOString();
       const nowIso = new Date().toISOString();
 
-      // Invalidate old refresh token in Redis
+      // Invalidate old refresh token in Redis and blacklist old JTI
       await this.invalidateRefreshToken(account.id, oldRefreshTokenJti, remainingTtl);
 
       const existingSession = await this.sessionRepository.findByJti(oldRefreshTokenJti);
       if (existingSession) {
          await this.sessionRepository.updateSession(existingSession.id, {
             refreshTokenJti,
+            refreshTokenHash: hash,
             lastActiveAt: nowIso,
             expiresAt,
             isRevoked: false,
@@ -140,6 +147,7 @@ export class TokenLifecycleService implements ITokenLifecycleService {
          await this.sessionRepository.createSession({
             accountId: account.id,
             refreshTokenJti,
+            refreshTokenHash: hash,
             deviceType: deviceInfo?.deviceType,
             deviceName: deviceInfo?.deviceName,
             browser: deviceInfo?.browser,
@@ -157,16 +165,19 @@ export class TokenLifecycleService implements ITokenLifecycleService {
          });
       }
 
+      const sessionCacheData: IRefreshTokenCacheData = {
+         accountId: account.id,
+         email: account.email,
+         roles: account.roles,
+         jti: refreshTokenJti,
+         hash,
+         createdAt: nowIso,
+         expiresAt,
+      };
+
       await Promise.all([
-         this.redisService.setJson(
-            refreshRedisKey,
-            {
-               accountId: account.id,
-               jti: refreshTokenJti,
-               createdAt: nowIso,
-            },
-            this.jwtService.refreshTokenExpiresIn,
-         ),
+         this.redisService.setJson(refreshRedisKey, sessionCacheData, this.jwtService.refreshTokenExpiresIn),
+         this.redisService.setJson(refreshJtiKey, sessionCacheData, this.jwtService.refreshTokenExpiresIn),
          this.redisService.sadd(sessionsKey, accessTokenJti, refreshTokenJti),
          this.redisService.expire(sessionsKey, this.jwtService.refreshTokenExpiresIn),
       ]);
@@ -209,37 +220,84 @@ export class TokenLifecycleService implements ITokenLifecycleService {
          throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_REQUIRED);
       }
 
-      let payload: JwtPayload;
-      try {
-         payload = this.jwtService.verify(token);
-      } catch {
+      const parsed = OpaqueTokenUtil.parse(token);
+      if (!parsed) {
          throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_INVALID);
       }
 
-      if (payload.tokenType !== JWT_TOKEN_TYPE.REFRESH) {
-         throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_INVALID);
-      }
+      const { jti, secret } = parsed;
 
-      if (!payload.jti || !payload.sub) {
-         throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_INVALID);
-      }
-
-      const isRevoked = await this.isTokenRevoked(payload.jti);
+      const isRevoked = await this.isTokenRevoked(jti);
       if (isRevoked) {
          // Token reuse detected: Revoke all active sessions for this user to mitigate breach
-         await this.revokeAllAccountTokens(payload.sub);
+         const session = await this.sessionRepository.findByJti(jti);
+         if (session?.accountId) {
+            await this.revokeAllAccountTokens(session.accountId);
+         }
          throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_REVOKED);
       }
 
-      const activeKey = AuthRedisKeys.refreshToken(payload.sub, payload.jti);
-      const activeToken = await this.redisService.getJson(activeKey);
-      if (!activeToken) {
-         // Token reuse detected or not active: Revoke all active sessions for this user
-         await this.revokeAllAccountTokens(payload.sub);
-         throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_REVOKED);
+      // Check Active Session in Redis by JTI O(1)
+      const jtiKey = AuthRedisKeys.refreshTokenByJti(jti);
+      const cached = await this.redisService.getJson<IRefreshTokenCacheData>(jtiKey);
+
+      let accountId = cached?.accountId;
+      let storedHash = cached?.hash;
+      const email = cached?.email;
+      const roles = cached?.roles;
+      let expiresAt = cached?.expiresAt;
+      let createdAt = cached?.createdAt;
+
+      // Fallback to database
+      if (!cached) {
+         const dbSession = await this.sessionRepository.findByJti(jti);
+         if (!dbSession) {
+            throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_REVOKED);
+         }
+
+         if (dbSession.isRevoked || new Date(dbSession.expiresAt).getTime() <= Date.now()) {
+            await this.revokeAllAccountTokens(dbSession.accountId);
+            throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_REVOKED);
+         }
+
+         accountId = dbSession.accountId;
+         storedHash = dbSession.refreshTokenHash ?? undefined;
+         expiresAt = dbSession.expiresAt;
+         createdAt = dbSession.createdAt;
       }
 
-      return payload;
+      if (!storedHash) {
+         if (accountId) {
+            await this.revokeAllAccountTokens(accountId);
+         }
+         throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_INVALID);
+      }
+
+      const computedHash = OpaqueTokenUtil.hashSecret(secret, this.configService.refreshTokenSecret);
+      const isValid = OpaqueTokenUtil.verifyHash(computedHash, storedHash);
+
+      if (!isValid) {
+         if (accountId) {
+            await this.revokeAllAccountTokens(accountId);
+         }
+         throw new UnauthorizedException(AUTH_ERROR_CODES.REFRESH_TOKEN_INVALID);
+      }
+
+      const exp = expiresAt
+         ? Math.floor(new Date(expiresAt).getTime() / 1000)
+         : Math.floor(Date.now() / 1000) + this.jwtService.refreshTokenExpiresIn;
+
+      const iat = createdAt ? Math.floor(new Date(createdAt).getTime() / 1000) : Math.floor(Date.now() / 1000);
+
+      return {
+         sub: accountId!,
+         email: email || '',
+         roles: roles || [],
+         jti,
+         tokenType: JWT_TOKEN_TYPE.REFRESH,
+         iat,
+         exp,
+      };
    }
 
    async isTokenRevoked(jti: string): Promise<boolean> {
@@ -250,6 +308,7 @@ export class TokenLifecycleService implements ITokenLifecycleService {
 
    async invalidateRefreshToken(accountId: string, jti: string, remainingTtl?: number): Promise<void> {
       const activeKey = AuthRedisKeys.refreshToken(accountId, jti);
+      const jtiKey = AuthRedisKeys.refreshTokenByJti(jti);
       const sessionsKey = AuthRedisKeys.sessions(accountId);
       const revokedKey = AuthRedisKeys.revokedToken(jti);
       const ttl =
@@ -257,6 +316,7 @@ export class TokenLifecycleService implements ITokenLifecycleService {
 
       await Promise.all([
          this.redisService.del(activeKey),
+         this.redisService.del(jtiKey),
          this.redisService.srem(sessionsKey, jti),
          this.redisService.set(revokedKey, TOKEN_REVOCATION_VALUE, ttl),
          this.sessionRepository.updateSessionByJti(jti, { isRevoked: true }),
@@ -280,9 +340,11 @@ export class TokenLifecycleService implements ITokenLifecycleService {
 
       for (const jti of activeJtis) {
          const activeKey = AuthRedisKeys.refreshToken(accountId, jti);
+         const jtiKey = AuthRedisKeys.refreshTokenByJti(jti);
          const revokedKey = AuthRedisKeys.revokedToken(jti);
          delPromises.push(
             this.redisService.del(activeKey),
+            this.redisService.del(jtiKey),
             this.redisService.set(revokedKey, TOKEN_REVOCATION_VALUE, this.jwtService.refreshTokenExpiresIn),
          );
       }
@@ -298,6 +360,31 @@ export class TokenLifecycleService implements ITokenLifecycleService {
 
    async revokeToken(token: string): Promise<void> {
       if (!token) {
+         return;
+      }
+
+      const parsed = OpaqueTokenUtil.parse(token);
+      if (parsed) {
+         const { jti } = parsed;
+         let accountId: string | null = null;
+         const cached = await this.redisService.getJson<IRefreshTokenCacheData>(AuthRedisKeys.refreshTokenByJti(jti));
+         if (cached?.accountId) {
+            accountId = cached.accountId;
+         } else {
+            const session = await this.sessionRepository.findByJti(jti);
+            if (session?.accountId) {
+               accountId = session.accountId;
+            }
+         }
+         if (accountId) {
+            await this.invalidateRefreshToken(accountId, jti);
+         } else {
+            await this.redisService.set(
+               AuthRedisKeys.revokedToken(jti),
+               TOKEN_REVOCATION_VALUE,
+               this.jwtService.refreshTokenExpiresIn,
+            );
+         }
          return;
       }
 

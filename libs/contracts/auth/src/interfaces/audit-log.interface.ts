@@ -1,6 +1,7 @@
 export interface ISecurityAuditLog {
-   id: string;
+   auditLogId: string;
    accountId?: string | null;
+   userId?: string | null;
    actorEmail?: string | null;
    action: string;
    status: string;

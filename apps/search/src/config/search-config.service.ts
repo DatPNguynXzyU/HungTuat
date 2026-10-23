@@ -24,4 +24,12 @@ export class SearchConfigService extends CommonConfigService {
    get httpPort(): number {
       return this.configService.get(SEARCH_ENV_KEYS.SEARCH_HTTP_PORT, { infer: true }) || 3003;
    }
+
+   get grpcPort(): number {
+      return this.configService.get(SEARCH_ENV_KEYS.GRPC_PORT, { infer: true }) || 50056;
+   }
+
+   get grpcUrl(): string {
+      return this.configService.get(SEARCH_ENV_KEYS.GRPC_URL, { infer: true }) || '0.0.0.0:50056';
+   }
 }

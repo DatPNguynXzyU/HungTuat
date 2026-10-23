@@ -1,6 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ApiErrorResponses, COMMON_ERROR_CODES, CurrentUser, type JwtPayload, ResponseMessage } from '@common';
+import {
+   ApiErrorResponses,
+   COMMON_ERROR_CODES,
+   CORRELATION_ID_HEADER,
+   CurrentUser,
+   type JwtPayload,
+   ResponseMessage,
+} from '@common';
 import {
    ConfirmUploadDto,
    DeleteMediaResponseDto,
@@ -46,8 +54,13 @@ export class MediaController {
       },
    ])
    @ResponseMessage(MEDIA_RESPONSE_MESSAGES.GET_UPLOAD_URL_SUCCESS)
-   async getUploadUrl(@Body() dto: GetUploadUrlDto, @CurrentUser() user: JwtPayload): Promise<UploadUrlResponseDto> {
-      return this.mediaService.getUploadUrl(dto, user);
+   async getUploadUrl(
+      @Body() dto: GetUploadUrlDto,
+      @CurrentUser() user: JwtPayload,
+      @Req() req: Request,
+   ): Promise<UploadUrlResponseDto> {
+      const correlationId = req.headers[CORRELATION_ID_HEADER] as string | undefined;
+      return this.mediaService.getUploadUrl(dto, user, correlationId);
    }
 
    @Post('upload')
@@ -77,8 +90,13 @@ export class MediaController {
       },
    ])
    @ResponseMessage(MEDIA_RESPONSE_MESSAGES.UPLOAD_SUCCESS)
-   async uploadFile(@Body() dto: UploadFileDto, @CurrentUser() user: JwtPayload): Promise<MediaResponseDto> {
-      return this.mediaService.uploadFile(dto, user);
+   async uploadFile(
+      @Body() dto: UploadFileDto,
+      @CurrentUser() user: JwtPayload,
+      @Req() req: Request,
+   ): Promise<MediaResponseDto> {
+      const correlationId = req.headers[CORRELATION_ID_HEADER] as string | undefined;
+      return this.mediaService.uploadFile(dto, user, correlationId);
    }
 
    @Post('confirm')
@@ -108,8 +126,13 @@ export class MediaController {
       },
    ])
    @ResponseMessage(MEDIA_RESPONSE_MESSAGES.CONFIRM_UPLOAD_SUCCESS)
-   async confirmUpload(@Body() dto: ConfirmUploadDto, @CurrentUser() user: JwtPayload): Promise<MediaResponseDto> {
-      return this.mediaService.confirmUpload(dto, user);
+   async confirmUpload(
+      @Body() dto: ConfirmUploadDto,
+      @CurrentUser() user: JwtPayload,
+      @Req() req: Request,
+   ): Promise<MediaResponseDto> {
+      const correlationId = req.headers[CORRELATION_ID_HEADER] as string | undefined;
+      return this.mediaService.confirmUpload(dto, user, correlationId);
    }
 
    @Get(':id')
@@ -167,11 +190,20 @@ export class MediaController {
       {
          status: HttpStatus.FORBIDDEN,
          description: 'User does not have permission to delete this media asset',
-         errorCodes: [MEDIA_ERROR_CODES.CONFIRMATION_FAILED],
+         errorCodes: [
+            MEDIA_ERROR_CODES.CONFIRMATION_FAILED,
+            COMMON_ERROR_CODES.FORBIDDEN,
+            COMMON_ERROR_CODES.NOT_OWNER_OR_ADMIN,
+         ],
       },
    ])
    @ResponseMessage(MEDIA_RESPONSE_MESSAGES.DELETE_MEDIA_SUCCESS)
-   async deleteMedia(@Param('id') id: string, @CurrentUser() user: JwtPayload): Promise<DeleteMediaResponseDto> {
-      return this.mediaService.deleteMedia(id, user);
+   async deleteMedia(
+      @Param('id') id: string,
+      @CurrentUser() user: JwtPayload,
+      @Req() req: Request,
+   ): Promise<DeleteMediaResponseDto> {
+      const correlationId = req.headers[CORRELATION_ID_HEADER] as string | undefined;
+      return this.mediaService.deleteMedia(id, user, correlationId);
    }
 }

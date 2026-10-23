@@ -1,5 +1,4 @@
-import { DEFAULT_ROLES } from '@common';
-import { SUPPLIER_MEMBER_STATUS } from '@contracts/supplier';
+import { SUPPLIER_MEMBER_STATUS, SUPPLIER_ROLES } from '@contracts/supplier';
 import { HandleSupplierRegisteredCommand } from '@supplier/commands/handle-supplier-registered.command';
 import { HandleSupplierRegisteredHandler } from '@supplier/commands/handle-supplier-registered.handler';
 import type { ISupplierMemberRepository } from '@supplier/repositories';
@@ -26,7 +25,7 @@ describe('HandleSupplierRegisteredHandler', () => {
          supplierId: null,
          accountId: 'acc-1',
          email: 'admin@supplier.com',
-         role: DEFAULT_ROLES.SUPPLIER_ADMIN,
+         role: SUPPLIER_ROLES.SUPPLIER_ADMIN,
          memberStatus: SUPPLIER_MEMBER_STATUS.ACTIVE,
          createdAt: new Date(),
          updatedAt: new Date(),
@@ -50,7 +49,7 @@ describe('HandleSupplierRegisteredHandler', () => {
          supplierId: null,
          accountId: 'acc-2',
          email: 'admin2@supplier.com',
-         role: DEFAULT_ROLES.SUPPLIER_ADMIN,
+         role: SUPPLIER_ROLES.SUPPLIER_ADMIN,
          memberStatus: SUPPLIER_MEMBER_STATUS.ACTIVE,
          createdAt: new Date(),
          updatedAt: new Date(),
@@ -68,7 +67,7 @@ describe('HandleSupplierRegisteredHandler', () => {
          expect.objectContaining({
             accountId: 'acc-2',
             email: 'admin2@supplier.com',
-            role: DEFAULT_ROLES.SUPPLIER_ADMIN,
+            role: SUPPLIER_ROLES.SUPPLIER_ADMIN,
             memberStatus: SUPPLIER_MEMBER_STATUS.ACTIVE,
          }),
       );

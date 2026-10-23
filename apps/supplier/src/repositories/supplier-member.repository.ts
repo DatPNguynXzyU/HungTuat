@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DEFAULT_ROLES } from '@common';
-import { SUPPLIER_MEMBER_STATUS } from '@contracts/supplier';
+import { SUPPLIER_MEMBER_STATUS, SUPPLIER_ROLES } from '@contracts/supplier';
 import { PrismaService } from '@supplier/prisma/prisma.service';
 import type { MemberStatus as PrismaMemberStatus } from '@supplier/prisma-client';
 import type {
@@ -68,7 +67,7 @@ export class SupplierMemberRepository implements ISupplierMemberRepository {
             supplierId: data.supplierId ?? null,
             accountId: data.accountId,
             email: data.email,
-            role: data.role ?? DEFAULT_ROLES.SUPPLIER_ADMIN,
+            role: data.role ?? SUPPLIER_ROLES.SUPPLIER_ADMIN,
             memberStatus: (data.memberStatus as PrismaMemberStatus) ?? SUPPLIER_MEMBER_STATUS.ACTIVE,
             joinedAt: data.joinedAt ?? null,
          },

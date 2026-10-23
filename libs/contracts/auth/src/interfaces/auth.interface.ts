@@ -5,7 +5,7 @@ export interface ITokenAccountPayload {
 }
 
 export interface IAuthUser {
-   id: string;
+   userId: string;
    email: string;
    roles: string[];
    status?: string;
@@ -16,7 +16,7 @@ export interface IAuthUser {
 }
 
 export interface IUserSessionInfo {
-   id: string;
+   sessionId: string;
    deviceType?: string | null;
    deviceName?: string | null;
    browser?: string | null;

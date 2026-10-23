@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package auth.v1;
+
+message SecurityAuditLogProto {
+  string auditLogId = 1;
+  string userId = 2;
+  string accountId = 3;
+  string actorEmail = 4;
+  string action = 5;
+  string status = 6;
+  string ipAddress = 7;
+  string userAgent = 8;
+  string deviceType = 9;
+  string deviceName = 10;
+  string browser = 11;
+  string os = 12;
+  string city = 13;
+  string country = 14;
+  string reason = 15;
+  string metadataJson = 16;
+  string createdAt = 17;
+}

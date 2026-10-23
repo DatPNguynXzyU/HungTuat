@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { createGrpcRetryChannelOptions, RmqModule, SERVICES } from '@common';
+import { createGrpcRetryChannelOptions } from '@common';
 import {
    AUTH_V1_GRPC_CLIENT,
    AUTH_V1_GRPC_PACKAGE_NAME,
@@ -14,9 +14,6 @@ import { AuthService } from '@/modules/auth/auth.service';
 
 @Module({
    imports: [
-      RmqModule.register({
-         name: SERVICES.AUTH_SERVICE,
-      }),
       ClientsModule.registerAsync([
          {
             name: AUTH_V1_GRPC_CLIENT,
@@ -39,6 +36,6 @@ import { AuthService } from '@/modules/auth/auth.service';
    ],
    controllers: [AuthController],
    providers: [AuthService],
-   exports: [AuthService],
+   exports: [AuthService, ClientsModule],
 })
 export class AuthModule {}

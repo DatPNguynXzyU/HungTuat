@@ -3,7 +3,7 @@ import type { ISecurityAuditLog } from '@contracts/auth/interfaces/audit-log.int
 
 export class AuditLogResponseDto implements ISecurityAuditLog {
    @ApiProperty({ example: '018dc3bc-11a2-7f28-9842-bc08684d0001', description: 'Unique audit log entry UUID' })
-   id: string;
+   auditLogId: string;
 
    @ApiPropertyOptional({
       example: '018dc3bc-11a2-7f28-9842-bc08684d0000',

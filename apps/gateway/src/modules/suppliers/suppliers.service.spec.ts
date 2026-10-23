@@ -80,12 +80,20 @@ describe('SuppliersService', () => {
             supplierCode: 'SUPP-MM',
          },
          {
-            authHeader: 'Bearer test-token',
             correlationId: 'req-123',
+            accountId: 'acc-123',
+            roles: [DEFAULT_ROLES.SUPPLIER_ADMIN],
+            email: 'admin@supplier.vn',
          },
       );
 
-      expect(mockGrpcService.registerSupplier).toHaveBeenCalled();
+      expect(mockGrpcService.registerSupplier).toHaveBeenCalledWith(
+         expect.objectContaining({
+            supplierName: 'Mega Market',
+            supplierCode: 'SUPP-MM',
+         }),
+         expect.any(Object),
+      );
       expect(result.supplierId).toBe(mockSupplier.supplierId);
       expect(result.supplierName).toBe('Mega Market');
    });
@@ -114,12 +122,18 @@ describe('SuppliersService', () => {
       );
 
       const result = await service.getMySupplier({
-         authHeader: 'Bearer test-token',
          correlationId: 'req-123',
          accountId: 'acc-123',
+         roles: [DEFAULT_ROLES.SUPPLIER_ADMIN],
+         email: 'admin@supplier.vn',
       });
 
-      expect(mockGrpcService.getMySupplier).toHaveBeenCalled();
+      expect(mockGrpcService.getMySupplier).toHaveBeenCalledWith(
+         expect.objectContaining({
+            accountId: 'acc-123',
+         }),
+         expect.any(Object),
+      );
       expect(result.hasSupplier).toBe(true);
       expect(result.supplier?.supplierId).toBe(mockSupplier.supplierId);
       expect(result.role).toBe(DEFAULT_ROLES.SUPPLIER_ADMIN);

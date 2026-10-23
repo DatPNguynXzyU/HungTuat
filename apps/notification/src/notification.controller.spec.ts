@@ -8,6 +8,7 @@ describe('NotificationController', () => {
    let controller: NotificationController;
    let mockSendEmail: jest.Mock;
    let mockSendWelcomeEmail: jest.Mock;
+   let mockSendSupplierWelcomeEmail: jest.Mock;
    let mockSendVerificationEmail: jest.Mock;
    let mockSendResetPasswordEmail: jest.Mock;
    let mockSendOtpEmail: jest.Mock;
@@ -21,6 +22,9 @@ describe('NotificationController', () => {
    beforeEach(async () => {
       mockSendEmail = jest.fn().mockResolvedValue({ id: 'msg_1', to: 'test@example.com', subject: 'Custom' });
       mockSendWelcomeEmail = jest.fn().mockResolvedValue({ id: 'msg_2', to: 'test@example.com', subject: 'Welcome' });
+      mockSendSupplierWelcomeEmail = jest
+         .fn()
+         .mockResolvedValue({ id: 'msg_sup', to: 'supplier@example.com', subject: 'Supplier Welcome' });
       mockSendVerificationEmail = jest
          .fn()
          .mockResolvedValue({ id: 'msg_3', to: 'test@example.com', subject: 'Verify' });
@@ -33,6 +37,7 @@ describe('NotificationController', () => {
       const mockNotificationService = {
          sendEmail: mockSendEmail,
          sendWelcomeEmail: mockSendWelcomeEmail,
+         sendSupplierWelcomeEmail: mockSendSupplierWelcomeEmail,
          sendVerificationEmail: mockSendVerificationEmail,
          sendResetPasswordEmail: mockSendResetPasswordEmail,
          sendOtpEmail: mockSendOtpEmail,
@@ -113,6 +118,32 @@ describe('NotificationController', () => {
       expect(mockSendWelcomeEmail).toHaveBeenCalledWith({
          to: 'test@example.com',
          fullName: 'John Doe',
+      });
+      expect(mockAck).toHaveBeenCalledWith(mockContext);
+   });
+
+   it('should handle sendSupplierWelcomeEmail and ack', async () => {
+      const payload = { to: 'supplier@example.com', fullName: 'Supplier A', supplierName: 'Biz LLC' };
+      const res = await controller.sendSupplierWelcomeEmail(payload, mockContext);
+
+      expect(res).toEqual({ id: 'msg_sup', to: 'supplier@example.com', subject: 'Supplier Welcome' });
+      expect(mockSendSupplierWelcomeEmail).toHaveBeenCalledWith(payload);
+      expect(mockAck).toHaveBeenCalledWith(mockContext);
+   });
+
+   it('should handle handleSupplierRegistered event pattern and ack', async () => {
+      const payload = {
+         email: 'supplier@example.com',
+         accountId: 'acc-1',
+         supplierName: 'Organic Foods',
+      };
+      const res = await controller.handleSupplierRegistered(payload, mockContext);
+
+      expect(res).toEqual({ id: 'msg_sup', to: 'supplier@example.com', subject: 'Supplier Welcome' });
+      expect(mockSendSupplierWelcomeEmail).toHaveBeenCalledWith({
+         to: 'supplier@example.com',
+         fullName: 'Organic Foods',
+         supplierName: 'Organic Foods',
       });
       expect(mockAck).toHaveBeenCalledWith(mockContext);
    });

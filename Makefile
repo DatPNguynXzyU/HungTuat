@@ -25,6 +25,11 @@ else
 	pnpm run prisma:seed
 endif
 
+.PHONY: start
+start:
+	@echo "Starting all services..."
+	pnpm run pc:start
+
 .PHONY: start-gateway
 start-gateway:
 	pnpm run start:gateway

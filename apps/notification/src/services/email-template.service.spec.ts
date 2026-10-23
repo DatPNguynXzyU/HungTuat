@@ -1,3 +1,4 @@
+import { NOTIFICATION_TEMPLATES } from '@contracts/notification';
 import { Locale, TranslationService } from '@notification/i18n';
 import { EmailTemplateService } from '@notification/services/email-template.service';
 
@@ -34,6 +35,49 @@ describe('EmailTemplateService', () => {
          expect(result.html).toContain('Chào mừng bạn, Nguyen Van A!');
          expect(result.html).toContain('Bắt Đầu');
          expect(result.text).toContain('Chào mừng bạn, Nguyen Van A!');
+      });
+   });
+
+   describe('Supplier Welcome Email', () => {
+      it('should render supplier welcome email in English by default', () => {
+         const result = service.renderSupplierWelcomeEmail({
+            fullName: 'Tech Corp Partner',
+            supplierName: 'Tech Corp Ltd',
+            actionUrl: 'https://supplier.example.com',
+         });
+
+         expect(result.html).toContain('Welcome to the Partner Network, Tech Corp Ltd!');
+         expect(result.html).toContain('SUPPLIER ONBOARDING');
+         expect(result.html).toContain('1. Complete Company Profile');
+         expect(result.html).toContain('Go to Supplier Portal');
+         expect(result.html).toContain('https://supplier.example.com');
+         expect(result.text).toContain('Welcome to the Partner Network, Tech Corp Ltd!');
+      });
+
+      it('should render supplier welcome email in Vietnamese when locale is VI', () => {
+         const result = service.renderSupplierWelcomeEmail(
+            {
+               fullName: 'Công Ty ABC',
+               actionUrl: 'https://supplier.example.com',
+            },
+            Locale.VI,
+         );
+
+         expect(result.html).toContain('Chào mừng đối tác, Công Ty ABC!');
+         expect(result.html).toContain('CHÀO MỪNG ĐỐI TÁC');
+         expect(result.html).toContain('1. Hoàn tất hồ sơ doanh nghiệp');
+         expect(result.html).toContain('Truy Cập Kênh Người Bán');
+         expect(result.text).toContain('Chào mừng đối tác, Công Ty ABC!');
+      });
+
+      it('should render supplier welcome email via Strategy Pattern renderTemplate', () => {
+         const result = service.renderTemplate(NOTIFICATION_TEMPLATES.SUPPLIER_WELCOME_EMAIL, {
+            fullName: 'Partner X',
+            actionUrl: 'https://supplier.example.com/onboard',
+         });
+
+         expect(result.html).toContain('Welcome to the Partner Network, Partner X!');
+         expect(result.html).toContain('https://supplier.example.com/onboard');
       });
    });
 

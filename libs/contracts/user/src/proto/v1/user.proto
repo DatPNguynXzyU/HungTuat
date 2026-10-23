@@ -2,15 +2,34 @@ syntax = "proto3";
 
 package user.v1;
 
+import "messages/user_messages.proto";
+
 service UserService {
   rpc CheckUsername (CheckUsernameRequest) returns (CheckUsernameResponse);
+  rpc GetUserById (GetUserByIdRequest) returns (GetUserResponse);
+  rpc GetMyProfile (GetMyProfileRequest) returns (GetUserResponse);
+  rpc GetAllUsers (GetAllUsersRequest) returns (GetAllUsersResponse);
+  rpc CreateProfile (CreateProfileRequest) returns (GetUserResponse);
+  rpc UpdateUserProfile (UpdateUserProfileRequest) returns (GetUserResponse);
+  rpc UpdateUsername (UpdateUsernameRequest) returns (GetUserResponse);
+  rpc DeleteUser (DeleteUserRequest) returns (GetUserResponse);
+  rpc UploadAvatar (UploadAvatarRequest) returns (UploadAvatarResponse);
+  rpc GetAvatarUploadSignature (GetAvatarUploadSignatureRequest) returns (GetAvatarUploadSignatureResponse);
+  rpc FollowUser (FollowUserRequest) returns (FollowUserResponse);
+  rpc UnfollowUser (UnfollowUserRequest) returns (UnfollowUserResponse);
+  rpc GetFollowSuggestions (GetFollowSuggestionsRequest) returns (GetFollowSuggestionsResponse);
+  rpc GetDateOfBirth (GetDateOfBirthRequest) returns (GetDateOfBirthResponse);
+  rpc SearchUsers (SearchUsersRequest) returns (SearchUsersResponse);
+  rpc GetFollowers (GetFollowersRequest) returns (GetFollowersResponse);
+  rpc GetFollowing (GetFollowingRequest) returns (GetFollowingResponse);
+  rpc GetFollowersCount (GetFollowCountRequest) returns (GetFollowCountResponse);
+  rpc GetFollowingCount (GetFollowCountRequest) returns (GetFollowCountResponse);
+  rpc GetMutualFollowers (GetMutualFollowersRequest) returns (GetMutualFollowersResponse);
+  rpc AcceptFollowRequest (FollowRequestActionRequest) returns (FollowRequestActionResponse);
+  rpc RejectFollowRequest (FollowRequestActionRequest) returns (FollowRequestActionResponse);
+  rpc GetUserByAccountId (GetUserByAccountIdRequest) returns (GetUserResponse);
+  rpc GetUserByUsername (GetUserByUsernameRequest) returns (GetUserResponse);
+  rpc RestoreUser (RestoreUserRequest) returns (GetUserResponse);
+  rpc GetUserStats (GetUserStatsRequest) returns (UserStatsResponse);
 }
 
-message CheckUsernameRequest {
-  string username = 1;
-}
-
-message CheckUsernameResponse {
-  bool available = 1;
-  string username = 2;
-}

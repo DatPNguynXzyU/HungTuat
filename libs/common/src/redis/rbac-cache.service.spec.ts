@@ -29,7 +29,7 @@ describe('RbacCacheService', () => {
          send: mockAuthClientSend,
       } as unknown as ClientProxy;
 
-      service = new RbacCacheService(mockRedisService, mockAuthClient);
+      service = new RbacCacheService(mockRedisService, undefined, mockAuthClient);
    });
 
    it('should get role from Redis by key', async () => {

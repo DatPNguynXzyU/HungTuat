@@ -1,5 +1,5 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { DEFAULT_ROLES, UnauthorizedException, type IDeviceInfo } from '@common';
+import { SYSTEM_ROLES, UnauthorizedException, type IDeviceInfo } from '@common';
 import {
    AUDIT_ACTIONS,
    AUTH_ERROR_CODES,
@@ -49,7 +49,7 @@ export class AuthTokenService {
       }
 
       const accountRoles =
-         account.roles && account.roles.length > 0 ? account.roles : payload.roles || [DEFAULT_ROLES.USER];
+         account.roles && account.roles.length > 0 ? account.roles : payload.roles || [SYSTEM_ROLES.USER];
 
       const nowInSeconds = Math.floor(Date.now() / 1000);
       const remainingTtl = payload.exp ? Math.max(payload.exp - nowInSeconds, 0) : undefined;
@@ -76,7 +76,7 @@ export class AuthTokenService {
 
       return {
          user: {
-            id: account.id,
+            userId: account.id,
             email: account.email,
             roles: accountRoles,
             status: account.status || USER_STATUS.ACTIVE,
@@ -139,12 +139,12 @@ export class AuthTokenService {
       }
 
       const accountRoles =
-         account.roles && account.roles.length > 0 ? account.roles : payload.roles || [DEFAULT_ROLES.USER];
+         account.roles && account.roles.length > 0 ? account.roles : payload.roles || [SYSTEM_ROLES.USER];
 
       return {
          valid: true,
          user: {
-            id: account.id,
+            userId: account.id,
             email: account.email,
             roles: accountRoles,
             status: account.status || USER_STATUS.ACTIVE,

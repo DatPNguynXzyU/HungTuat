@@ -12,7 +12,7 @@ export class AuditLogRepository implements IAuditLogRepository {
 
    private toEntity(log: SecurityAuditLog): SecurityAuditLogEntity {
       return {
-         id: log.auditLogId,
+         auditLogId: log.auditLogId,
          accountId: log.accountId,
          actorEmail: log.actorEmail,
          action: log.action,
@@ -32,7 +32,7 @@ export class AuditLogRepository implements IAuditLogRepository {
    }
 
    async createAuditLog(data: CreateAuditLogData): Promise<SecurityAuditLogEntity> {
-      const id = data.id || uuidv7();
+      const auditLogId = data.auditLogId || uuidv7();
       const sanitizedMeta = data.metadata
          ? (AuditSanitizerUtil.sanitize(data.metadata) as Prisma.InputJsonValue)
          : Prisma.DbNull;
@@ -41,7 +41,7 @@ export class AuditLogRepository implements IAuditLogRepository {
 
       const log = await this.prisma.securityAuditLog.create({
          data: {
-            auditLogId: id,
+            auditLogId,
             accountId: data.accountId || null,
             actorEmail: data.actorEmail || null,
             action: data.action,

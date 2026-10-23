@@ -3,7 +3,7 @@ import { ArgumentsHost } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { AUTH_ERROR_REASONS, COMMON_ERROR_CODES } from '@common';
-import { BadRequestException } from '@common/exceptions';
+import { BadRequestException, UnauthorizedException } from '@common/exceptions';
 import { GrpcExceptionFilter } from '@common/filters/grpc-exception.filter';
 import { GrpcTraceStorage } from '@common/interceptors/grpc-trace.storage';
 
@@ -101,6 +101,34 @@ describe('GrpcExceptionFilter', () => {
          const rpcErr = err as RpcException;
          const error = rpcErr.getError() as { code: number; message: string };
          expect(error.code).toBe(GrpcStatus.INTERNAL);
+      }
+   });
+
+   it('should map UnauthorizedException to UNAUTHENTICATED gRPC status with statusCode 401 and details', async () => {
+      const exception = new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
+         params: { reason: AUTH_ERROR_REASONS.TOKEN_INVALID_OR_EXPIRED },
+      });
+
+      const obs = filter.catch(exception);
+      try {
+         await firstValueFrom(obs);
+         throw new Error('Expected exception to be thrown');
+      } catch (err: unknown) {
+         expect(err).toBeInstanceOf(RpcException);
+         const rpcErr = err as RpcException;
+         expect((rpcErr as unknown as { code: number }).code).toBe(GrpcStatus.UNAUTHENTICATED);
+         const error = rpcErr.getError() as { code: number; message: string };
+         expect(error.code).toBe(GrpcStatus.UNAUTHENTICATED);
+         const parsed = JSON.parse(error.message) as {
+            statusCode: number;
+            errorCode: string;
+            params?: { reason?: string };
+            correlationId?: string;
+         };
+         expect(parsed.statusCode).toBe(401);
+         expect(parsed.errorCode).toBe(COMMON_ERROR_CODES.UNAUTHORIZED);
+         expect(parsed.params?.reason).toBe(AUTH_ERROR_REASONS.TOKEN_INVALID_OR_EXPIRED);
+         expect((rpcErr as unknown as { details: string }).details).toBeDefined();
       }
    });
 });

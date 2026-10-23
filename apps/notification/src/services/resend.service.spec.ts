@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Resend } from 'resend';
 import { AppException } from '@common';
+import { NOTIFICATION_TEMPLATES } from '@contracts/notification';
 import { NotificationConfigService } from '@notification/config';
 import { TranslationService } from '@notification/i18n';
 import { EmailTemplateService } from '@notification/services/email-template.service';
@@ -105,6 +106,53 @@ describe('ResendService', () => {
 
       expect(result.id).toBe('welcome_123');
       expect(mockSend).toHaveBeenCalled();
+   });
+
+   it('should send supplier welcome email with supplier portal subject', async () => {
+      mockSend.mockResolvedValue({
+         data: { id: 'sup_welcome_123' },
+         error: null,
+      });
+
+      const result = await service.sendSupplierWelcomeEmail({
+         to: 'supplier@example.com',
+         fullName: 'Partner A',
+         supplierName: 'Partner Supplies',
+         actionUrl: 'https://supplier.example.com',
+      });
+
+      expect(result.id).toBe('sup_welcome_123');
+      expect(mockSend).toHaveBeenCalledWith(
+         expect.objectContaining({
+            to: ['supplier@example.com'],
+            subject: 'Welcome to OmniServices Partner Network!',
+            html: expect.stringContaining('Partner Supplies') as unknown,
+         }),
+      );
+   });
+
+   it('should dynamically render template when template property is provided in sendEmail', async () => {
+      mockSend.mockResolvedValue({
+         data: { id: 'dyn_123' },
+         error: null,
+      });
+
+      const result = await service.sendEmail({
+         to: 'supplier@example.com',
+         subject: 'Welcome Partner',
+         template: NOTIFICATION_TEMPLATES.SUPPLIER_WELCOME_EMAIL,
+         data: {
+            fullName: 'Dynamic Partner',
+         },
+      });
+
+      expect(result.id).toBe('dyn_123');
+      expect(mockSend).toHaveBeenCalledWith(
+         expect.objectContaining({
+            to: ['supplier@example.com'],
+            html: expect.stringContaining('Dynamic Partner') as unknown,
+         }),
+      );
    });
 
    it('should send verification email', async () => {

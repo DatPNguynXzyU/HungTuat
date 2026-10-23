@@ -52,7 +52,7 @@ export class AuditLogService {
          const status = data.status === 'FAILURE' ? AuditStatus.FAILURE : AuditStatus.SUCCESS;
 
          return {
-            id: event.eventId,
+            auditLogId: event.eventId,
             accountId: data.accountId || null,
             actorEmail: data.actorEmail || null,
             action: data.action,

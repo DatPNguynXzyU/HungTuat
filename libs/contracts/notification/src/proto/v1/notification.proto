@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package notification.v1;
+
+import "messages/notification_messages.proto";
+
+service NotificationService {
+  rpc GetUserNotifications (GetUserNotificationsRequest) returns (GetUserNotificationsResponse);
+  rpc GetUnreadCount (GetUnreadCountRequest) returns (GetUnreadCountResponse);
+  rpc MarkAsRead (MarkAsReadRequest) returns (MarkAsReadResponse);
+  rpc MarkAllAsRead (MarkAllAsReadRequest) returns (MarkAllAsReadResponse);
+}

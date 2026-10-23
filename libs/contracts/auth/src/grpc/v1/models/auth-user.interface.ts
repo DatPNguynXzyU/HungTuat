@@ -1,5 +1,5 @@
 export interface IAuthUserProto {
-   id: string;
+   userId: string;
    email: string;
    roles: string[];
    status?: string;

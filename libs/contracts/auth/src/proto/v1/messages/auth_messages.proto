@@ -5,6 +5,8 @@ package auth.v1;
 import "models/device.proto";
 import "models/user.proto";
 import "models/token.proto";
+import "models/session.proto";
+import "models/audit_log.proto";
 
 message CheckEmailRequest {
   string email = 1;
@@ -43,3 +45,204 @@ message RefreshTokenResponse {
   string refreshToken = 3;
   AuthTokensProto tokens = 4;
 }
+
+message SendRegisterOtpRequest {
+  string email = 1;
+  DeviceInfoProto deviceInfo = 2;
+}
+
+message SendRegisterOtpResponse {
+  bool success = 1;
+  string message = 2;
+  int32 cooldownSeconds = 3;
+  int32 expiresInMinutes = 4;
+}
+
+message VerifyRegisterOtpRequest {
+  string email = 1;
+  string otp = 2;
+  DeviceInfoProto deviceInfo = 3;
+}
+
+message VerifyRegisterOtpResponse {
+  bool success = 1;
+  string verificationToken = 2;
+  int32 expiresInSeconds = 3;
+}
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string confirmPassword = 3;
+  string verificationToken = 4;
+  DeviceInfoProto deviceInfo = 5;
+}
+
+message RegisterSupplierRequest {
+  string email = 1;
+  string password = 2;
+  string confirmPassword = 3;
+  string verificationToken = 4;
+  DeviceInfoProto deviceInfo = 5;
+}
+
+message GetSessionsRequest {
+  string userId = 1;
+  string currentJti = 2;
+}
+
+message GetSessionsResponse {
+  repeated UserSessionProto sessions = 1;
+}
+
+message RevokeSessionRequest {
+  string userId = 1;
+  string sessionId = 2;
+  DeviceInfoProto deviceInfo = 3;
+}
+
+message RevokeOtherSessionsRequest {
+  string userId = 1;
+  string currentJti = 2;
+  DeviceInfoProto deviceInfo = 3;
+}
+
+message RevokeOtherSessionsResponse {
+  bool success = 1;
+  int32 revokedCount = 2;
+}
+
+message RevokeTokenRequest {
+  string token = 1;
+  DeviceInfoProto deviceInfo = 2;
+}
+
+message RevokeTokenResponse {
+  bool success = 1;
+}
+
+message RevokeAllUserTokensRequest {
+  string userId = 1;
+  DeviceInfoProto deviceInfo = 2;
+}
+
+message LogoutAllRequest {
+  string userId = 1;
+  DeviceInfoProto deviceInfo = 2;
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  AuthUserProto user = 2;
+}
+
+message ChangePasswordRequest {
+  string userId = 1;
+  string currentPassword = 2;
+  string newPassword = 3;
+  string confirmPassword = 4;
+  bool logoutAll = 5;
+  DeviceInfoProto deviceInfo = 6;
+}
+
+message ChangePasswordResponse {
+  bool success = 1;
+  string message = 2;
+  int32 cooldownSeconds = 3;
+  int32 expiresInMinutes = 4;
+}
+
+message VerifyChangePasswordOtpRequest {
+  string userId = 1;
+  string otp = 2;
+  DeviceInfoProto deviceInfo = 3;
+}
+
+message VerifyChangePasswordOtpResponse {
+  bool success = 1;
+  string message = 2;
+  bool logoutAll = 3;
+}
+
+message GetUserAuditLogsRequest {
+  string userId = 1;
+  int32 page = 2;
+  int32 limit = 3;
+}
+
+message QueryAuditLogsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  string accountId = 3;
+  string actorEmail = 4;
+  string action = 5;
+  string status = 6;
+  string startDate = 7;
+  string endDate = 8;
+  string requestingUserId = 9;
+  repeated string requestingRoles = 10;
+  repeated string requestingPermissions = 11;
+}
+
+message AuditLogListResponse {
+  repeated SecurityAuditLogProto items = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  int32 totalPages = 5;
+}
+
+message GetAuditLogByIdRequest {
+  string auditLogId = 1;
+  string requestingUserId = 2;
+  repeated string requestingRoles = 3;
+  repeated string requestingPermissions = 4;
+}
+
+message GetAuditLogByIdResponse {
+  SecurityAuditLogProto auditLog = 1;
+}
+
+message GetJwksRequest {}
+
+message GetJwksResponse {
+  string keysJson = 1;
+}
+
+message GetEmailRequest {
+  string accountId = 1;
+}
+
+message GetEmailResponse {
+  string accountId = 1;
+  string email = 2;
+}
+
+message GetRolePermissionsRequest {
+  string roleCode = 1;
+}
+
+message GetRolePermissionsResponse {
+  repeated string permissions = 1;
+}
+
+message PermissionDefinition {
+  string code = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message RegisterServicePermissionsRequest {
+  string serviceName = 1;
+  repeated PermissionDefinition permissions = 2;
+}
+
+message RegisterServicePermissionsResponse {
+  bool success = 1;
+  int32 upsertedCount = 2;
+}
+

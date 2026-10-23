@@ -1,15 +1,6 @@
 import { Controller, Get, HttpCode, HttpStatus, Param, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import {
-   ApiErrorResponses,
-   COMMON_ERROR_CODES,
-   CurrentUser,
-   DEFAULT_ROLES,
-   PERMISSIONS,
-   RequirePermissions,
-   RequireRoles,
-   ResponseMessage,
-} from '@common';
+import { ApiErrorResponses, COMMON_ERROR_CODES, CurrentUser, ResponseMessage } from '@common';
 import {
    AUDIT_LOG_RESPONSE_MESSAGES,
    AuditLogResponseDto,
@@ -24,8 +15,6 @@ import type { JwtPayload } from '@common/utils/jwt.util';
 @Controller('audit-logs')
 @ApiCookieAuth()
 @ApiBearerAuth()
-@RequireRoles(DEFAULT_ROLES.ADMIN)
-@RequirePermissions(PERMISSIONS.AUDIT_LOGS_READ)
 export class AuditLogsController {
    constructor(private readonly auditLogsService: AuditLogsService) {}
 

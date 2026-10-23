@@ -1,0 +1,264 @@
+syntax = "proto3";
+
+package user.v1;
+
+import "models/user.proto";
+
+message CheckUsernameRequest {
+  string username = 1;
+}
+
+message CheckUsernameResponse {
+  bool available = 1;
+  string username = 2;
+}
+
+message GetUserByIdRequest {
+  string userId = 1;
+}
+
+message GetMyProfileRequest {
+  optional string userId = 1;
+}
+
+message GetUserResponse {
+  UserProto user = 1;
+}
+
+message GetAllUsersRequest {
+  optional int32 page = 1;
+  optional int32 limit = 2;
+}
+
+message GetAllUsersResponse {
+  repeated UserProto users = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+
+message CreateProfileRequest {
+  optional string username = 1;
+  optional string displayName = 2;
+  optional string gender = 3;
+  optional string dateOfBirth = 4;
+  optional string bio = 5;
+  optional string avatar = 6;
+  optional string coverImage = 7;
+  optional string website = 8;
+  optional string location = 9;
+  optional string accountId = 10;
+  optional string userId = 11;
+}
+
+message UpdateUserProfileRequest {
+  string userId = 1;
+  optional string displayName = 2;
+  optional string bio = 3;
+  optional string dateOfBirth = 4;
+  optional string gender = 5;
+  optional string location = 6;
+  optional string website = 7;
+  optional string coverImage = 8;
+}
+
+message UpdateUsernameRequest {
+  string userId = 1;
+  string username = 2;
+}
+
+message DeleteUserRequest {
+  string userId = 1;
+}
+
+message UploadAvatarRequest {
+  string userId = 1;
+  string fileBase64 = 2;
+  optional string mimeType = 3;
+}
+
+message UploadAvatarResponse {
+  string avatarUrl = 1;
+  string publicId = 2;
+  optional UserProto user = 3;
+}
+
+message GetAvatarUploadSignatureRequest {
+  string userId = 1;
+}
+
+message GetAvatarUploadSignatureResponse {
+  optional string signature = 1;
+  optional int64 timestamp = 2;
+  optional string apiKey = 3;
+  optional string cloudName = 4;
+  optional string uploadUrl = 5;
+  optional string publicUrl = 6;
+  optional string key = 7;
+  optional string mediaId = 8;
+  optional string provider = 9;
+  optional string method = 10;
+}
+
+message FollowUserRequest {
+  string followerId = 1;
+  string followingId = 2;
+}
+
+message FollowUserResponse {
+  string followId = 1;
+  string followerId = 2;
+  string followingId = 3;
+  string status = 4;
+  string createdAt = 5;
+}
+
+message UnfollowUserRequest {
+  string followerId = 1;
+  string followingId = 2;
+}
+
+message UnfollowUserResponse {
+  bool success = 1;
+}
+
+message GetFollowSuggestionsRequest {
+  optional string userId = 1;
+  optional int32 limit = 2;
+}
+
+message GetFollowSuggestionsResponse {
+  repeated UserSuggestionItemProto items = 1;
+}
+
+message GetDateOfBirthRequest {
+  string userId = 1;
+}
+
+message GetDateOfBirthResponse {
+  string userId = 1;
+  optional string dateOfBirth = 2;
+  optional int32 age = 3;
+}
+
+// --- Search Users ---
+message SearchUsersRequest {
+  string query = 1;
+  optional int32 limit = 2;
+  optional string cursor = 3;
+  optional string currentUserId = 4;
+}
+
+message UserSearchHitProto {
+  string id = 1;
+  optional string username = 2;
+  optional string displayName = 3;
+  optional string avatar = 4;
+  optional string bio = 5;
+  bool isFollowing = 6;
+  bool isFollower = 7;
+  bool isSelf = 8;
+  bool isVerified = 9;
+  int32 followersCount = 10;
+  int32 followingCount = 11;
+  float score = 12;
+}
+
+message SearchUsersResponse {
+  repeated UserSearchHitProto items = 1;
+  optional string nextCursor = 2;
+  int32 total = 3;
+  bool hasMore = 4;
+}
+
+// --- Social Graph & Follow Messages ---
+message FollowerItemProto {
+  string followId = 1;
+  string followerId = 2;
+  string followingId = 3;
+  string status = 4;
+  string createdAt = 5;
+  optional UserProto user = 6;
+}
+
+message GetFollowersRequest {
+  string userId = 1;
+  optional string status = 2;
+  optional int32 skip = 3;
+  optional int32 take = 4;
+}
+
+message GetFollowersResponse {
+  repeated FollowerItemProto items = 1;
+  int32 total = 2;
+}
+
+message GetFollowingRequest {
+  string userId = 1;
+  optional string status = 2;
+  optional int32 skip = 3;
+  optional int32 take = 4;
+}
+
+message GetFollowingResponse {
+  repeated FollowerItemProto items = 1;
+  int32 total = 2;
+}
+
+message GetFollowCountRequest {
+  string userId = 1;
+  optional string status = 2;
+}
+
+message GetFollowCountResponse {
+  string userId = 1;
+  int32 count = 2;
+}
+
+message GetMutualFollowersRequest {
+  string userId1 = 1;
+  string userId2 = 2;
+}
+
+message GetMutualFollowersResponse {
+  repeated string mutualUserIds = 1;
+  int32 total = 2;
+}
+
+message FollowRequestActionRequest {
+  string followId = 1;
+}
+
+message FollowRequestActionResponse {
+  bool success = 1;
+  string message = 2;
+  optional string status = 3;
+}
+
+// --- Internal Lookups & Lifecycle ---
+message GetUserByAccountIdRequest {
+  string accountId = 1;
+}
+
+message GetUserByUsernameRequest {
+  string username = 1;
+}
+
+message RestoreUserRequest {
+  string userId = 1;
+}
+
+// --- User Stats ---
+message GetUserStatsRequest {
+  string userId = 1;
+}
+
+message UserStatsResponse {
+  string userId = 1;
+  int32 postsCount = 2;
+  int32 followersCount = 3;
+  int32 followingCount = 4;
+  int32 recipesCount = 5;
+  optional int32 likesReceivedCount = 6;
+}
+

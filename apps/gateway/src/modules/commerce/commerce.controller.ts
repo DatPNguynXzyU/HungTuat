@@ -1,6 +1,15 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ApiErrorResponses, COMMON_ERROR_CODES, Public, ResponseMessage } from '@common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, Req } from '@nestjs/common';
+import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import type { Request } from 'express';
+import {
+   ApiErrorResponses,
+   COMMON_ERROR_CODES,
+   CORRELATION_ID_HEADER,
+   CurrentUser,
+   type JwtPayload,
+   Public,
+   ResponseMessage,
+} from '@common';
 import {
    CategoryItemDto,
    COMMERCE_ERROR_CODES,
@@ -138,11 +147,14 @@ export class CommerceController {
    }
 
    @Post('ingredients')
+   @ApiBearerAuth()
+   @ApiCookieAuth()
    @HttpCode(HttpStatus.CREATED)
    @ApiOperation({
       operationId: 'createIngredient',
       summary: 'Create and propose a new standardized cooking ingredient',
-      description: 'Adds a new standardized ingredient to the central catalog for creator selection.',
+      description:
+         'Adds a new standardized ingredient to the central catalog for creator selection. Requires ADMIN role.',
    })
    @ApiResponse({
       status: HttpStatus.CREATED,
@@ -156,22 +168,40 @@ export class CommerceController {
          errorCodes: [COMMON_ERROR_CODES.INVALID_REQUEST, COMMERCE_ERROR_CODES.CATEGORY_NOT_FOUND],
       },
       {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Authentication token is missing or invalid',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.FORBIDDEN,
+         description: 'Requires Administrator role',
+         errorCodes: [COMMON_ERROR_CODES.FORBIDDEN],
+      },
+      {
          status: HttpStatus.CONFLICT,
          description: 'An ingredient with this name or slug already exists',
          errorCodes: [COMMERCE_ERROR_CODES.INGREDIENT_ALREADY_EXISTS],
       },
    ])
    @ResponseMessage(COMMERCE_RESPONSE_MESSAGES.CREATE_INGREDIENT_SUCCESS)
-   async createIngredient(@Body() dto: CreateIngredientDto): Promise<IngredientItemDto> {
-      return this.commerceService.createIngredient(dto);
+   async createIngredient(
+      @Body() dto: CreateIngredientDto,
+      @CurrentUser() user: JwtPayload,
+      @Req() req: Request,
+   ): Promise<IngredientItemDto> {
+      const correlationId = req.headers[CORRELATION_ID_HEADER] as string | undefined;
+      return this.commerceService.createIngredient(dto, { user, correlationId });
    }
 
    @Post('products')
+   @ApiBearerAuth()
+   @ApiCookieAuth()
    @HttpCode(HttpStatus.CREATED)
    @ApiOperation({
       operationId: 'createProductOffer',
       summary: 'Create a supplier product offer for an ingredient',
-      description: 'Links an ingredient to a supplier with specific price, packaging, stock, and online ordering link.',
+      description:
+         'Links an ingredient to a supplier with specific price, packaging, stock, and online ordering link. Requires supplier owner or ADMIN role.',
    })
    @ApiResponse({
       status: HttpStatus.CREATED,
@@ -179,6 +209,21 @@ export class CommerceController {
       type: SupplierProductOfferDto,
    })
    @ApiErrorResponses([
+      {
+         status: HttpStatus.BAD_REQUEST,
+         description: 'Validation failure',
+         errorCodes: [COMMON_ERROR_CODES.INVALID_REQUEST],
+      },
+      {
+         status: HttpStatus.UNAUTHORIZED,
+         description: 'Authentication token is missing or invalid',
+         errorCodes: [COMMON_ERROR_CODES.UNAUTHORIZED],
+      },
+      {
+         status: HttpStatus.FORBIDDEN,
+         description: 'Caller is not the supplier owner or Administrator',
+         errorCodes: [COMMON_ERROR_CODES.FORBIDDEN, COMMON_ERROR_CODES.NOT_OWNER_OR_ADMIN],
+      },
       {
          status: HttpStatus.NOT_FOUND,
          description: 'Supplier or ingredient not found',
@@ -191,7 +236,12 @@ export class CommerceController {
       },
    ])
    @ResponseMessage(COMMERCE_RESPONSE_MESSAGES.CREATE_PRODUCT_SUCCESS)
-   async createProductOffer(@Body() dto: CreateProductOfferDto): Promise<SupplierProductOfferDto> {
-      return this.commerceService.createProductOffer(dto);
+   async createProductOffer(
+      @Body() dto: CreateProductOfferDto,
+      @CurrentUser() user: JwtPayload,
+      @Req() req: Request,
+   ): Promise<SupplierProductOfferDto> {
+      const correlationId = req.headers[CORRELATION_ID_HEADER] as string | undefined;
+      return this.commerceService.createProductOffer(dto, { user, correlationId });
    }
 }

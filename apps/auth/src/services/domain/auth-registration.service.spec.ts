@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { DEFAULT_ROLES, RbacCacheService, RedisService, UnauthorizedException } from '@common';
+import { RbacCacheService, RedisService, SYSTEM_ROLES, UnauthorizedException } from '@common';
 import { NOTIFICATION_ADAPTER } from '@auth/adapters';
 import { AUTH_AGGREGATES, AUTH_ERROR_CODES, USER_STATUS } from '@contracts/auth';
+import { SUPPLIER_ROLES } from '@contracts/supplier';
 import { NOTIFICATION_EVENTS } from '@contracts/notification';
 import { AuthRegistrationService } from '@auth/services/domain/auth-registration.service';
 import { ACCOUNT_REPOSITORY, RBAC_REPOSITORY } from '@auth/repositories';
@@ -204,7 +205,7 @@ describe('AuthRegistrationService', () => {
       const mockCreatedAccount = {
          id: 'new-account-id',
          email: 'newuser@example.com',
-         roles: [DEFAULT_ROLES.USER],
+         roles: [SYSTEM_ROLES.USER],
          status: USER_STATUS.ACTIVE,
          isEmailVerified: true,
          lastLoginAt: null,
@@ -235,7 +236,7 @@ describe('AuthRegistrationService', () => {
             confirmPassword: 'Password123!',
          });
 
-         expect(result.user.id).toBe('new-account-id');
+         expect(result.user.userId).toBe('new-account-id');
          expect(result.accessToken).toBe('mock-reg-access');
          expect(result.refreshToken).toBe('mock-reg-refresh');
 
@@ -261,7 +262,7 @@ describe('AuthRegistrationService', () => {
             verificationToken: 'vtok_018d45e07c2a7f61b54110c7936a28e8',
          });
 
-         expect(result.user.id).toBe('new-account-id');
+         expect(result.user.userId).toBe('new-account-id');
          expect(mockVerificationTokenService.consume).toHaveBeenCalledWith('vtok_018d45e07c2a7f61b54110c7936a28e8');
       });
 
@@ -347,14 +348,14 @@ describe('AuthRegistrationService', () => {
             confirmPassword: 'Password123!',
          });
 
-         expect(result.user.id).toBe('new-account-id');
+         expect(result.user.userId).toBe('new-account-id');
          expect(result.accessToken).toBe('mock-reg-access');
       });
 
       it('should successfully register supplier admin and emit SUPPLIER_REGISTERED event', async () => {
          mockRbacRepository.findRoleByCode.mockResolvedValue({
             id: 'role-supplier-admin-id',
-            code: DEFAULT_ROLES.SUPPLIER_ADMIN,
+            code: SUPPLIER_ROLES.SUPPLIER_ADMIN,
          });
          const result = await service.registerSupplier({
             email: 'newuser@example.com',
@@ -362,12 +363,12 @@ describe('AuthRegistrationService', () => {
             confirmPassword: 'Password123!',
          });
 
-         expect(result.user.id).toBe('new-account-id');
+         expect(result.user.userId).toBe('new-account-id');
          expect(mockOutboxRepository.create).toHaveBeenCalledWith(
             expect.objectContaining({
                eventType: NOTIFICATION_EVENTS.SUPPLIER_REGISTERED,
                payload: expect.objectContaining({
-                  role: DEFAULT_ROLES.SUPPLIER_ADMIN,
+                  role: SUPPLIER_ROLES.SUPPLIER_ADMIN,
                }),
             }),
          );

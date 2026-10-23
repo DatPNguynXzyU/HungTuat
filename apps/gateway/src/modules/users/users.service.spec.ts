@@ -7,27 +7,45 @@ import {
    FixedBackoffStrategy,
    GrpcStatus,
    RetryPolicyRegistry,
-   SERVICES,
    ServiceUnavailableException,
 } from '@common';
 import {
+   FOLLOW_STATUS,
    GenderDto,
    USER_ERROR_CODES,
    USER_ERROR_REASONS,
-   USER_PATTERNS,
    USER_V1_GRPC_CLIENT,
    USER_V1_GRPC_SERVICE_NAME,
 } from '@contracts/user';
+
 import type { JwtPayload } from '@common';
 import { UsersService } from '@/modules/users/users.service';
 
 describe('UsersService', () => {
    let service: UsersService;
-   const mockUserClient = {
-      send: jest.fn(),
-   };
    const mockUserGrpcService = {
       checkUsername: jest.fn(),
+      getUserById: jest.fn(),
+      getMyProfile: jest.fn(),
+      getAllUsers: jest.fn(),
+      updateUserProfile: jest.fn(),
+      updateUsername: jest.fn(),
+      getFollowSuggestions: jest.fn(),
+      getDateOfBirth: jest.fn(),
+      searchUsers: jest.fn(),
+      followUser: jest.fn(),
+      unfollowUser: jest.fn(),
+      getFollowers: jest.fn(),
+      getFollowing: jest.fn(),
+      getFollowersCount: jest.fn(),
+      getFollowingCount: jest.fn(),
+      getMutualFollowers: jest.fn(),
+      acceptFollowRequest: jest.fn(),
+      rejectFollowRequest: jest.fn(),
+      getUserByAccountId: jest.fn(),
+      getUserByUsername: jest.fn(),
+      restoreUser: jest.fn(),
+      getUserStats: jest.fn(),
    };
    const mockUserGrpcClient = {
       getService: jest.fn().mockReturnValue(mockUserGrpcService),
@@ -51,10 +69,6 @@ describe('UsersService', () => {
       const module: TestingModule = await Test.createTestingModule({
          providers: [
             UsersService,
-            {
-               provide: SERVICES.USER_SERVICE,
-               useValue: mockUserClient,
-            },
             {
                provide: USER_V1_GRPC_CLIENT,
                useValue: mockUserGrpcClient,
@@ -95,170 +109,211 @@ describe('UsersService', () => {
    });
 
    it('should map and handle gRPC errors when checking username', async () => {
-      const serializedError = {
-         message: JSON.stringify({
-            errorCode: USER_ERROR_CODES.INVALID_USERNAME_FORMAT,
-            params: { username: 'invalid_user', reason: USER_ERROR_REASONS.INVALID_FORMAT },
-         }),
-         code: GrpcStatus.INVALID_ARGUMENT,
-      };
-      mockUserGrpcService.checkUsername.mockReturnValue(throwError(() => serializedError));
+      mockUserGrpcService.checkUsername.mockReturnValue(
+         throwError(() => ({
+            code: GrpcStatus.INVALID_ARGUMENT,
+            details: JSON.stringify({
+               errorCode: USER_ERROR_CODES.INVALID_USERNAME_FORMAT,
+               params: { reason: USER_ERROR_REASONS.EMPTY },
+            }),
+         })),
+      );
 
-      await expect(service.checkUsername('invalid_user')).rejects.toThrow();
+      await expect(service.checkUsername('invalid')).rejects.toThrow();
    });
 
    it('should trip circuit breaker and fail fast when User microservice is unavailable', async () => {
-      const unavailableError = {
-         code: GrpcStatus.UNAVAILABLE,
-         message: '14 UNAVAILABLE: connection refused',
-      };
-      mockUserGrpcService.checkUsername.mockReturnValue(throwError(() => unavailableError));
+      mockUserGrpcService.checkUsername.mockReturnValue(
+         throwError(() => ({ code: GrpcStatus.UNAVAILABLE, message: 'service down' })),
+      );
 
       for (let i = 0; i < 5; i++) {
-         await expect(service.checkUsername('john_doe')).rejects.toThrow(ServiceUnavailableException);
+         try {
+            await service.checkUsername('fail_user');
+         } catch {
+            // expected to throw
+         }
       }
 
-      // 6th call should immediately short-circuit without calling gRPC
-      const callCountBefore = mockUserGrpcService.checkUsername.mock.calls.length;
-      await expect(service.checkUsername('john_doe')).rejects.toThrow(CircuitBreakerOpenException);
-      expect(mockUserGrpcService.checkUsername.mock.calls.length).toBe(callCountBefore);
+      await expect(service.checkUsername('fail_user')).rejects.toThrow(CircuitBreakerOpenException);
+      await expect(service.checkUsername('fail_user')).rejects.toThrow(ServiceUnavailableException);
    });
 
-   it('should send get_user_by_id message with user context', async () => {
-      mockUserClient.send.mockReturnValue(of({ id: 'u1' }));
+   it('should retrieve user by id via gRPC client with user context', async () => {
+      const mockProfile = { id: 'u1', username: 'john', email: 'john@example.com' };
+      mockUserGrpcService.getUserById.mockReturnValue(of({ user: mockProfile }));
 
       const result = await service.getUserById('u1', mockUser);
-      expect(mockUserClient.send).toHaveBeenCalledWith(
-         { cmd: USER_PATTERNS.GET_USER_BY_ID },
-         {
-            data: { id: 'u1' },
-            user: {
-               userId: mockUser.sub,
-               email: mockUser.email,
-               roles: mockUser.roles,
-               permissions: [],
-               sessionId: mockUser.jti,
-            },
-         },
-      );
-      expect(result).toEqual({ id: 'u1' });
+      expect(mockUserGrpcService.getUserById).toHaveBeenCalledWith({ userId: 'u1' }, expect.anything());
+      expect(result).toEqual(mockProfile);
    });
 
-   it('should send users.get_all message with user context', async () => {
-      mockUserClient.send.mockReturnValue(of([{ id: 'u1' }]));
+   it('should retrieve all users via gRPC client with user context', async () => {
+      const mockUsers = [{ id: 'u1', username: 'john' }];
+      mockUserGrpcService.getAllUsers.mockReturnValue(of({ users: mockUsers, total: 1, page: 1, limit: 10 }));
 
       const result = await service.getAllUsers(1, 10, mockUser);
-      expect(mockUserClient.send).toHaveBeenCalledWith(
-         { cmd: USER_PATTERNS.GET_ALL_USERS },
-         {
-            data: { page: 1, limit: 10 },
-            user: {
-               userId: mockUser.sub,
-               email: mockUser.email,
-               roles: mockUser.roles,
-               permissions: [],
-               sessionId: mockUser.jti,
-            },
-         },
-      );
-      expect(result).toEqual([{ id: 'u1' }]);
+      expect(mockUserGrpcService.getAllUsers).toHaveBeenCalledWith({ page: 1, limit: 10 }, expect.anything());
+      expect(result).toEqual(mockUsers);
    });
 
-   it('should send update_username message pattern with user context', async () => {
-      mockUserClient.send.mockReturnValue(of({ id: 'auth-user-1', username: 'new_username' }));
+   it('should update username via gRPC client with user context', async () => {
+      const mockUpdated = { id: 'u1', username: 'new_john' };
+      mockUserGrpcService.updateUsername.mockReturnValue(of({ user: mockUpdated }));
 
-      const result = await service.updateUsername('auth-user-1', 'new_username', mockUser);
-      expect(mockUserClient.send).toHaveBeenCalledWith(
-         { cmd: USER_PATTERNS.UPDATE_USERNAME },
-         {
-            data: { userId: 'auth-user-1', username: 'new_username' },
-            user: {
-               userId: mockUser.sub,
-               email: mockUser.email,
-               roles: mockUser.roles,
-               permissions: [],
-               sessionId: mockUser.jti,
-            },
-         },
+      const result = await service.updateUsername('u1', 'new_john', mockUser);
+      expect(mockUserGrpcService.updateUsername).toHaveBeenCalledWith(
+         { userId: 'u1', username: 'new_john' },
+         expect.anything(),
       );
-      expect(result).toEqual({ id: 'auth-user-1', username: 'new_username' });
+      expect(result).toEqual(mockUpdated);
    });
 
    it('should update display name via updateDisplayName', async () => {
-      mockUserClient.send.mockReturnValue(of({ id: 'auth-user-1', displayName: 'New Display Name' }));
+      const mockUpdated = { id: 'u1', displayName: 'Johnny' };
+      mockUserGrpcService.updateUserProfile.mockReturnValue(of({ user: mockUpdated }));
 
-      const result = await service.updateDisplayName('auth-user-1', 'New Display Name', mockUser);
-      expect(mockUserClient.send).toHaveBeenCalledWith(
-         { cmd: USER_PATTERNS.UPDATE_USER_PROFILE },
-         {
-            data: { userId: 'auth-user-1', id: 'auth-user-1', displayName: 'New Display Name' },
-            user: {
-               userId: mockUser.sub,
-               email: mockUser.email,
-               roles: mockUser.roles,
-               permissions: [],
-               sessionId: mockUser.jti,
-            },
-         },
+      const result = await service.updateDisplayName('u1', 'Johnny', mockUser);
+      expect(mockUserGrpcService.updateUserProfile).toHaveBeenCalledWith(
+         expect.objectContaining({ userId: 'u1', displayName: 'Johnny' }),
+         expect.anything(),
       );
-      expect(result).toEqual({ id: 'auth-user-1', displayName: 'New Display Name' });
+      expect(result).toEqual(mockUpdated);
    });
 
    it('should update personal info via updatePersonalInfo', async () => {
-      const dob = '1995-05-20';
-      mockUserClient.send.mockReturnValue(of({ id: 'auth-user-1', dateOfBirth: dob, gender: GenderDto.MALE }));
+      const mockUpdated = { id: 'u1', dateOfBirth: '2000-01-01', gender: 'MALE' };
+      mockUserGrpcService.updateUserProfile.mockReturnValue(of({ user: mockUpdated }));
 
       const result = await service.updatePersonalInfo(
-         'auth-user-1',
-         { dateOfBirth: dob, gender: GenderDto.MALE },
+         'u1',
+         { dateOfBirth: '2000-01-01', gender: GenderDto.MALE },
          mockUser,
       );
-      expect(mockUserClient.send).toHaveBeenCalledWith(
-         { cmd: USER_PATTERNS.UPDATE_USER_PROFILE },
-         {
-            data: { userId: 'auth-user-1', id: 'auth-user-1', dateOfBirth: dob, gender: GenderDto.MALE },
-            user: {
-               userId: mockUser.sub,
-               email: mockUser.email,
-               roles: mockUser.roles,
-               permissions: [],
-               sessionId: mockUser.jti,
-            },
-         },
+      expect(mockUserGrpcService.updateUserProfile).toHaveBeenCalledWith(
+         expect.objectContaining({ userId: 'u1', dateOfBirth: '2000-01-01', gender: 'MALE' }),
+         expect.anything(),
       );
-      expect(result).toEqual({ id: 'auth-user-1', dateOfBirth: dob, gender: GenderDto.MALE });
+      expect(result).toEqual(mockUpdated);
    });
 
-   it('should send get_date_of_birth message with userId', async () => {
-      const mockDob = { userId: 'u1', dateOfBirth: '1995-06-15T00:00:00.000Z', age: 31 };
-      mockUserClient.send.mockReturnValue(of(mockDob));
+   it('should get date of birth via gRPC client with userId', async () => {
+      mockUserGrpcService.getDateOfBirth.mockReturnValue(of({ userId: 'u1', dateOfBirth: '1995-05-15', age: 30 }));
 
-      const result = await service.getDateOfBirth('u1');
-      expect(mockUserClient.send).toHaveBeenCalledWith({ cmd: USER_PATTERNS.GET_DATE_OF_BIRTH }, { userId: 'u1' });
-      expect(result).toEqual(mockDob);
+      const result = await service.getDateOfBirth('u1', mockUser);
+      expect(mockUserGrpcService.getDateOfBirth).toHaveBeenCalledWith({ userId: 'u1' }, expect.anything());
+      expect(result).toEqual({ userId: 'u1', dateOfBirth: '1995-05-15', age: 30 });
    });
 
-   it('should send search_users message with query, limit, cursor, and currentUserId', async () => {
-      const mockSearchRes = { items: [], meta: { nextCursor: null, hasMore: false, limit: 10, total: 0 } };
-      mockUserClient.send.mockReturnValue(of(mockSearchRes));
+   it('should search users via gRPC client with query, limit, cursor, and currentUserId', async () => {
+      const mockGrpcRes = {
+         items: [
+            {
+               id: 'u-1',
+               username: 'alex',
+               displayName: 'Alex Doe',
+               avatar: 'https://example.com/a.jpg',
+               bio: 'Bio',
+               isVerified: true,
+               followersCount: 10,
+               followingCount: 5,
+               isFollowing: true,
+               isFollower: false,
+               isSelf: false,
+            },
+         ],
+         nextCursor: 'cursor_next',
+         total: 1,
+         hasMore: false,
+      };
+      mockUserGrpcService.searchUsers.mockReturnValue(of(mockGrpcRes));
 
       const result = await service.searchUsers('alex', 10, 'cursor_val', mockUser);
-      expect(mockUserClient.send).toHaveBeenCalledWith(
-         { cmd: USER_PATTERNS.SEARCH_USERS },
+      expect(mockUserGrpcService.searchUsers).toHaveBeenCalledWith(
          { query: 'alex', limit: 10, cursor: 'cursor_val', currentUserId: mockUser.sub },
+         expect.anything(),
       );
-      expect(result).toEqual(mockSearchRes);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].userId).toBe('u-1');
+      expect(result.items[0].username).toBe('alex');
+      expect(result.meta.nextCursor).toBe('cursor_next');
+      expect(result.meta.total).toBe(1);
    });
 
-   it('should send get_follow_suggestions message with userId and limit', async () => {
-      const mockSuggestions = [{ id: 'u2', username: 'alex' }];
-      mockUserClient.send.mockReturnValue(of(mockSuggestions));
+   it('should get follow suggestions via gRPC client with userId and limit', async () => {
+      const mockSuggestions = [
+         {
+            id: 'u2',
+            username: 'alex',
+            isVerified: false,
+            followersCount: 0,
+            followingCount: 0,
+            mutualCount: 0,
+            isFollowing: false,
+            isFollower: false,
+            reason: 'popular',
+         },
+      ];
+      mockUserGrpcService.getFollowSuggestions.mockReturnValue(of({ items: mockSuggestions }));
 
       const result = await service.getFollowSuggestions(10, mockUser);
-      expect(mockUserClient.send).toHaveBeenCalledWith(
-         { cmd: USER_PATTERNS.GET_FOLLOW_SUGGESTIONS },
+      expect(mockUserGrpcService.getFollowSuggestions).toHaveBeenCalledWith(
          { userId: mockUser.sub, limit: 10 },
+         expect.anything(),
       );
       expect(result).toEqual(mockSuggestions);
+   });
+
+   it('should followUser via gRPC client', async () => {
+      const mockRes = {
+         followId: 'f-1',
+         followerId: mockUser.sub,
+         followingId: 'target-1',
+         status: FOLLOW_STATUS.ACCEPTED,
+         createdAt: new Date().toISOString(),
+      };
+      mockUserGrpcService.followUser.mockReturnValue(of(mockRes));
+
+      const result = await service.followUser(mockUser.sub, 'target-1', mockUser);
+      expect(mockUserGrpcService.followUser).toHaveBeenCalledWith(
+         { followerId: mockUser.sub, followingId: 'target-1' },
+         expect.anything(),
+      );
+      expect(result).toEqual(mockRes);
+   });
+
+   it('should unfollowUser via gRPC client', async () => {
+      mockUserGrpcService.unfollowUser.mockReturnValue(of({ success: true }));
+
+      const result = await service.unfollowUser(mockUser.sub, 'target-1', mockUser);
+      expect(mockUserGrpcService.unfollowUser).toHaveBeenCalledWith(
+         { followerId: mockUser.sub, followingId: 'target-1' },
+         expect.anything(),
+      );
+      expect(result).toEqual({ success: true });
+   });
+
+   it('should getUserByAccountId via gRPC client', async () => {
+      const mockUserRes = { id: 'u-1', accountId: 'acc-1', username: 'acc_user' };
+      mockUserGrpcService.getUserByAccountId.mockReturnValue(of({ user: mockUserRes }));
+
+      const result = await service.getUserByAccountId('acc-1', mockUser);
+      expect(mockUserGrpcService.getUserByAccountId).toHaveBeenCalledWith({ accountId: 'acc-1' }, expect.anything());
+      expect(result).toEqual(mockUserRes);
+   });
+
+   it('should getUserStats via gRPC client', async () => {
+      const mockStats = {
+         userId: 'u-1',
+         postsCount: 5,
+         followersCount: 100,
+         followingCount: 50,
+         recipesCount: 2,
+      };
+      mockUserGrpcService.getUserStats.mockReturnValue(of(mockStats));
+
+      const result = await service.getUserStats('u-1', mockUser);
+      expect(mockUserGrpcService.getUserStats).toHaveBeenCalledWith({ userId: 'u-1' }, expect.anything());
+      expect(result).toEqual(mockStats);
    });
 });

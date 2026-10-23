@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package media.v1;
+
+import "models/media.proto";
+
+message GetUploadUrlRequest {
+  string fileName = 1;
+  string mimeType = 2;
+  optional int64 size = 3;
+  optional string type = 4;
+  optional string folder = 5;
+  optional string provider = 6;
+}
+
+message GetUploadUrlResponse {
+  string mediaId = 1;
+  string provider = 2;
+  string method = 3;
+  optional string uploadUrl = 4;
+  optional string publicUrl = 5;
+  optional string key = 6;
+  optional string signature = 7;
+  optional int64 timestamp = 8;
+  optional string apiKey = 9;
+  optional string cloudName = 10;
+  map<string, string> headers = 11;
+}
+
+message UploadFileRequest {
+  string fileBase64 = 1;
+  optional string fileName = 2;
+  optional string mimeType = 3;
+  optional string type = 4;
+  optional string folder = 5;
+  optional string provider = 6;
+}
+
+message UploadFileResponse {
+  MediaProto media = 1;
+}
+
+message ConfirmUploadRequest {
+  string mediaId = 1;
+  optional int64 size = 2;
+  optional string key = 3;
+  optional int32 width = 4;
+  optional int32 height = 5;
+  optional double duration = 6;
+  optional string thumbnailUrl = 7;
+}
+
+message ConfirmUploadResponse {
+  MediaProto media = 1;
+}
+
+message GetMediaByIdRequest {
+  string id = 1;
+}
+
+message GetMediaByIdResponse {
+  MediaProto media = 1;
+}
+
+message DeleteMediaRequest {
+  string id = 1;
+}
+
+message DeleteMediaResponse {
+  bool success = 1;
+}

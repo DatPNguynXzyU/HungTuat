@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DEFAULT_ROLES, UnauthorizedException } from '@common';
+import { SYSTEM_ROLES, UnauthorizedException } from '@common';
 import { USER_STATUS } from '@contracts/auth';
 import { ACCOUNT_REPOSITORY } from '@auth/repositories';
 import { AUTH_RATE_LIMITER, AuditLogService, TOKEN_LIFECYCLE_SERVICE } from '@auth/services/infrastructure';
@@ -65,14 +65,14 @@ describe('AuthTokenService', () => {
       const mockPayload = {
          sub: 'acc-1',
          jti: 'jti-1',
-         roles: [DEFAULT_ROLES.USER],
+         roles: [SYSTEM_ROLES.USER],
          exp: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const mockAccount = {
          id: 'acc-1',
          email: 'test@example.com',
-         roles: [DEFAULT_ROLES.USER],
+         roles: [SYSTEM_ROLES.USER],
          status: USER_STATUS.ACTIVE,
          isEmailVerified: true,
          lastLoginAt: '2026-10-10T00:00:00.000Z',
@@ -95,7 +95,7 @@ describe('AuthTokenService', () => {
          expect(mockAuditLogService.record).toHaveBeenCalled();
          expect(result.accessToken).toBe('new-access-token');
          expect(result.refreshToken).toBe('new-refresh-token');
-         expect(result.user.id).toBe('acc-1');
+         expect(result.user.userId).toBe('acc-1');
       });
 
       it('should throw UnauthorizedException if account is blocked and trigger logoutAll', async () => {
@@ -165,12 +165,12 @@ describe('AuthTokenService', () => {
       it('should validate token and return account info when active', async () => {
          mockTokenLifecycleService.validateAccessToken.mockResolvedValueOnce({
             sub: 'acc-1',
-            roles: [DEFAULT_ROLES.USER],
+            roles: [SYSTEM_ROLES.USER],
          });
          mockAccountRepository.findById.mockResolvedValueOnce({
             id: 'acc-1',
             email: 'user@example.com',
-            roles: [DEFAULT_ROLES.USER],
+            roles: [SYSTEM_ROLES.USER],
             status: USER_STATUS.ACTIVE,
             isEmailVerified: true,
             lastLoginAt: '2026-10-10T00:00:00.000Z',
@@ -181,7 +181,7 @@ describe('AuthTokenService', () => {
          const result = await service.validateToken('valid-access-token');
 
          expect(result.valid).toBe(true);
-         expect(result.user.id).toBe('acc-1');
+         expect(result.user.userId).toBe('acc-1');
       });
 
       it('should throw UnauthorizedException if account not found', async () => {

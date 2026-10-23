@@ -1,13 +1,11 @@
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
-import { ClientProxy, type ClientGrpc } from '@nestjs/microservices';
+import type { ClientGrpc } from '@nestjs/microservices';
 import {
    CircuitBreakerRegistry,
    createGrpcMetadata,
    handleGrpcError,
-   IServiceMessage,
    RetryPolicyRegistry,
    SERVICE_NAMES,
-   SERVICES,
    withGrpcRetry,
 } from '@common';
 import {
@@ -19,10 +17,18 @@ import {
 import {
    CreateUserProfileDto,
    UserDateOfBirthResponseDto,
-   USER_PATTERNS,
+   UserSearchResponseDto,
    UpdatePersonalInfoDto,
    USER_V1_GRPC_CLIENT,
    USER_V1_GRPC_SERVICE_NAME,
+   type IFollowRequestActionResponse,
+   type IFollowUserResponse,
+   type IGetFollowCountResponse,
+   type IGetFollowersResponse,
+   type IGetFollowingResponse,
+   type IGetMutualFollowersResponse,
+   type IUserStatsResponse,
+   type IUnfollowUserResponse,
    type IUserV1GrpcService,
 } from '@contracts/user';
 import { defer, firstValueFrom } from 'rxjs';
@@ -43,21 +49,32 @@ export class UsersService implements OnModuleInit {
       maxDelayMs: 2000,
    });
 
-   constructor(
-      @Inject(SERVICES.USER_SERVICE) private readonly userClient: ClientProxy,
-      @Inject(USER_V1_GRPC_CLIENT) private readonly userGrpcClient: ClientGrpc,
-   ) {}
+   constructor(@Inject(USER_V1_GRPC_CLIENT) private readonly userGrpcClient: ClientGrpc) {}
 
    onModuleInit(): void {
       this.userGrpcService = this.userGrpcClient.getService<IUserV1GrpcService>(USER_V1_GRPC_SERVICE_NAME);
    }
 
+   private buildGrpcMetadata(user?: JwtPayload, correlationId?: string) {
+      return createGrpcMetadata({
+         correlationId,
+         callerService: SERVICE_NAMES.GATEWAY,
+         user: user
+            ? {
+                 userId: user.sub,
+                 accountId: user.sub,
+                 roles: user.roles || [],
+                 email: user.email,
+                 permissions: (user.permissions as string[]) || [],
+                 sessionId: user.jti,
+              }
+            : undefined,
+      });
+   }
+
    async checkUsername(username: string, correlationId?: string): Promise<{ available: boolean; username: string }> {
       try {
-         const metadata = createGrpcMetadata({
-            correlationId,
-            callerService: SERVICE_NAMES.GATEWAY,
-         });
+         const metadata = this.buildGrpcMetadata(undefined, correlationId);
          return await this.userGrpcBreaker.execute(async () => {
             return await firstValueFrom(
                defer(() => this.userGrpcService.checkUsername({ username }, metadata)).pipe(
@@ -79,207 +96,579 @@ export class UsersService implements OnModuleInit {
       }
    }
 
-   async createProfile(createUserProfileDto: CreateUserProfileDto, user: JwtPayload): Promise<unknown> {
-      const message: IServiceMessage<CreateUserProfileDto> = {
-         data: createUserProfileDto,
-         user: {
-            userId: user.sub,
-            email: user.email,
-            roles: user.roles || [],
-            permissions: [],
-            sessionId: user.jti,
-         },
-      };
+   async createProfile(
+      createUserProfileDto: CreateUserProfileDto,
+      user: JwtPayload,
+      correlationId?: string,
+   ): Promise<unknown> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() =>
+                  this.userGrpcService.createProfile(
+                     {
+                        username: createUserProfileDto.username,
+                        displayName: createUserProfileDto.displayName,
+                        gender: createUserProfileDto.gender,
+                        dateOfBirth: createUserProfileDto.dateOfBirth
+                           ? String(createUserProfileDto.dateOfBirth)
+                           : undefined,
+                        bio: createUserProfileDto.bio,
+                        avatar: createUserProfileDto.avatar,
+                        coverImage: createUserProfileDto.coverImage,
+                        website: createUserProfileDto.website,
+                        location: createUserProfileDto.location,
+                        accountId: user.sub,
+                        userId: user.sub,
+                     },
+                     metadata,
+                  ),
+               ).pipe(withGrpcRetry(this.userGrpcRetryPolicy)),
+            );
+            return res.user;
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
 
-      return firstValueFrom(
-         this.userClient.send<unknown, IServiceMessage<CreateUserProfileDto>>(
-            { cmd: USER_PATTERNS.CREATE_PROFILE },
-            message,
-         ),
+   async getUserById(id: string, user?: JwtPayload, correlationId?: string): Promise<unknown> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() => this.userGrpcService.getUserById({ userId: id }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+            return res.user;
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async getAllUsers(page = 1, limit = 10, user?: JwtPayload, correlationId?: string): Promise<unknown> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() => this.userGrpcService.getAllUsers({ page, limit }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+            return res.users;
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async updateUsername(userId: string, username: string, user: JwtPayload, correlationId?: string): Promise<unknown> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() => this.userGrpcService.updateUsername({ userId, username }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+            return res.user;
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async updateDisplayName(
+      userId: string,
+      displayName: string,
+      user: JwtPayload,
+      correlationId?: string,
+   ): Promise<unknown> {
+      return this.updatePartialProfile(userId, { displayName }, user, correlationId);
+   }
+
+   async updateBio(
+      userId: string,
+      bio: string | undefined,
+      user: JwtPayload,
+      correlationId?: string,
+   ): Promise<unknown> {
+      return this.updatePartialProfile(userId, { bio }, user, correlationId);
+   }
+
+   async updatePersonalInfo(
+      userId: string,
+      dto: UpdatePersonalInfoDto,
+      user: JwtPayload,
+      correlationId?: string,
+   ): Promise<unknown> {
+      return this.updatePartialProfile(
+         userId,
+         { dateOfBirth: dto.dateOfBirth, gender: dto.gender },
+         user,
+         correlationId,
       );
    }
 
-   async getUserById(id: string, user?: JwtPayload): Promise<unknown> {
-      const message: IServiceMessage<{ id: string }> = {
-         data: { id },
-         user: user
-            ? {
-                 userId: user.sub,
-                 email: user.email,
-                 roles: user.roles || [],
-                 permissions: [],
-                 sessionId: user.jti,
-              }
-            : undefined,
-      };
-
-      return firstValueFrom(
-         this.userClient.send<unknown, IServiceMessage<{ id: string }>>({ cmd: USER_PATTERNS.GET_USER_BY_ID }, message),
-      );
+   async updateLocation(
+      userId: string,
+      location: string | undefined,
+      user: JwtPayload,
+      correlationId?: string,
+   ): Promise<unknown> {
+      return this.updatePartialProfile(userId, { location }, user, correlationId);
    }
 
-   async getAllUsers(page = 1, limit = 10, user?: JwtPayload): Promise<unknown> {
-      const message: IServiceMessage<{ page: number; limit: number }> = {
-         data: { page, limit },
-         user: user
-            ? {
-                 userId: user.sub,
-                 email: user.email,
-                 roles: user.roles || [],
-                 permissions: [],
-                 sessionId: user.jti,
-              }
-            : undefined,
-      };
-
-      return firstValueFrom(
-         this.userClient.send<unknown, IServiceMessage<{ page: number; limit: number }>>(
-            { cmd: USER_PATTERNS.GET_ALL_USERS },
-            message,
-         ),
-      );
+   async updateWebsite(
+      userId: string,
+      website: string | undefined,
+      user: JwtPayload,
+      correlationId?: string,
+   ): Promise<unknown> {
+      return this.updatePartialProfile(userId, { website }, user, correlationId);
    }
 
-   private buildUserContext(user?: JwtPayload) {
-      return user
-         ? {
-              userId: user.sub,
-              email: user.email,
-              roles: user.roles || [],
-              permissions: [],
-              sessionId: user.jti,
-           }
-         : undefined;
-   }
-
-   async updateUsername(userId: string, username: string, user: JwtPayload): Promise<unknown> {
-      const message: IServiceMessage<{ userId: string; username: string }> = {
-         data: { userId, username },
-         user: this.buildUserContext(user),
-      };
-
-      return firstValueFrom(
-         this.userClient.send<unknown, IServiceMessage<{ userId: string; username: string }>>(
-            { cmd: USER_PATTERNS.UPDATE_USERNAME },
-            message,
-         ),
-      );
-   }
-
-   async updateDisplayName(userId: string, displayName: string, user: JwtPayload): Promise<unknown> {
-      return this.updatePartialProfile(userId, { displayName }, user);
-   }
-
-   async updateBio(userId: string, bio: string | undefined, user: JwtPayload): Promise<unknown> {
-      return this.updatePartialProfile(userId, { bio }, user);
-   }
-
-   async updatePersonalInfo(userId: string, dto: UpdatePersonalInfoDto, user: JwtPayload): Promise<unknown> {
-      return this.updatePartialProfile(userId, { dateOfBirth: dto.dateOfBirth, gender: dto.gender }, user);
-   }
-
-   async updateLocation(userId: string, location: string | undefined, user: JwtPayload): Promise<unknown> {
-      return this.updatePartialProfile(userId, { location }, user);
-   }
-
-   async updateWebsite(userId: string, website: string | undefined, user: JwtPayload): Promise<unknown> {
-      return this.updatePartialProfile(userId, { website }, user);
-   }
-
-   async updateCoverImage(userId: string, coverImage: string, user: JwtPayload): Promise<unknown> {
-      return this.updatePartialProfile(userId, { coverImage }, user);
+   async updateCoverImage(
+      userId: string,
+      coverImage: string,
+      user: JwtPayload,
+      correlationId?: string,
+   ): Promise<unknown> {
+      return this.updatePartialProfile(userId, { coverImage }, user, correlationId);
    }
 
    private async updatePartialProfile(
       userId: string,
       fields: Record<string, unknown>,
       user: JwtPayload,
+      correlationId?: string,
    ): Promise<unknown> {
-      const message: IServiceMessage<{ userId: string; id: string } & Record<string, unknown>> = {
-         data: { userId, id: userId, ...fields },
-         user: this.buildUserContext(user),
-      };
-
-      return firstValueFrom(
-         this.userClient.send<unknown, IServiceMessage<{ userId: string; id: string } & Record<string, unknown>>>(
-            { cmd: USER_PATTERNS.UPDATE_USER_PROFILE },
-            message,
-         ),
-      );
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() =>
+                  this.userGrpcService.updateUserProfile(
+                     {
+                        userId,
+                        displayName: typeof fields.displayName === 'string' ? fields.displayName : undefined,
+                        bio: typeof fields.bio === 'string' ? fields.bio : undefined,
+                        dateOfBirth:
+                           fields.dateOfBirth instanceof Date
+                              ? fields.dateOfBirth.toISOString()
+                              : typeof fields.dateOfBirth === 'string'
+                                ? fields.dateOfBirth
+                                : undefined,
+                        gender: typeof fields.gender === 'string' ? fields.gender : undefined,
+                        location: typeof fields.location === 'string' ? fields.location : undefined,
+                        website: typeof fields.website === 'string' ? fields.website : undefined,
+                        coverImage: typeof fields.coverImage === 'string' ? fields.coverImage : undefined,
+                     },
+                     metadata,
+                  ),
+               ).pipe(withGrpcRetry(this.userGrpcRetryPolicy)),
+            );
+            return res.user;
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
    }
 
-   async getMyProfile(user: JwtPayload): Promise<unknown> {
-      return this.getUserById(user.sub, user);
+   async getMyProfile(user: JwtPayload, correlationId?: string): Promise<unknown> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() => this.userGrpcService.getMyProfile({ userId: user.sub }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+            return res.user;
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
    }
 
-   async searchUsers(query: string, limit = 10, cursor?: string, user?: JwtPayload): Promise<unknown> {
-      return firstValueFrom(
-         this.userClient.send<unknown, { query: string; limit: number; cursor?: string; currentUserId?: string }>(
-            { cmd: USER_PATTERNS.SEARCH_USERS },
-            { query, limit, cursor, currentUserId: user?.sub },
-         ),
-      );
+   async searchUsers(
+      query: string,
+      limit = 10,
+      cursor?: string,
+      user?: JwtPayload,
+      correlationId?: string,
+   ): Promise<UserSearchResponseDto> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() =>
+                  this.userGrpcService.searchUsers(
+                     {
+                        query,
+                        limit,
+                        cursor,
+                        currentUserId: user?.sub,
+                     },
+                     metadata,
+                  ),
+               ).pipe(withGrpcRetry(this.userGrpcRetryPolicy)),
+            );
+            return {
+               items: (res.items || []).map((item) => ({
+                  userId: item.id,
+                  username: item.username ?? null,
+                  displayName: item.displayName ?? null,
+                  avatar: item.avatar ?? null,
+                  bio: item.bio ?? null,
+                  isVerified: Boolean(item.isVerified),
+                  followersCount: item.followersCount || 0,
+                  followingCount: item.followingCount || 0,
+                  isFollowing: Boolean(item.isFollowing),
+                  isFollower: Boolean(item.isFollower),
+                  isSelf: Boolean(item.isSelf),
+               })),
+               meta: {
+                  nextCursor: res.nextCursor ?? null,
+                  hasMore: Boolean(res.hasMore),
+                  limit,
+                  total: res.total,
+               },
+            };
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
    }
 
-   async getFollowSuggestions(limit = 10, user: JwtPayload): Promise<unknown> {
-      return firstValueFrom(
-         this.userClient.send<unknown, { userId: string; limit: number }>(
-            { cmd: USER_PATTERNS.GET_FOLLOW_SUGGESTIONS },
-            { userId: user.sub, limit },
-         ),
-      );
+   async getFollowSuggestions(limit = 10, user: JwtPayload, correlationId?: string): Promise<unknown> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() => this.userGrpcService.getFollowSuggestions({ userId: user.sub, limit }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+            return res.items;
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
    }
 
-   async uploadAvatar(id: string, fileBase64: string, mimeType?: string, user?: JwtPayload): Promise<unknown> {
-      const message: IServiceMessage<{ id: string; fileBase64: string; mimeType?: string }> = {
-         data: { id, fileBase64, mimeType },
-         user: user
-            ? {
-                 userId: user.sub,
-                 email: user.email,
-                 roles: user.roles || [],
-                 permissions: [],
-                 sessionId: user.jti,
-              }
-            : undefined,
-      };
-
-      return firstValueFrom(
-         this.userClient.send<unknown, IServiceMessage<{ id: string; fileBase64: string; mimeType?: string }>>(
-            { cmd: USER_PATTERNS.UPLOAD_AVATAR },
-            message,
-         ),
-      );
+   async uploadAvatar(
+      id: string,
+      fileBase64: string,
+      mimeType?: string,
+      user?: JwtPayload,
+      correlationId?: string,
+   ): Promise<unknown> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() =>
+                  this.userGrpcService.uploadAvatar(
+                     {
+                        userId: id,
+                        fileBase64,
+                        mimeType,
+                     },
+                     metadata,
+                  ),
+               ).pipe(withGrpcRetry(this.userGrpcRetryPolicy)),
+            );
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
    }
 
-   async getAvatarUploadSignature(id: string, user?: JwtPayload): Promise<unknown> {
-      const message: IServiceMessage<{ id: string }> = {
-         data: { id },
-         user: user
-            ? {
-                 userId: user.sub,
-                 email: user.email,
-                 roles: user.roles || [],
-                 permissions: [],
-                 sessionId: user.jti,
-              }
-            : undefined,
-      };
-
-      return firstValueFrom(
-         this.userClient.send<unknown, IServiceMessage<{ id: string }>>(
-            { cmd: USER_PATTERNS.GET_AVATAR_UPLOAD_SIGNATURE },
-            message,
-         ),
-      );
+   async getAvatarUploadSignature(id: string, user?: JwtPayload, correlationId?: string): Promise<unknown> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.userGrpcService.getAvatarUploadSignature({ userId: id }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
    }
 
-   async getDateOfBirth(userId: string): Promise<UserDateOfBirthResponseDto> {
-      return firstValueFrom(
-         this.userClient.send<UserDateOfBirthResponseDto, { userId: string }>(
-            { cmd: USER_PATTERNS.GET_DATE_OF_BIRTH },
-            { userId },
-         ),
-      );
+   async getDateOfBirth(
+      userId: string,
+      user?: JwtPayload,
+      correlationId?: string,
+   ): Promise<UserDateOfBirthResponseDto> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() => this.userGrpcService.getDateOfBirth({ userId }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+            return {
+               userId: res.userId,
+               dateOfBirth: res.dateOfBirth || null,
+               age: res.age ?? null,
+            };
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async followUser(
+      followerId: string,
+      followingId: string,
+      user?: JwtPayload,
+      correlationId?: string,
+   ): Promise<IFollowUserResponse> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.userGrpcService.followUser({ followerId, followingId }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async unfollowUser(
+      followerId: string,
+      followingId: string,
+      user?: JwtPayload,
+      correlationId?: string,
+   ): Promise<IUnfollowUserResponse> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.userGrpcService.unfollowUser({ followerId, followingId }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async getFollowers(
+      userId: string,
+      status?: string,
+      skip?: number,
+      take?: number,
+      user?: JwtPayload,
+      correlationId?: string,
+   ): Promise<IGetFollowersResponse> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.userGrpcService.getFollowers({ userId, status, skip, take }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async getFollowing(
+      userId: string,
+      status?: string,
+      skip?: number,
+      take?: number,
+      user?: JwtPayload,
+      correlationId?: string,
+   ): Promise<IGetFollowingResponse> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.userGrpcService.getFollowing({ userId, status, skip, take }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async getFollowersCount(
+      userId: string,
+      status?: string,
+      user?: JwtPayload,
+      correlationId?: string,
+   ): Promise<IGetFollowCountResponse> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.userGrpcService.getFollowersCount({ userId, status }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async getFollowingCount(
+      userId: string,
+      status?: string,
+      user?: JwtPayload,
+      correlationId?: string,
+   ): Promise<IGetFollowCountResponse> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.userGrpcService.getFollowingCount({ userId, status }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async getMutualFollowers(
+      userId1: string,
+      userId2: string,
+      user?: JwtPayload,
+      correlationId?: string,
+   ): Promise<IGetMutualFollowersResponse> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.userGrpcService.getMutualFollowers({ userId1, userId2 }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async acceptFollowRequest(
+      followId: string,
+      user?: JwtPayload,
+      correlationId?: string,
+   ): Promise<IFollowRequestActionResponse> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.userGrpcService.acceptFollowRequest({ followId }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async rejectFollowRequest(
+      followId: string,
+      user?: JwtPayload,
+      correlationId?: string,
+   ): Promise<IFollowRequestActionResponse> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.userGrpcService.rejectFollowRequest({ followId }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async getUserByAccountId(accountId: string, user?: JwtPayload, correlationId?: string): Promise<unknown> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() => this.userGrpcService.getUserByAccountId({ accountId }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+            return res.user;
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async getUserByUsername(username: string, user?: JwtPayload, correlationId?: string): Promise<unknown> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() => this.userGrpcService.getUserByUsername({ username }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+            return res.user;
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async restoreUser(userId: string, user?: JwtPayload, correlationId?: string): Promise<unknown> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            const res = await firstValueFrom(
+               defer(() => this.userGrpcService.restoreUser({ userId }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+            return res.user;
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
+   }
+
+   async getUserStats(userId: string, user?: JwtPayload, correlationId?: string): Promise<IUserStatsResponse> {
+      try {
+         const metadata = this.buildGrpcMetadata(user, correlationId);
+         return await this.userGrpcBreaker.execute(async () => {
+            return await firstValueFrom(
+               defer(() => this.userGrpcService.getUserStats({ userId }, metadata)).pipe(
+                  withGrpcRetry(this.userGrpcRetryPolicy),
+               ),
+            );
+         });
+      } catch (error: unknown) {
+         return handleGrpcError(error);
+      }
    }
 }

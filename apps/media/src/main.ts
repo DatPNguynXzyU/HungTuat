@@ -1,23 +1,48 @@
 import '@media/tracing';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
+import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AllRpcExceptionsFilter, RmqService, SERVICES, TracingInterceptor } from '@common';
+import { MEDIA_V1_GRPC_PACKAGE_NAME, getMediaProtoLoaderOptions, getMediaProtoPath } from '@contracts/media';
 import { MediaModule } from '@media/media.module';
+import { MediaConfigService } from '@media/config';
 
 async function bootstrap() {
-   const appContext = await NestFactory.createApplicationContext(MediaModule, {
+   const app = await NestFactory.create(MediaModule, {
       bufferLogs: true,
    });
-   const logger = appContext.get(Logger);
-   const rmqService = appContext.get(RmqService);
-
-   const app = await NestFactory.createMicroservice(MediaModule, rmqService.getOptions(SERVICES.MEDIA_SERVICE));
+   const logger = app.get(Logger);
+   const rmqService = app.get(RmqService);
+   const configService = app.get(MediaConfigService);
 
    app.useLogger(logger);
    app.useGlobalFilters(new AllRpcExceptionsFilter());
    app.useGlobalInterceptors(new TracingInterceptor());
-   await app.listen();
-   logger.log('Media Microservice is listening on RabbitMQ queue: MEDIA_SERVICE');
+
+   // Connect RabbitMQ microservice
+   app.connectMicroservice(rmqService.getOptions(SERVICES.MEDIA_SERVICE), {
+      inheritAppConfig: true,
+   });
+
+   // Connect gRPC microservice
+   app.connectMicroservice<MicroserviceOptions>(
+      {
+         transport: Transport.GRPC,
+         options: {
+            package: [MEDIA_V1_GRPC_PACKAGE_NAME],
+            protoPath: [getMediaProtoPath()],
+            url: configService.grpcUrl,
+            loader: getMediaProtoLoaderOptions(),
+         },
+      },
+      {
+         inheritAppConfig: true,
+      },
+   );
+
+   await app.startAllMicroservices();
+   logger.log(`Media Microservice is listening on RabbitMQ queue: ${SERVICES.MEDIA_SERVICE}`);
+   logger.log(`Media gRPC Microservice is listening on ${configService.grpcUrl}`);
 }
 
 void bootstrap();
