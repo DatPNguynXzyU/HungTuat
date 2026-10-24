@@ -15,10 +15,22 @@ describe('validateSharedEnv with Zod', () => {
          NODE_ENV: 'production',
          SERVICE_NAME: 'test-service',
          REDIS_PORT: '6380',
+         JWT_PUBLIC_KEY: 'test-public-key',
       });
       expect(result.NODE_ENV).toBe('production');
       expect(result.SERVICE_NAME).toBe('test-service');
       expect(result.REDIS_PORT).toBe(6380);
+      expect(result.JWT_ISSUER).toBe('omni-auth-service');
+      expect(result.JWT_AUDIENCE).toBe('omni-microservices');
+   });
+
+   it('should throw fatal error when JWT key is missing in production', () => {
+      expect(() => {
+         validateSharedEnv({
+            NODE_ENV: 'production',
+            SERVICE_NAME: 'test-service',
+         });
+      }).toThrow('FATAL: JWT key missing in production');
    });
 
    it('should throw error when invalid enum or type is provided', () => {

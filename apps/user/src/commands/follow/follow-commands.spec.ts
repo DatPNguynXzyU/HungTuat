@@ -4,6 +4,8 @@ import type { FollowService } from '@user/services/domain/follow.service';
 import {
    AcceptFollowRequestCommand,
    AcceptFollowRequestHandler,
+   CheckIsFollowingCommand,
+   CheckIsFollowingHandler,
    FollowUserCommand,
    FollowUserHandler,
    GetFollowersCommand,
@@ -23,6 +25,7 @@ import {
    UnfollowUserCommand,
    UnfollowUserHandler,
 } from '@user/commands/follow';
+import { FOLLOW_STATUS } from '@contracts/user';
 
 describe('Follow Command Handlers', () => {
    let followService: jest.Mocked<Partial<FollowService>>;
@@ -45,6 +48,7 @@ describe('Follow Command Handlers', () => {
          getFollowersCount: jest.fn().mockResolvedValue(42),
          getFollowingCount: jest.fn().mockResolvedValue(10),
          getMutualFollowers: jest.fn().mockResolvedValue(['user-3']),
+         checkIsFollowing: jest.fn().mockResolvedValue({ isFollowing: true, status: FollowStatus.ACCEPTED }),
          getFollowSuggestions: jest
             .fn()
             .mockResolvedValue([{ id: 'u-3', username: 'suggested_1', mutualCount: 2, reason: 'MUTUAL_FRIENDS' }]),
@@ -163,6 +167,16 @@ describe('Follow Command Handlers', () => {
       it('should throw BadRequestException if userId is empty', async () => {
          const handler = new GetFollowSuggestionsHandler(followService as FollowService);
          await expect(handler.execute(new GetFollowSuggestionsCommand(''))).rejects.toThrow(BadRequestException);
+      });
+   });
+
+   describe('CheckIsFollowingHandler', () => {
+      it('should return follow check result', async () => {
+         const handler = new CheckIsFollowingHandler(followService as FollowService);
+         const result = await handler.execute(new CheckIsFollowingCommand('user-1', 'user-2'));
+
+         expect(followService.checkIsFollowing).toHaveBeenCalledWith('user-1', 'user-2');
+         expect(result).toEqual({ isFollowing: true, status: FOLLOW_STATUS.ACCEPTED });
       });
    });
 });

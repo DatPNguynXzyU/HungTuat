@@ -27,6 +27,8 @@ describe('JwtAuthGuard', () => {
       mockConfigService = {
          jwtPublicKey: publicKey,
          jwtSecret: publicKey,
+         jwtIssuer: 'omni-auth-service',
+         jwtAudience: 'omni-microservices',
          cookieName: 'access_token',
          accessTokenCookieName: 'access_token',
       } as unknown as jest.Mocked<CommonConfigService>;
@@ -272,7 +274,7 @@ describe('JwtAuthGuard', () => {
       }
    });
 
-   it('should authenticate legacy RS256 token during zero-downtime rollout window', async () => {
+   it('should reject legacy RS256 token when algorithms are locked to ES256', async () => {
       const legacyToken = JwtUtil.sign(
          { sub: 'legacy-user-1', email: 'legacy@example.com', tokenType: 'access' },
          DEFAULT_DEV_RSA_PRIVATE_KEY,
@@ -294,9 +296,56 @@ describe('JwtAuthGuard', () => {
          }),
       } as unknown as ExecutionContext;
 
-      const result = await guard.canActivate(mockContext);
-      expect(result).toBe(true);
-      expect(mockRequest.user).toBeDefined();
-      expect((mockRequest.user as { sub: string }).sub).toBe('legacy-user-1');
+      await expect(guard.canActivate(mockContext)).rejects.toThrow(UnauthorizedException);
+   });
+
+   it('should reject token with mismatched issuer (Token Substitution Attack)', async () => {
+      const tokenWithWrongIssuer = JwtUtil.sign(
+         { sub: 'user-attack', email: 'attacker@example.com', tokenType: 'access' },
+         DEFAULT_DEV_EC_PRIVATE_KEY,
+         3600,
+         { issuer: 'untrusted-auth-service' },
+      );
+      const mockRequest = {
+         headers: {
+            authorization: `Bearer ${tokenWithWrongIssuer}`,
+         },
+         cookies: {},
+      } as unknown as { headers: Record<string, string>; cookies: Record<string, string>; user?: unknown };
+
+      const mockContext = {
+         getHandler: () => {},
+         getClass: () => {},
+         switchToHttp: () => ({
+            getRequest: () => mockRequest,
+         }),
+      } as unknown as ExecutionContext;
+
+      await expect(guard.canActivate(mockContext)).rejects.toThrow(UnauthorizedException);
+   });
+
+   it('should reject token with mismatched audience', async () => {
+      const tokenWithWrongAudience = JwtUtil.sign(
+         { sub: 'user-attack', email: 'attacker@example.com', tokenType: 'access' },
+         DEFAULT_DEV_EC_PRIVATE_KEY,
+         3600,
+         { audience: 'wrong-audience' },
+      );
+      const mockRequest = {
+         headers: {
+            authorization: `Bearer ${tokenWithWrongAudience}`,
+         },
+         cookies: {},
+      } as unknown as { headers: Record<string, string>; cookies: Record<string, string>; user?: unknown };
+
+      const mockContext = {
+         getHandler: () => {},
+         getClass: () => {},
+         switchToHttp: () => ({
+            getRequest: () => mockRequest,
+         }),
+      } as unknown as ExecutionContext;
+
+      await expect(guard.canActivate(mockContext)).rejects.toThrow(UnauthorizedException);
    });
 });

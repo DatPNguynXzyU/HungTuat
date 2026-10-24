@@ -1,8 +1,8 @@
 import { Module, DynamicModule, Global } from '@nestjs/common';
-import { NebulaService } from '@common/nebula/nebula.service';
-import { NebulaConfig, getNebulaConfig } from '@common/nebula/nebula.config';
-import { CommonConfigService } from '@common/config/common-config.service';
-import { NEBULA_CONFIG_TOKEN } from '@common/nebula/nebula.constants';
+import { NebulaService } from '@user/infrastructure/nebula/nebula.service';
+import { NebulaConfig, getNebulaConfig } from '@user/infrastructure/nebula/nebula.config';
+import { UserConfigService } from '@user/config/user-config.service';
+import { NEBULA_CONFIG_TOKEN } from '@user/infrastructure/nebula/nebula.constants';
 
 @Global()
 @Module({})
@@ -13,11 +13,11 @@ export class NebulaModule {
          providers: [
             {
                provide: NEBULA_CONFIG_TOKEN,
-               useFactory: (configService?: CommonConfigService) => {
-                  const nebulaConfig = getNebulaConfig(configService as unknown as { nebula?: Partial<NebulaConfig> });
+               useFactory: (configService?: UserConfigService) => {
+                  const nebulaConfig = getNebulaConfig(configService);
                   return config ? { ...nebulaConfig, ...config } : nebulaConfig;
                },
-               inject: [{ token: CommonConfigService, optional: true }],
+               inject: [{ token: UserConfigService, optional: true }],
             },
             {
                provide: NebulaService,

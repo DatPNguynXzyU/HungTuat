@@ -18,6 +18,8 @@ export * from '@user/commands/follow/get-mutual-followers.command';
 export * from '@user/commands/follow/get-mutual-followers.handler';
 export * from '@user/commands/follow/get-follow-suggestions.command';
 export * from '@user/commands/follow/get-follow-suggestions.handler';
+export * from '@user/commands/follow/check-is-following.command';
+export * from '@user/commands/follow/check-is-following.handler';
 
 import { FollowUserHandler } from '@user/commands/follow/follow-user.handler';
 import { UnfollowUserHandler } from '@user/commands/follow/unfollow-user.handler';
@@ -29,6 +31,7 @@ import { GetFollowersCountHandler } from '@user/commands/follow/get-followers-co
 import { GetFollowingCountHandler } from '@user/commands/follow/get-following-count.handler';
 import { GetMutualFollowersHandler } from '@user/commands/follow/get-mutual-followers.handler';
 import { GetFollowSuggestionsHandler } from '@user/commands/follow/get-follow-suggestions.handler';
+import { CheckIsFollowingHandler } from '@user/commands/follow/check-is-following.handler';
 
 export const USER_FOLLOW_COMMAND_HANDLERS = [
    FollowUserHandler,
@@ -41,4 +44,5 @@ export const USER_FOLLOW_COMMAND_HANDLERS = [
    GetFollowingCountHandler,
    GetMutualFollowersHandler,
    GetFollowSuggestionsHandler,
+   CheckIsFollowingHandler,
 ];

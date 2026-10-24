@@ -15,6 +15,10 @@ export const USER_ENV_KEYS = {
    NEBULA_USERNAME: 'NEBULA_USERNAME',
    NEBULA_PASSWORD: 'NEBULA_PASSWORD',
    NEBULA_SPACE: 'NEBULA_SPACE',
+   NEBULA_ADMIN_USERNAME: 'NEBULA_ADMIN_USERNAME',
+   NEBULA_ADMIN_PASSWORD: 'NEBULA_ADMIN_PASSWORD',
+   NEBULA_STORAGED_HOST: 'NEBULA_STORAGED_HOST',
+   NEBULA_STORAGED_PORT: 'NEBULA_STORAGED_PORT',
    SEARCH_GRPC_URL: 'SEARCH_GRPC_URL',
    MEDIA_GRPC_URL: 'MEDIA_GRPC_URL',
 } as const;
@@ -35,6 +39,10 @@ export const userEnvSchema = sharedEnvSchema.extend({
    NEBULA_USERNAME: z.string().default('root'),
    NEBULA_PASSWORD: z.string().default('nebula'),
    NEBULA_SPACE: z.string().default('social_graph'),
+   NEBULA_ADMIN_USERNAME: z.string().optional(),
+   NEBULA_ADMIN_PASSWORD: z.string().optional(),
+   NEBULA_STORAGED_HOST: z.string().default('nebula-storaged'),
+   NEBULA_STORAGED_PORT: z.coerce.number().int().positive().default(9779),
    SEARCH_GRPC_URL: z.string().default('localhost:50056'),
    MEDIA_GRPC_URL: z.string().default('localhost:50055'),
 });

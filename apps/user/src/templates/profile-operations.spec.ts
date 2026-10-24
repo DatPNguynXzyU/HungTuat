@@ -154,7 +154,10 @@ describe('Concrete Profile Operations (Template Method Subclasses)', () => {
                existingUser: mockUser,
             }),
          );
-         expect(mockRepo.update).toHaveBeenCalledWith('u-1', { username: 'newjohn' });
+         expect(mockRepo.update).toHaveBeenCalledWith('u-1', {
+            username: 'newjohn',
+            lastUsernameChangedAt: expect.any(Date),
+         });
          expect(mockSyncService.syncUserUpdated).toHaveBeenCalledWith(updatedUser, { username: 'newjohn' }, mockUser);
       });
    });
@@ -171,7 +174,7 @@ describe('Concrete Profile Operations (Template Method Subclasses)', () => {
          expect(result).toEqual(mockUser);
          expect(mockQueryService.getUserById).toHaveBeenCalledWith('u-1');
          expect(mockRepo.softDelete).toHaveBeenCalledWith('u-1');
-         expect(mockSyncService.syncUserDeleted).toHaveBeenCalledWith('u-1', 'acc-1');
+         expect(mockSyncService.syncUserDeleted).toHaveBeenCalledWith('u-1', 'acc-1', mockUser);
       });
    });
 

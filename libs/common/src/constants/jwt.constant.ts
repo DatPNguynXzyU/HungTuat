@@ -1,4 +1,6 @@
 export const DEFAULT_JWT_KEY_ID = 'omni-auth-key-1';
+export const DEFAULT_JWT_ISSUER = 'omni-auth-service';
+export const DEFAULT_JWT_AUDIENCE = 'omni-microservices';
 
 export const JWT_ALGORITHM = {
    ES256: 'ES256',

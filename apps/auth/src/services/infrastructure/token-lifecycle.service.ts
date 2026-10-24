@@ -43,7 +43,7 @@ export class TokenLifecycleService implements ITokenLifecycleService {
 
       const accessToken = this.jwtService.sign(
          {
-            sub: account.id,
+            sub: account.accountId,
             email: account.email,
             roles: account.roles,
             tokenType: JWT_TOKEN_TYPE.ACCESS,
@@ -52,14 +52,14 @@ export class TokenLifecycleService implements ITokenLifecycleService {
          this.jwtService.accessTokenExpiresIn,
       );
 
-      const refreshRedisKey = AuthRedisKeys.refreshToken(account.id, refreshTokenJti);
+      const refreshRedisKey = AuthRedisKeys.refreshToken(account.accountId, refreshTokenJti);
       const refreshJtiKey = AuthRedisKeys.refreshTokenByJti(refreshTokenJti);
-      const sessionsKey = AuthRedisKeys.sessions(account.id);
+      const sessionsKey = AuthRedisKeys.sessions(account.accountId);
       const nowIso = new Date().toISOString();
       const expiresAt = new Date(Date.now() + this.jwtService.refreshTokenExpiresIn * 1000).toISOString();
 
       const sessionCacheData: IRefreshTokenCacheData = {
-         accountId: account.id,
+         accountId: account.accountId,
          email: account.email,
          roles: account.roles,
          jti: refreshTokenJti,
@@ -74,7 +74,7 @@ export class TokenLifecycleService implements ITokenLifecycleService {
          this.redisService.sadd(sessionsKey, accessTokenJti, refreshTokenJti),
          this.redisService.expire(sessionsKey, this.jwtService.refreshTokenExpiresIn),
          this.sessionRepository.createSession({
-            accountId: account.id,
+            accountId: account.accountId,
             refreshTokenJti,
             refreshTokenHash: hash,
             deviceType: deviceInfo?.deviceType,
@@ -111,7 +111,7 @@ export class TokenLifecycleService implements ITokenLifecycleService {
 
       const accessToken = this.jwtService.sign(
          {
-            sub: account.id,
+            sub: account.accountId,
             email: account.email,
             roles: account.roles,
             tokenType: JWT_TOKEN_TYPE.ACCESS,
@@ -120,18 +120,18 @@ export class TokenLifecycleService implements ITokenLifecycleService {
          this.jwtService.accessTokenExpiresIn,
       );
 
-      const refreshRedisKey = AuthRedisKeys.refreshToken(account.id, refreshTokenJti);
+      const refreshRedisKey = AuthRedisKeys.refreshToken(account.accountId, refreshTokenJti);
       const refreshJtiKey = AuthRedisKeys.refreshTokenByJti(refreshTokenJti);
-      const sessionsKey = AuthRedisKeys.sessions(account.id);
+      const sessionsKey = AuthRedisKeys.sessions(account.accountId);
       const expiresAt = new Date(Date.now() + this.jwtService.refreshTokenExpiresIn * 1000).toISOString();
       const nowIso = new Date().toISOString();
 
       // Invalidate old refresh token in Redis and blacklist old JTI
-      await this.invalidateRefreshToken(account.id, oldRefreshTokenJti, remainingTtl);
+      await this.invalidateRefreshToken(account.accountId, oldRefreshTokenJti, remainingTtl);
 
       const existingSession = await this.sessionRepository.findByJti(oldRefreshTokenJti);
       if (existingSession) {
-         await this.sessionRepository.updateSession(existingSession.id, {
+         await this.sessionRepository.updateSession(existingSession.sessionId, {
             refreshTokenJti,
             refreshTokenHash: hash,
             lastActiveAt: nowIso,
@@ -145,7 +145,7 @@ export class TokenLifecycleService implements ITokenLifecycleService {
          });
       } else {
          await this.sessionRepository.createSession({
-            accountId: account.id,
+            accountId: account.accountId,
             refreshTokenJti,
             refreshTokenHash: hash,
             deviceType: deviceInfo?.deviceType,
@@ -166,7 +166,7 @@ export class TokenLifecycleService implements ITokenLifecycleService {
       }
 
       const sessionCacheData: IRefreshTokenCacheData = {
-         accountId: account.id,
+         accountId: account.accountId,
          email: account.email,
          roles: account.roles,
          jti: refreshTokenJti,

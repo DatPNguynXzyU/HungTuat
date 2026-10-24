@@ -1,6 +1,6 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { NebulaService } from '@common';
 import { AppLogger } from '@common';
+import { NebulaService } from '@user/infrastructure/nebula';
 
 @Injectable()
 export class GraphSchemaService implements OnApplicationBootstrap {

@@ -1,5 +1,4 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
 import {
    MEDIA_TYPES,
    type MediaType,
@@ -15,6 +14,7 @@ import { NotFoundException, ForbiddenException, checkOwnershipOrAdmin, type ISer
 import type { Media } from '@media/prisma-client';
 import { StorageStrategyFactory } from '@media/storage';
 import { MEDIA_REPOSITORY, type IMediaRepository } from '@media/modules/media/repositories/media.repository.interface';
+import { generateUniqueFileName } from '@media/utils';
 
 @Injectable()
 export class MediaService {
@@ -30,8 +30,7 @@ export class MediaService {
       const type = dto.type || this.inferMediaType(dto.mimeType);
       const providerInstance = this.storageStrategyFactory.getProvider(dto.provider, type);
 
-      const ext = dto.fileName.includes('.') ? dto.fileName.split('.').pop() : '';
-      const uniqueFileName = `${Date.now()}_${randomUUID().slice(0, 8)}${ext ? `.${ext}` : ''}`;
+      const uniqueFileName = generateUniqueFileName(dto.fileName);
       const folder = dto.folder || `omni/${type.toLowerCase()}s`;
       const fullKey = `${folder}/${uniqueFileName}`;
 
@@ -79,8 +78,7 @@ export class MediaService {
       const providerInstance = this.storageStrategyFactory.getProvider(dto.provider, type);
 
       const folder = dto.folder || `omni/${type.toLowerCase()}s`;
-      const ext = dto.fileName?.includes('.') ? dto.fileName.split('.').pop() : '';
-      const uniqueFileName = `${Date.now()}_${randomUUID().slice(0, 8)}${ext ? `.${ext}` : ''}`;
+      const uniqueFileName = generateUniqueFileName(dto.fileName);
       const fullKey = `${folder}/${uniqueFileName}`;
 
       const uploadResult = await providerInstance.uploadBase64(dto.fileBase64, {

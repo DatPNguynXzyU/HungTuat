@@ -19,6 +19,8 @@ import {
    USER_SUGGESTION_REASONS,
    USER_V1_GRPC_METHODS,
    USER_V1_GRPC_SERVICE_NAME,
+   type ICheckIsFollowingRequest,
+   type ICheckIsFollowingResponse,
    type ICheckUsernameRequest,
    type ICheckUsernameResponse,
    type ICreateProfileRequest,
@@ -83,6 +85,7 @@ import {
 } from '@user/commands/profile';
 import {
    AcceptFollowRequestCommand,
+   CheckIsFollowingCommand,
    FollowUserCommand,
    GetFollowersCommand,
    GetFollowersCountCommand,
@@ -343,6 +346,11 @@ export class UserGrpcController implements IUserV1GrpcService {
       checkOwnershipOrAdmin(metadata, data.followerId);
       const user = extractGrpcUser(metadata);
       return from(this.commandBus.execute(new UnfollowUserCommand({ data, user })));
+   }
+
+   @GrpcMethod(USER_V1_GRPC_SERVICE_NAME, USER_V1_GRPC_METHODS.CHECK_IS_FOLLOWING)
+   checkIsFollowing(data: ICheckIsFollowingRequest): Observable<ICheckIsFollowingResponse> {
+      return from(this.commandBus.execute(new CheckIsFollowingCommand(data.followerId, data.followingId)));
    }
 
    @GrpcMethod(USER_V1_GRPC_SERVICE_NAME, USER_V1_GRPC_METHODS.GET_FOLLOW_SUGGESTIONS)

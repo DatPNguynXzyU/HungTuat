@@ -17,7 +17,7 @@ export class AccountRepository implements IAccountRepository {
 
    private toEntity(account: AccountWithRoles): AccountEntity {
       return {
-         id: account.accountId,
+         accountId: account.accountId,
          email: account.email,
          phoneNumber: account.phoneNumber,
          passwordHash: account.passwordHash,
@@ -83,7 +83,7 @@ export class AccountRepository implements IAccountRepository {
    }
 
    async create(data: CreateAccountData): Promise<AccountEntity> {
-      const accountId = data.id || uuidv7();
+      const accountId = data.accountId || uuidv7();
 
       const createdAccount = await this.prisma.account.create({
          data: {

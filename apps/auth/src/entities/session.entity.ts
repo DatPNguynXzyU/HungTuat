@@ -1,7 +1,7 @@
 import type { SetOptional } from '@common';
 
 export interface SessionEntity {
-   id: string;
+   sessionId: string;
    accountId: string;
    refreshTokenJti: string;
    refreshTokenHash?: string | null;
@@ -27,5 +27,5 @@ export interface SessionEntity {
 
 export type CreateSessionData = SetOptional<
    SessionEntity,
-   'id' | 'createdAt' | 'updatedAt' | 'isRevoked' | 'lastActiveAt'
+   'sessionId' | 'createdAt' | 'updatedAt' | 'isRevoked' | 'lastActiveAt'
 >;

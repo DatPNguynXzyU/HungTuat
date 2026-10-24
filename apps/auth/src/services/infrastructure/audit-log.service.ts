@@ -49,7 +49,7 @@ export class AuditLogService {
 
       try {
          const event = await this.eventStore.appendEvent(data);
-         const status = data.status === 'FAILURE' ? AuditStatus.FAILURE : AuditStatus.SUCCESS;
+         const status = data.status === AuditStatus.FAILURE ? AuditStatus.FAILURE : AuditStatus.SUCCESS;
 
          return {
             auditLogId: event.eventId,

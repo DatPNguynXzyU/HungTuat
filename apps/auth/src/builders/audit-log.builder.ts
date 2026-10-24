@@ -82,14 +82,14 @@ export class AuditLogBuilder implements IBuilder<CreateAuditLogData> {
    }
 
    /**
-    * Sets account information from an object or explicit id/email parameters.
+    * Sets account information from an object or explicit accountId/email parameters.
     */
    withAccount(
-      accountOrId?: { id?: string | null; email?: string | null } | string | null,
+      accountOrId?: { accountId?: string | null; email?: string | null } | string | null,
       actorEmail?: string | null,
    ): this {
       if (typeof accountOrId === 'object' && accountOrId !== null) {
-         if (accountOrId.id !== undefined) this.accountId = accountOrId.id ?? null;
+         if (accountOrId.accountId !== undefined) this.accountId = accountOrId.accountId ?? null;
          if (accountOrId.email !== undefined) this.actorEmail = accountOrId.email ?? null;
       } else {
          if (accountOrId !== undefined) this.accountId = accountOrId ?? null;

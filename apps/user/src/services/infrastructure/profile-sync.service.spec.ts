@@ -27,6 +27,7 @@ describe('ProfileSyncService (Infrastructure)', () => {
 
    const mockUsernameBloomFilterService = {
       addUsername: jest.fn().mockResolvedValue(undefined),
+      updateUsername: jest.fn().mockResolvedValue(undefined),
    };
 
    const mockEventEmitter = {
@@ -117,13 +118,19 @@ describe('ProfileSyncService (Infrastructure)', () => {
 
       await service.syncUserUpdated(updatedUser, { username: 'newusername' }, previousUser);
 
-      expect(mockUsernameBloomFilterService.addUsername).toHaveBeenCalledWith('newusername');
+      expect(mockUsernameBloomFilterService.updateUsername).toHaveBeenCalledWith('newusername', 'oldusername');
       expect(mockUserGraphSyncService.syncUserToGraph).toHaveBeenCalledWith(updatedUser);
       expect(mockOutboxService.createOutboxEvent).toHaveBeenCalledWith(
          'u1',
          USER_AGGREGATES.USER,
          USER_OUTBOX_EVENTS.USER_UPDATED,
-         expect.objectContaining({ changes: { username: 'newusername' } }),
+         expect.objectContaining({
+            userId: 'u1',
+            accountId: 'acc1',
+            field: 'username',
+            oldValue: 'oldusername',
+            newValue: 'newusername',
+         }),
       );
       expect(mockSearchAdapter.emitIndexEvent).toHaveBeenCalledWith(
          USER_EVENTS.UPDATED,

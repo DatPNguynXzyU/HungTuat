@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import { Metadata, status as GrpcStatus } from '@grpc/grpc-js';
 import { ArgumentsHost, HttpStatus } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
@@ -6,6 +5,7 @@ import { context as otelContext, propagation } from '@opentelemetry/api';
 import { AppException } from '@common/exceptions/app.exception';
 import { CORRELATION_ID_HEADER, REQUEST_ID_HEADER, SENSITIVE_LOG_KEYS } from '@common/logger/logger.constants';
 import { GrpcTraceStorage, type IGrpcTraceContext } from '@common/interceptors/grpc-trace.storage';
+import { uuidv7 } from '@common/utils/uuid.util';
 import type { RoleCode } from '@common/constants/roles.constant';
 import type { PermissionCode } from '@common/constants/permissions.constant';
 import {
@@ -118,7 +118,7 @@ export function extractGrpcMetadata(context: ArgumentsHost): IGrpcTraceContext {
    }
 
    if (!correlationId) {
-      correlationId = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.CORRELATION_ID) || randomUUID();
+      correlationId = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.CORRELATION_ID) || uuidv7();
    }
 
    const callerService = getFirstMatchingHeader(metadataMap, GRPC_METADATA_ALIASES.CALLER_SERVICE);
@@ -307,7 +307,7 @@ export interface GrpcMetadataOptions {
  */
 export function createGrpcMetadata(context?: GrpcMetadataOptions): Metadata {
    const metadata = new Metadata();
-   const correlationId = context?.correlationId || randomUUID();
+   const correlationId = context?.correlationId || uuidv7();
    metadata.set(CORRELATION_ID_HEADER, correlationId);
 
    // Inject W3C trace context (traceparent, tracestate) into gRPC metadata

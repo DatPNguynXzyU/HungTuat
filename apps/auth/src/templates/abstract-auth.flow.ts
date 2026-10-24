@@ -137,7 +137,7 @@ export abstract class AbstractAuthFlow<TDto, TSaga extends IAuthSaga = IAuthSaga
    ): Promise<TokenPair> {
       const tokens = await this.tokenLifecycleService.generateTokenPair(
          {
-            id: account.id,
+            accountId: account.accountId,
             email: account.email,
             roles,
          },
@@ -207,7 +207,7 @@ export abstract class AbstractAuthFlow<TDto, TSaga extends IAuthSaga = IAuthSaga
       const { account, roles, tokens, lastLoginAt } = context;
       return {
          user: {
-            userId: account.id,
+            userId: account.accountId,
             email: account.email,
             roles,
             status: account.status || USER_STATUS.ACTIVE,

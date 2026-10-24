@@ -44,7 +44,7 @@ export class AuthTokenService {
 
       const authValidation = this.accountCanAuthenticateSpec.validate(account);
       if (authValidation.isFailure()) {
-         await this.tokenLifecycleService.logoutAll(account.id);
+         await this.tokenLifecycleService.logoutAll(account.accountId);
          throw new UnauthorizedException(authValidation.getError());
       }
 
@@ -56,7 +56,7 @@ export class AuthTokenService {
 
       const { accessToken, refreshToken: newRefreshToken } = await this.tokenLifecycleService.rotateTokenPair(
          {
-            id: account.id,
+            accountId: account.accountId,
             email: account.email,
             roles: accountRoles,
          },
@@ -76,7 +76,7 @@ export class AuthTokenService {
 
       return {
          user: {
-            userId: account.id,
+            userId: account.accountId,
             email: account.email,
             roles: accountRoles,
             status: account.status || USER_STATUS.ACTIVE,
@@ -144,7 +144,7 @@ export class AuthTokenService {
       return {
          valid: true,
          user: {
-            userId: account.id,
+            userId: account.accountId,
             email: account.email,
             roles: accountRoles,
             status: account.status || USER_STATUS.ACTIVE,

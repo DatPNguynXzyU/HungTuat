@@ -22,7 +22,14 @@ lerna-debug.log*
 .env.*
 !.env.example
 !.env.sample
+
+# Cryptographic Keys & Secrets
 keys/
+apps/auth/keys/*.key
+apps/auth/keys/*.pem
+**/keys/*.key
+**/keys/*.pem
+!**/keys/*.example
 
 # Testing & Coverage
 coverage/

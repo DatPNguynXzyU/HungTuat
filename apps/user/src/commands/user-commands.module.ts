@@ -1,6 +1,7 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { AppLogger, COMMAND_BUS, CommandBus, NebulaModule, RedisModule, type ICommandHandler } from '@common';
+import { AppLogger, COMMAND_BUS, CommandBus, RedisModule, type ICommandHandler } from '@common';
+import { NebulaModule } from '@user/infrastructure/nebula';
 import { PrismaModule } from '@user/prisma';
 import { OutboxModule } from '@user/outbox';
 import { UnitOfWorkModule } from '@user/unit-of-work';

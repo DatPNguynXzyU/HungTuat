@@ -1,5 +1,5 @@
 export interface ITokenAccountPayload {
-   id: string;
+   accountId: string;
    email: string;
    roles: string[];
 }

@@ -34,14 +34,14 @@ export class LoginSaga implements IAuthSaga {
          return;
       }
 
-      this.logger.warn(`Compensating transaction: rolling back login flow for account ${this.account.id}`);
+      this.logger.warn(`Compensating transaction: rolling back login flow for account ${this.account.accountId}`);
 
       if (this.tokens) {
          try {
-            await this.tokenLifecycleService.revokeAllAccountTokens(this.account.id);
+            await this.tokenLifecycleService.revokeAllAccountTokens(this.account.accountId);
          } catch (error: unknown) {
             this.logger.error(
-               `LoginSaga compensation failed: Unable to revoke tokens for account ${this.account.id}`,
+               `LoginSaga compensation failed: Unable to revoke tokens for account ${this.account.accountId}`,
                error instanceof Error ? error.stack : error,
             );
          }
@@ -49,12 +49,12 @@ export class LoginSaga implements IAuthSaga {
 
       if (this.dbUpdated) {
          try {
-            await this.accountRepository.update(this.account.id, {
+            await this.accountRepository.update(this.account.accountId, {
                lastLoginAt: this.previousLastLoginAt ?? null,
             });
          } catch (error: unknown) {
             this.logger.error(
-               `LoginSaga compensation failed: Unable to revert lastLoginAt for account ${this.account.id}`,
+               `LoginSaga compensation failed: Unable to revert lastLoginAt for account ${this.account.accountId}`,
                error instanceof Error ? error.stack : error,
             );
          }

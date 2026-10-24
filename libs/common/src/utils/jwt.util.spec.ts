@@ -32,6 +32,20 @@ describe('JwtUtil (ECDSA ES256 & Backward Compatibility)', () => {
          expect(decoded.email).toBe(testPayload.email);
          expect(decoded.roles).toEqual(testPayload.roles);
          expect(decoded.tokenType).toBe(testPayload.tokenType);
+         expect(decoded.iss).toBe('omni-auth-service');
+         expect(decoded.aud).toBe('omni-microservices');
+      });
+
+      it('should fail verification if issuer or audience does not match', () => {
+         const token = JwtUtil.sign(testPayload, DEFAULT_DEV_EC_PRIVATE_KEY, 3600);
+
+         expect(() => {
+            JwtUtil.verify(token, DEFAULT_DEV_EC_PUBLIC_KEY, { issuer: 'wrong-issuer' });
+         }).toThrow();
+
+         expect(() => {
+            JwtUtil.verify(token, DEFAULT_DEV_EC_PUBLIC_KEY, { audience: 'wrong-audience' });
+         }).toThrow();
       });
 
       it('should produce a significantly smaller token with ES256 compared to RS256', () => {
@@ -96,21 +110,26 @@ describe('JwtUtil (ECDSA ES256 & Backward Compatibility)', () => {
       });
    });
 
-   describe('Backward Compatibility & Zero-Downtime Rollout', () => {
-      it('should correctly sign and verify legacy RS256 token', () => {
-         const token = JwtUtil.sign(testPayload, DEFAULT_DEV_RSA_PRIVATE_KEY, 3600);
-         const decoded = JwtUtil.verify(token, DEFAULT_DEV_RSA_PUBLIC_KEY);
+   describe('Algorithm Enforcement & Multi-Key JWKS', () => {
+      it('should correctly sign and verify legacy RS256 token when explicit key & algorithm provided', () => {
+         const token = JwtUtil.sign(testPayload, DEFAULT_DEV_RSA_PRIVATE_KEY, 3600, {
+            algorithm: JWT_ALGORITHM.RS256,
+         });
+         const decoded = JwtUtil.verify(token, DEFAULT_DEV_RSA_PUBLIC_KEY, {
+            algorithms: [JWT_ALGORITHM.RS256],
+         });
          expect(decoded.sub).toBe(testPayload.sub);
          expect(decoded.email).toBe(testPayload.email);
       });
 
-      it('should verify legacy RS256 token seamlessly via zero-downtime fallback', () => {
-         const legacyRs256Token = JwtUtil.sign(testPayload, DEFAULT_DEV_RSA_PRIVATE_KEY, 3600);
+      it('should reject legacy RS256 token when verified against EC key (fallback removed)', () => {
+         const legacyRs256Token = JwtUtil.sign(testPayload, DEFAULT_DEV_RSA_PRIVATE_KEY, 3600, {
+            algorithm: JWT_ALGORITHM.RS256,
+         });
 
-         // Pass default EC public key, fallback gracefully handles RS256 token
-         const decoded = JwtUtil.verify(legacyRs256Token, DEFAULT_DEV_EC_PUBLIC_KEY);
-         expect(decoded.sub).toBe(testPayload.sub);
-         expect(decoded.email).toBe(testPayload.email);
+         expect(() => {
+            JwtUtil.verify(legacyRs256Token, DEFAULT_DEV_EC_PUBLIC_KEY);
+         }).toThrow();
       });
 
       it('should verify both ES256 and RS256 tokens using a multi-key JWKS set', () => {
@@ -124,6 +143,7 @@ describe('JwtUtil (ECDSA ES256 & Backward Compatibility)', () => {
          });
          const rs256Token = JwtUtil.sign(testPayload, DEFAULT_DEV_RSA_PRIVATE_KEY, 3600, {
             keyid: 'rsa-key-1',
+            algorithm: JWT_ALGORITHM.RS256,
          });
 
          const decodedEc = JwtUtil.verify(es256Token, multiJwks);

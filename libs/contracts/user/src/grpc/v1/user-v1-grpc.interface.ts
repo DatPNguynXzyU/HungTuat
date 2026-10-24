@@ -180,6 +180,16 @@ export interface IUnfollowUserResponse {
    success: boolean;
 }
 
+export interface ICheckIsFollowingRequest {
+   followerId: string;
+   followingId: string;
+}
+
+export interface ICheckIsFollowingResponse {
+   isFollowing: boolean;
+   status?: string;
+}
+
 export interface IGetFollowSuggestionsRequest {
    userId?: string;
    limit?: number;
@@ -336,6 +346,7 @@ export interface IUserV1GrpcService {
    ): Observable<IGetAvatarUploadSignatureResponse>;
    followUser(request: IFollowUserRequest, metadata?: Metadata): Observable<IFollowUserResponse>;
    unfollowUser(request: IUnfollowUserRequest, metadata?: Metadata): Observable<IUnfollowUserResponse>;
+   checkIsFollowing(request: ICheckIsFollowingRequest, metadata?: Metadata): Observable<ICheckIsFollowingResponse>;
    getFollowSuggestions(
       request: IGetFollowSuggestionsRequest,
       metadata?: Metadata,

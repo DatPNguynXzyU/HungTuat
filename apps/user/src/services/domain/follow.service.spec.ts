@@ -285,4 +285,42 @@ describe('FollowService', () => {
          await expect(service.rejectFollowRequest('f-nonexistent')).rejects.toThrow(NotFoundException);
       });
    });
+
+   describe('checkIsFollowing', () => {
+      it('should return isFollowing: true if found in graph', async () => {
+         mockUserResolverService.resolveUser.mockImplementation((id: string) =>
+            Promise.resolve(id === 'follower-1' ? mockFollower : mockFollowing),
+         );
+         mockGraphFollowRepository.findFollow.mockResolvedValueOnce(true);
+
+         const result = await service.checkIsFollowing('follower-1', 'following-1');
+
+         expect(result).toEqual({ isFollowing: true, status: FollowStatus.ACCEPTED });
+         expect(mockGraphFollowRepository.findFollow).toHaveBeenCalledWith('follower-1', 'following-1');
+      });
+
+      it('should return postgres status if not found in graph but exists in db', async () => {
+         mockUserResolverService.resolveUser.mockImplementation((id: string) =>
+            Promise.resolve(id === 'follower-1' ? mockFollower : mockPrivateFollowing),
+         );
+         mockGraphFollowRepository.findFollow.mockResolvedValueOnce(false);
+         mockFollowRepository.findByFollowerAndFollowing.mockResolvedValueOnce(mockPendingFollowEntity);
+
+         const result = await service.checkIsFollowing('follower-1', 'following-priv');
+
+         expect(result).toEqual({ isFollowing: false, status: FollowStatus.PENDING });
+      });
+
+      it('should return isFollowing: false if not found in graph or db', async () => {
+         mockUserResolverService.resolveUser.mockImplementation((id: string) =>
+            Promise.resolve(id === 'follower-1' ? mockFollower : mockFollowing),
+         );
+         mockGraphFollowRepository.findFollow.mockResolvedValueOnce(false);
+         mockFollowRepository.findByFollowerAndFollowing.mockResolvedValueOnce(null);
+
+         const result = await service.checkIsFollowing('follower-1', 'following-1');
+
+         expect(result).toEqual({ isFollowing: false });
+      });
+   });
 });

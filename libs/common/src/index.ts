@@ -14,7 +14,6 @@ export * from '@common/redis';
 export * from '@common/cache';
 export * from '@common/rmq';
 export * from '@common/utils';
-export * from '@common/nebula';
 export * from '@common/types';
 export * from '@common/domain';
 export * from '@common/patterns';

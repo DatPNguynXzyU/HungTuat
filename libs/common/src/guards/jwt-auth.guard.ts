@@ -1,8 +1,16 @@
 import { CanActivate, ExecutionContext, Injectable, Optional } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
+import type { VerifyOptions } from 'jsonwebtoken';
 import { CommonConfigService } from '@common/config/common-config.service';
-import { AUTH_COOKIES, AUTH_ERROR_REASONS, JWT_TOKEN_TYPE } from '@common/constants/jwt.constant';
+import {
+   AUTH_COOKIES,
+   AUTH_ERROR_REASONS,
+   DEFAULT_JWT_AUDIENCE,
+   DEFAULT_JWT_ISSUER,
+   JWT_ALGORITHM,
+   JWT_TOKEN_TYPE,
+} from '@common/constants/jwt.constant';
 import { AuthRevocationRedisKeys } from '@common/constants/redis.constant';
 import { IS_PUBLIC_KEY } from '@common/decorators/public.decorator';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
@@ -23,18 +31,28 @@ export class JwtAuthGuard implements CanActivate {
       @Optional() private readonly redisService?: RedisService,
    ) {}
 
+   private getVerifyOptions(): VerifyOptions {
+      return {
+         algorithms: [JWT_ALGORITHM.ES256],
+         issuer: this.config.jwtIssuer || DEFAULT_JWT_ISSUER,
+         audience: this.config.jwtAudience || DEFAULT_JWT_AUDIENCE,
+      };
+   }
+
    async canActivate(context: ExecutionContext): Promise<boolean> {
       const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
          context.getHandler(),
          context.getClass(),
       ]);
 
+      const verifyOptions = this.getVerifyOptions();
+
       if (isPublic) {
          const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
          const token = this.extractToken(request);
          if (token) {
             try {
-               const payload = JwtUtil.verify(token, this.config.jwtPublicKey);
+               const payload = JwtUtil.verify(token, this.config.jwtPublicKey, verifyOptions);
                if (!payload.tokenType || payload.tokenType === JWT_TOKEN_TYPE.ACCESS) {
                   request.user = payload;
                }
@@ -55,7 +73,8 @@ export class JwtAuthGuard implements CanActivate {
       }
 
       try {
-         const payload = JwtUtil.verify(token, this.config.jwtPublicKey);
+         const payload = JwtUtil.verify(token, this.config.jwtPublicKey, verifyOptions);
+
          if (payload.tokenType && payload.tokenType !== JWT_TOKEN_TYPE.ACCESS) {
             throw new UnauthorizedException(COMMON_ERROR_CODES.UNAUTHORIZED, {
                params: { reason: AUTH_ERROR_REASONS.INVALID_TOKEN_TYPE },

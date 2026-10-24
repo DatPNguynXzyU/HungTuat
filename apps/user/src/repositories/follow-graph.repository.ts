@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { NebulaService, AppLogger } from '@common';
+import { AppLogger } from '@common';
+import { NebulaService } from '@user/infrastructure/nebula';
 import { FollowStatus } from '@user/entities';
 import type {
    IFollowGraphRepository,

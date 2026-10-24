@@ -7,7 +7,7 @@ import { RedisService } from '@common/redis/redis.service';
 import { RBAC_INTERNAL_PATTERNS, SERVICES } from '@common/rmq/rmq.constants';
 
 export interface CachedRoleData {
-   id: string;
+   roleId: string;
    code: string;
    name: string;
    description?: string | null;

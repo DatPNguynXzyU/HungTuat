@@ -27,7 +27,7 @@ export class PasswordVerificationHandler extends AbstractLoginValidationHandler 
 
       const isValid = await this.passwordHasher.verify(context.account.passwordHash, context.password);
       if (!isValid) {
-         return this.handleCredentialFailure(context, context.account.id);
+         return this.handleCredentialFailure(context, context.account.accountId);
       }
 
       return super.handle(context);

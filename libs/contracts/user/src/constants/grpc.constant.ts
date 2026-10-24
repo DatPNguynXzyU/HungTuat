@@ -37,6 +37,7 @@ export const USER_V1_GRPC_METHODS = {
    GET_AVATAR_UPLOAD_SIGNATURE: 'GetAvatarUploadSignature',
    FOLLOW_USER: 'FollowUser',
    UNFOLLOW_USER: 'UnfollowUser',
+   CHECK_IS_FOLLOWING: 'CheckIsFollowing',
    GET_FOLLOW_SUGGESTIONS: 'GetFollowSuggestions',
    GET_DATE_OF_BIRTH: 'GetDateOfBirth',
    SEARCH_USERS: 'SearchUsers',

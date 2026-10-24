@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NebulaService, AppLogger } from '@common';
+import { AppLogger } from '@common';
+import { NebulaService } from '@user/infrastructure/nebula';
 import { FollowGraphRepository } from '@user/repositories/follow-graph.repository';
 import { FollowStatus } from '@user/entities';
 

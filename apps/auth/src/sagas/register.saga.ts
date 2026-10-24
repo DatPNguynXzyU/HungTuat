@@ -29,14 +29,16 @@ export class RegisterSaga implements IAuthSaga {
          return;
       }
 
-      this.logger.warn(`Compensating transaction: rolling back registration flow for account ${this.account.id}`);
+      this.logger.warn(
+         `Compensating transaction: rolling back registration flow for account ${this.account.accountId}`,
+      );
 
       if (this.tokens) {
          try {
-            await this.tokenLifecycleService.revokeAllAccountTokens(this.account.id);
+            await this.tokenLifecycleService.revokeAllAccountTokens(this.account.accountId);
          } catch (error: unknown) {
             this.logger.error(
-               `RegisterSaga compensation failed: Unable to revoke tokens for account ${this.account.id}`,
+               `RegisterSaga compensation failed: Unable to revoke tokens for account ${this.account.accountId}`,
                error instanceof Error ? error.stack : error,
             );
          }
@@ -44,20 +46,20 @@ export class RegisterSaga implements IAuthSaga {
 
       if (this.outboxRepository) {
          try {
-            await this.outboxRepository.deleteByAggregateId(this.account.id);
+            await this.outboxRepository.deleteByAggregateId(this.account.accountId);
          } catch (error: unknown) {
             this.logger.error(
-               `RegisterSaga compensation failed: Unable to delete outbox events for account ${this.account.id}`,
+               `RegisterSaga compensation failed: Unable to delete outbox events for account ${this.account.accountId}`,
                error instanceof Error ? error.stack : error,
             );
          }
       }
 
       try {
-         await this.accountRepository.delete(this.account.id);
+         await this.accountRepository.delete(this.account.accountId);
       } catch (error: unknown) {
          this.logger.error(
-            `RegisterSaga compensation failed: Unable to delete account ${this.account.id}`,
+            `RegisterSaga compensation failed: Unable to delete account ${this.account.accountId}`,
             error instanceof Error ? error.stack : error,
          );
       }

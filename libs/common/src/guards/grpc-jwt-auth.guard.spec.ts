@@ -6,6 +6,7 @@ import {
    AUTH_ERROR_REASONS,
    DEFAULT_DEV_EC_PRIVATE_KEY,
    DEFAULT_DEV_EC_PUBLIC_KEY,
+   DEFAULT_DEV_RSA_PRIVATE_KEY,
 } from '@common/constants/jwt.constant';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
 import { UnauthorizedException } from '@common/exceptions/http.exceptions';
@@ -25,6 +26,8 @@ describe('GrpcJwtAuthGuard', () => {
    beforeEach(() => {
       mockConfigService = {
          jwtPublicKey: publicKey,
+         jwtIssuer: 'omni-auth-service',
+         jwtAudience: 'omni-microservices',
       } as unknown as jest.Mocked<CommonConfigService>;
 
       mockReflector = {
@@ -100,6 +103,48 @@ describe('GrpcJwtAuthGuard', () => {
 
       const metadata = new Metadata();
       metadata.set('authorization', `Bearer ${token}`);
+      const context = createMockRpcContext(metadata);
+
+      await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+   });
+
+   it('should reject legacy RS256 token when algorithms are locked to ES256', async () => {
+      const legacyToken = JwtUtil.sign(
+         { sub: 'legacy-user-1', email: 'legacy@example.com' },
+         DEFAULT_DEV_RSA_PRIVATE_KEY,
+         3600,
+         { algorithm: 'RS256' },
+      );
+
+      const metadata = new Metadata();
+      metadata.set('authorization', `Bearer ${legacyToken}`);
+      const context = createMockRpcContext(metadata);
+
+      await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+   });
+
+   it('should reject token with mismatched issuer', async () => {
+      const tokenWithWrongIssuer = JwtUtil.sign({ sub: 'user-123', email: 'supplier@example.com' }, privateKey, 3600, {
+         issuer: 'untrusted-auth-service',
+      });
+
+      const metadata = new Metadata();
+      metadata.set('authorization', `Bearer ${tokenWithWrongIssuer}`);
+      const context = createMockRpcContext(metadata);
+
+      await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+   });
+
+   it('should reject token with mismatched audience', async () => {
+      const tokenWithWrongAudience = JwtUtil.sign(
+         { sub: 'user-123', email: 'supplier@example.com' },
+         privateKey,
+         3600,
+         { audience: 'wrong-audience' },
+      );
+
+      const metadata = new Metadata();
+      metadata.set('authorization', `Bearer ${tokenWithWrongAudience}`);
       const context = createMockRpcContext(metadata);
 
       await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);

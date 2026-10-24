@@ -6,11 +6,11 @@ import {
    AUTH_ERROR_REASONS,
    DEFAULT_DEV_EC_PRIVATE_KEY,
    DEFAULT_DEV_EC_PUBLIC_KEY,
-   DEFAULT_DEV_RSA_PUBLIC_KEY,
    DEFAULT_JWT_ALGORITHM,
+   DEFAULT_JWT_AUDIENCE,
+   DEFAULT_JWT_ISSUER,
    DEFAULT_JWT_KEY_ID,
    JWT_ALGORITHM,
-   SUPPORTED_JWT_ALGORITHMS,
    type JwtTokenType,
 } from '@common/constants/jwt.constant';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
@@ -24,6 +24,8 @@ export interface JwtPayload {
    permissions?: string[];
    tokenType?: JwtTokenType;
    jti?: string;
+   iss?: string;
+   aud?: string | string[];
    iat?: number;
    exp?: number;
    [key: string]: unknown;
@@ -34,6 +36,17 @@ export interface JwkKeyConfig {
    keyId?: string;
    alg?: string;
    use?: string;
+}
+
+export interface JwtCompleteToken<T = JwtPayload> {
+   header: {
+      alg: string;
+      typ?: string;
+      kid?: string;
+      [key: string]: unknown;
+   };
+   payload: T;
+   signature: string;
 }
 
 export class JwtUtil {
@@ -244,6 +257,8 @@ export class JwtUtil {
       const signOptions: SignOptions = {
          algorithm,
          keyid: options?.keyid || DEFAULT_JWT_KEY_ID,
+         issuer: options?.issuer || DEFAULT_JWT_ISSUER,
+         audience: options?.audience || DEFAULT_JWT_AUDIENCE,
          expiresIn: expiresInSeconds,
          ...options,
       };
@@ -274,8 +289,16 @@ export class JwtUtil {
          resolvedKey = typeof publicKeyOrJwks === 'string' ? this.formatPemKey(publicKeyOrJwks) : publicKeyOrJwks;
       }
 
+      let defaultAlgorithms: Algorithm[] = [JWT_ALGORITHM.ES256];
+      if (typeof publicKeyOrJwks === 'object' && publicKeyOrJwks !== null && 'keys' in publicKeyOrJwks) {
+         const jwksAlgs = publicKeyOrJwks.keys.map((k) => k.alg).filter(Boolean) as Algorithm[];
+         if (jwksAlgs.length > 0) {
+            defaultAlgorithms = Array.from(new Set([...defaultAlgorithms, ...jwksAlgs]));
+         }
+      }
+
       const verifyOptions: VerifyOptions = {
-         algorithms: [...SUPPORTED_JWT_ALGORITHMS] as Algorithm[],
+         algorithms: options?.algorithms || defaultAlgorithms,
          ...options,
       };
 
@@ -288,22 +311,6 @@ export class JwtUtil {
          }
          return decoded as JwtPayload;
       } catch (err: unknown) {
-         // Zero-downtime transition fallback: If token is RS256 and verified against EC key, attempt RSA fallback
-         const decodedHeader = jwt.decode(token, { complete: true });
-         if (decodedHeader?.header?.alg === JWT_ALGORITHM.RS256 && resolvedKey !== DEFAULT_DEV_RSA_PUBLIC_KEY) {
-            try {
-               const rsaFallback = jwt.verify(token, DEFAULT_DEV_RSA_PUBLIC_KEY, {
-                  ...verifyOptions,
-                  algorithms: [JWT_ALGORITHM.RS256],
-               });
-               if (typeof rsaFallback === 'object' && rsaFallback) {
-                  return rsaFallback as JwtPayload;
-               }
-            } catch {
-               // Fallthrough to standard error handling
-            }
-         }
-
          if (err instanceof UnauthorizedException) {
             throw err;
          }
@@ -313,11 +320,20 @@ export class JwtUtil {
       }
    }
 
-   static decode(token: string, options?: jwt.DecodeOptions): JwtPayload | null {
+   static decode<T = JwtPayload>(
+      token: string,
+      options: { complete: true } & jwt.DecodeOptions,
+   ): JwtCompleteToken<T> | null;
+
+   static decode<T = JwtPayload>(token: string, options?: { complete?: false } & jwt.DecodeOptions): T | null;
+
+   static decode<T = JwtPayload>(token: string, options?: jwt.DecodeOptions): JwtCompleteToken<T> | T | null;
+
+   static decode(token: string, options?: jwt.DecodeOptions): unknown {
       const decoded = jwt.decode(token, options);
       if (!decoded || typeof decoded === 'string') {
          return null;
       }
-      return decoded as JwtPayload;
+      return decoded;
    }
 }

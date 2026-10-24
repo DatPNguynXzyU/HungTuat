@@ -6,9 +6,8 @@ export const UUID_V7_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-
  * Checks whether a given value is a valid UUIDv7 format.
  * Functions as a TypeScript type guard (value is string).
  */
-export function isValidUuidV7(value: unknown): value is string {
-   return typeof value === 'string' && validate(value) && version(value) === 7;
-}
+export const isValidUuidV7 = (value: unknown): value is string =>
+   typeof value === 'string' && validate(value) && version(value) === 7;
 
 /**
  * Ergonomic alias for isValidUuidV7 used across services.
@@ -18,6 +17,4 @@ export const isUuidV7 = isValidUuidV7;
 /**
  * Generates an RFC 9562 compliant UUIDv7 string using the official standard 'uuid' library.
  */
-export function uuidv7(): string {
-   return v7();
-}
+export const uuidv7 = v7;

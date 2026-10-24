@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppLogger } from '@common';
 import { UserModule } from '@user/user.module';
 import { PrismaService } from '@user/prisma';
-import { NebulaService } from '@common';
+import { NebulaService } from '@user/infrastructure/nebula';
 
 async function bootstrap() {
    const app = await NestFactory.createApplicationContext(UserModule);

@@ -29,7 +29,7 @@ export class AccountStatusHandler extends AbstractLoginValidationHandler {
       if (authValidation.isFailure()) {
          const errorCode = authValidation.getError();
          return this.handleFailure(context, errorCode, {
-            accountId: context.account.id,
+            accountId: context.account.accountId,
          });
       }
 

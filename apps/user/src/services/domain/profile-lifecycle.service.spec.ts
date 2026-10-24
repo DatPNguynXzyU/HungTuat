@@ -175,7 +175,7 @@ describe('ProfileLifecycleService (Domain)', () => {
 
          const result = await service.deleteUser('u1');
          expect(result).toEqual(user);
-         expect(mockProfileSyncService.syncUserDeleted).toHaveBeenCalledWith('u1', 'acc1');
+         expect(mockProfileSyncService.syncUserDeleted).toHaveBeenCalledWith('u1', 'acc1', user);
       });
 
       it('should restore user and trigger sync', async () => {

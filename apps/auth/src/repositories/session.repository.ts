@@ -11,7 +11,7 @@ export class SessionRepository implements ISessionRepository {
 
    private toEntity(session: AccountSession): SessionEntity {
       return {
-         id: session.sessionId,
+         sessionId: session.sessionId,
          accountId: session.accountId,
          refreshTokenJti: session.refreshTokenJti,
          refreshTokenHash: session.refreshTokenHash,
@@ -37,10 +37,10 @@ export class SessionRepository implements ISessionRepository {
    }
 
    async createSession(data: CreateSessionData): Promise<SessionEntity> {
-      const id = data.id || uuidv7();
+      const sessionId = data.sessionId || uuidv7();
       const session = await this.prisma.accountSession.create({
          data: {
-            sessionId: id,
+            sessionId,
             accountId: data.accountId,
             refreshTokenJti: data.refreshTokenJti,
             refreshTokenHash: data.refreshTokenHash,

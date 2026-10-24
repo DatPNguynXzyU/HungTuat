@@ -1,5 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { z } from 'zod';
-import { sharedEnvSchema } from '@common';
+import { isProduction, sharedEnvSchema } from '@common';
 import { DEFAULT_JWT_KEY_ID } from '@contracts/auth';
 
 export const AUTH_ENV_KEYS = {
@@ -29,10 +31,36 @@ export const authEnvSchema = sharedEnvSchema.extend({
    GRPC_PORT: z.coerce.number().int().positive().default(50051),
 });
 
+export const authEnvValidationSchema = authEnvSchema.superRefine((data, ctx) => {
+   if (isProduction(data.NODE_ENV)) {
+      const hasPrivateKey = Boolean(data.JWT_PRIVATE_KEY && data.JWT_PRIVATE_KEY.trim());
+      let hasValidPrivateKeyFile = false;
+      if (data.JWT_PRIVATE_KEY_PATH) {
+         const resolvedPath = path.isAbsolute(data.JWT_PRIVATE_KEY_PATH)
+            ? data.JWT_PRIVATE_KEY_PATH
+            : path.resolve(process.cwd(), data.JWT_PRIVATE_KEY_PATH);
+         try {
+            hasValidPrivateKeyFile = fs.existsSync(resolvedPath);
+         } catch {
+            hasValidPrivateKeyFile = false;
+         }
+      }
+
+      if (!hasPrivateKey && !hasValidPrivateKeyFile) {
+         ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+               'FATAL: JWT key missing in production. Provide JWT_PRIVATE_KEY or a valid JWT_PRIVATE_KEY_PATH file.',
+            path: ['JWT_PRIVATE_KEY'],
+         });
+      }
+   }
+});
+
 export type AuthEnvConfig = z.infer<typeof authEnvSchema>;
 
 export function validateAuthEnv(config: Record<string, unknown>): AuthEnvConfig {
-   const parsed = authEnvSchema.safeParse(config);
+   const parsed = authEnvValidationSchema.safeParse(config);
    if (!parsed.success) {
       const formattedErrors = parsed.error.issues
          .map((issue) => `  - ${issue.path.join('.')}: ${issue.message}`)

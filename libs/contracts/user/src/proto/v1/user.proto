@@ -17,6 +17,7 @@ service UserService {
   rpc GetAvatarUploadSignature (GetAvatarUploadSignatureRequest) returns (GetAvatarUploadSignatureResponse);
   rpc FollowUser (FollowUserRequest) returns (FollowUserResponse);
   rpc UnfollowUser (UnfollowUserRequest) returns (UnfollowUserResponse);
+  rpc CheckIsFollowing (CheckIsFollowingRequest) returns (CheckIsFollowingResponse);
   rpc GetFollowSuggestions (GetFollowSuggestionsRequest) returns (GetFollowSuggestionsResponse);
   rpc GetDateOfBirth (GetDateOfBirthRequest) returns (GetDateOfBirthResponse);
   rpc SearchUsers (SearchUsersRequest) returns (SearchUsersResponse);

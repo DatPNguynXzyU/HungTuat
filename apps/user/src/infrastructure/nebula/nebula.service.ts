@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import createClient, { type Client } from '@nebula-contrib/nebula-nodejs';
-import type { NebulaConfig } from '@common/nebula/nebula.config';
-import type { NebulaExecutionResponse } from '@common/nebula/nebula.types';
+import type { NebulaConfig } from '@user/infrastructure/nebula/nebula.config';
+import type { NebulaExecutionResponse } from '@user/infrastructure/nebula/nebula.types';
 
 interface NebulaRawResponse {
    error_code: number;
@@ -33,10 +33,15 @@ export class NebulaService implements OnModuleInit, OnModuleDestroy {
 
    private async bootstrap(): Promise<void> {
       const server = `${this.config.graphAddress}:${this.config.graphPort}`;
+      const adminUsername = this.config.adminUsername || this.config.username;
+      const adminPassword = this.config.adminPassword || this.config.password;
+      const storagedHost = this.config.storagedHost || 'nebula-storaged';
+      const storagedPort = this.config.storagedPort || 9779;
+
       const adminClient = createClient({
          servers: [server],
-         userName: 'root',
-         password: 'nebula',
+         userName: adminUsername,
+         password: adminPassword,
          space: '',
          poolSize: 1,
          executeTimeout: 10000,
@@ -49,7 +54,7 @@ export class NebulaService implements OnModuleInit, OnModuleDestroy {
       try {
          // 1. Add storage host if not registered
          try {
-            await adminClient.execute('ADD HOSTS "nebula-storaged":9779;');
+            await adminClient.execute(`ADD HOSTS "${storagedHost}":${storagedPort};`);
          } catch {
             // Host might already be registered
          }
@@ -88,8 +93,8 @@ export class NebulaService implements OnModuleInit, OnModuleDestroy {
             }
          }
 
-         // 4. Ensure configured user exists with DBA role if not root
-         if (this.config.username !== 'root') {
+         // 4. Ensure configured user exists with DBA role if not admin
+         if (this.config.username !== adminUsername) {
             try {
                await adminClient.execute(
                   `CREATE USER IF NOT EXISTS ${this.config.username} WITH PASSWORD '${this.config.password}';`,

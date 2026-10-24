@@ -5,7 +5,7 @@ import { Observable, throwError } from 'rxjs';
 import { AppException, COMMON_ERROR_CODES } from '@common';
 import { extractGrpcMetadata, mapHttpStatusToGrpc } from '@common/interceptors/grpc-interceptor.util';
 import { GrpcTraceStorage } from '@common/interceptors/grpc-trace.storage';
-import { randomUUID } from 'crypto';
+import { uuidv7 } from '@common/utils/uuid.util';
 
 /**
  * Universal Filter for catching and mapping domain & application exceptions into standard gRPC status codes.
@@ -33,7 +33,7 @@ export class GrpcExceptionFilter implements RpcExceptionFilter {
          }
       }
       if (!correlationId) {
-         correlationId = randomUUID();
+         correlationId = uuidv7();
       }
 
       if (exception instanceof AppException) {

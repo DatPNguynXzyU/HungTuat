@@ -122,6 +122,16 @@ message UnfollowUserResponse {
   bool success = 1;
 }
 
+message CheckIsFollowingRequest {
+  string followerId = 1;
+  string followingId = 2;
+}
+
+message CheckIsFollowingResponse {
+  bool isFollowing = 1;
+  optional string status = 2;
+}
+
 message GetFollowSuggestionsRequest {
   optional string userId = 1;
   optional int32 limit = 2;

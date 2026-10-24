@@ -20,7 +20,7 @@ export class AuthRbacService {
       const role = await this.rbacRepository.findRoleByCode(roleCode);
       if (role) {
          await this.rbacCacheService.setRole(roleCode, {
-            id: role.id,
+            roleId: role.roleId,
             code: role.code,
             name: role.name,
             description: role.description,
@@ -53,7 +53,7 @@ export class AuthRbacService {
          });
       }
 
-      await this.rbacRepository.assignRoleToAccount(accountId, role.id);
+      await this.rbacRepository.assignRoleToAccount(accountId, role.roleId);
       await this.rbacCacheService.invalidateRole(roleCode);
    }
 }

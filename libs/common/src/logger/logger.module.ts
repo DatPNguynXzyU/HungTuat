@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
-import { randomUUID } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
 import { ReqId } from 'pino-http';
 import { isSpanContextValid, trace } from '@opentelemetry/api';
 import { AppConfigModule, AppConfigService } from '@common/config';
 import { CORRELATION_ID_HEADER, DEFAULT_PINO_REDACT_OPTIONS, REQUEST_ID_HEADER } from '@common/logger/logger.constants';
 import { AppLogger } from '@common/logger/logger.service';
+import { uuidv7 } from '@common/utils/uuid.util';
 
 interface ExtendedRequest extends IncomingMessage {
    id: ReqId;
@@ -89,7 +89,7 @@ interface ExtendedError extends Error {
                            : undefined;
                      const incomingId = req.headers[CORRELATION_ID_HEADER] || req.headers[REQUEST_ID_HEADER];
                      const traceId =
-                        (Array.isArray(incomingId) ? incomingId[0] : incomingId) || activeTraceId || randomUUID();
+                        (Array.isArray(incomingId) ? incomingId[0] : incomingId) || activeTraceId || uuidv7();
                      req.headers[CORRELATION_ID_HEADER] = traceId;
                      res.setHeader(CORRELATION_ID_HEADER, traceId);
                      res.setHeader(REQUEST_ID_HEADER, traceId);

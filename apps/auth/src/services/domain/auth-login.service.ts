@@ -133,7 +133,7 @@ export class AuthLoginService extends AbstractAuthFlow<LoginDto, LoginSaga> {
       const { account, saga, clientIp, dto } = context;
       const nowIso = new Date().toISOString();
 
-      await this.accountRepository.update(account.id, { lastLoginAt: nowIso });
+      await this.accountRepository.update(account.accountId, { lastLoginAt: nowIso });
       saga.markDatabaseUpdated();
       context.lastLoginAt = nowIso;
 
@@ -163,7 +163,7 @@ export class AuthLoginService extends AbstractAuthFlow<LoginDto, LoginSaga> {
       this.eventEmitter.emit(
          AUTH_DOMAIN_EVENTS.LOGIN_SUCCESS,
          new LoginSuccessEvent(
-            context.account.id,
+            context.account.accountId,
             context.account.email,
             new Date(),
             context.clientIp,

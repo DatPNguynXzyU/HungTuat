@@ -10,13 +10,13 @@ import {
    GrpcLoggingInterceptor,
    GrpcMetricsInterceptor,
    HEALTH_INDICATOR_NAMES,
-   NebulaModule,
    RedisHealthIndicator,
    RedisModule,
    RedisService,
    RmqModule,
    type ICommandHandler,
 } from '@common';
+import { NebulaModule } from '@user/infrastructure/nebula';
 import { UserConfigModule } from '@user/config';
 import { UserLoggerModule } from '@user/logger';
 import { PrismaModule, PrismaService } from '@user/prisma';

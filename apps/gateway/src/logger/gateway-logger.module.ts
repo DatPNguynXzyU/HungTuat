@@ -1,11 +1,10 @@
 import { Global, Module } from '@nestjs/common';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
-import { randomUUID } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
 import { ReqId } from 'pino-http';
 import { join } from 'path';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { AppLogger, CORRELATION_ID_HEADER, DEFAULT_PINO_REDACT_OPTIONS, REQUEST_ID_HEADER } from '@common';
+import { AppLogger, CORRELATION_ID_HEADER, DEFAULT_PINO_REDACT_OPTIONS, REQUEST_ID_HEADER, uuidv7 } from '@common';
 import { GatewayConfigService } from '@/config';
 
 interface ExtendedRequest extends IncomingMessage {
@@ -38,7 +37,7 @@ interface ExtendedError extends Error {
 export function createGatewayLoggerOptions(config: GatewayConfigService) {
    const nodeEnv = config.nodeEnv;
    const isProduction = config.isProduction;
-   const isDevelopment = nodeEnv === 'development';
+   const isDevelopment = config.isDevelopment;
    const serviceName = config.serviceName;
    const logLevel = config.logLevel;
 
@@ -82,7 +81,7 @@ export function createGatewayLoggerOptions(config: GatewayConfigService) {
          },
          genReqId: (req: IncomingMessage, res: ServerResponse) => {
             const incomingId = req.headers[CORRELATION_ID_HEADER] || req.headers[REQUEST_ID_HEADER];
-            const traceId = (Array.isArray(incomingId) ? incomingId[0] : incomingId) || randomUUID();
+            const traceId = (Array.isArray(incomingId) ? incomingId[0] : incomingId) || uuidv7();
             req.headers[CORRELATION_ID_HEADER] = traceId;
             res.setHeader(CORRELATION_ID_HEADER, traceId);
             res.setHeader(REQUEST_ID_HEADER, traceId);

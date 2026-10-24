@@ -16,7 +16,7 @@ export class RbacRepository implements IRbacRepository {
 
    private toRoleEntity(role: RoleWithPermissions): RoleEntity {
       return {
-         id: role.roleId,
+         roleId: role.roleId,
          code: role.code,
          name: role.name,
          description: role.description,
@@ -81,7 +81,7 @@ export class RbacRepository implements IRbacRepository {
       return rolePermissions
          .filter((rp) => rp.permission && !rp.permission.deletedAt)
          .map((rp) => ({
-            id: rp.permission.permissionId,
+            permissionId: rp.permission.permissionId,
             code: rp.permission.code,
             name: rp.permission.name,
             description: rp.permission.description,

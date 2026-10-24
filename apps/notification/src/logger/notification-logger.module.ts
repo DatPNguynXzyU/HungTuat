@@ -1,9 +1,8 @@
 import { Global, Module } from '@nestjs/common';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
-import { randomUUID } from 'crypto';
 import { join } from 'path';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { AppLogger } from '@common';
+import { AppLogger, DEFAULT_PINO_REDACT_OPTIONS, uuidv7 } from '@common';
 import { NotificationConfigModule, NotificationConfigService } from '@notification/config';
 
 interface RabbitMQContext {
@@ -32,7 +31,7 @@ interface ExtendedError extends Error {
          useFactory: (config: NotificationConfigService) => {
             const nodeEnv = config.nodeEnv;
             const isProduction = config.isProduction;
-            const isDevelopment = nodeEnv === 'development';
+            const isDevelopment = config.isDevelopment;
             const serviceName = config.serviceName;
             const logLevel = config.logLevel;
 
@@ -62,11 +61,11 @@ interface ExtendedError extends Error {
                      env: nodeEnv,
                   },
                   // Generate request ID for RabbitMQ messages
-                  genReqId: () => randomUUID(),
+                  genReqId: () => uuidv7(),
                   customProps: (req: unknown) => {
                      // For RabbitMQ microservice context
                      const context = req as RabbitMQContext;
-                     const correlationId = context?.correlationId || randomUUID();
+                     const correlationId = context?.correlationId || uuidv7();
                      const userId = context?.userId;
                      const action = context?.action;
                      const pattern = context?.pattern;
@@ -85,30 +84,7 @@ interface ExtendedError extends Error {
                      responseTime: 'durationMs',
                   },
                   timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
-                  redact: {
-                     paths: [
-                        'context.password',
-                        'context.token',
-                        'context.refreshToken',
-                        'context.accessToken',
-                        'context.secret',
-                        'context.apiKey',
-                        'context.resendToken',
-                        'context.otp',
-                        'context.code',
-                        'context.data.password',
-                        'context.data.token',
-                        'context.data.secret',
-                        'context.data.apiKey',
-                        'context.data.resendToken',
-                        'context.data.otp',
-                        'context.data.code',
-                        'result.password',
-                        'result.token',
-                        'result.apiKey',
-                     ],
-                     censor: '***REDACTED***',
-                  },
+                  redact: DEFAULT_PINO_REDACT_OPTIONS,
                   // Dual transport: pino-pretty console + JSON file streaming for development
                   transport:
                      isDevelopment && logFilePath

@@ -102,7 +102,7 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
       const role = await this.rbacRepository.findRoleByCode(roleCode);
       if (role) {
          await this.rbacCacheService.setRole(roleCode, {
-            id: role.id,
+            roleId: role.roleId,
             code: role.code,
             name: role.name,
             description: role.description,
@@ -409,18 +409,18 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
          const account = await uow.accountRepository.create({
             email: normalizedEmail,
             passwordHash,
-            roleId: defaultRole?.id,
+            roleId: defaultRole?.roleId,
             status: USER_STATUS.ACTIVE,
             isEmailVerified,
          });
 
          await uow.outboxRepository.create({
             aggregateType: AUTH_AGGREGATES.ACCOUNT,
-            aggregateId: account.id,
+            aggregateId: account.accountId,
             eventType,
             payload: {
                email: normalizedEmail,
-               accountId: account.id,
+               accountId: account.accountId,
                role: targetRoleName,
             },
          });
@@ -487,7 +487,7 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
    protected emitSuccessEvent(context: AuthFlowContext<RegistrationFlowDto, RegisterSaga>): void {
       this.eventEmitter.emit(
          AUTH_DOMAIN_EVENTS.USER_REGISTERED,
-         new UserRegisteredEvent(context.account.id, context.account.email, new Date(), context.deviceInfo),
+         new UserRegisteredEvent(context.account.accountId, context.account.email, new Date(), context.deviceInfo),
       );
    }
 

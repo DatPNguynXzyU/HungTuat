@@ -5,29 +5,40 @@ import {
    DEFAULT_DEV_EC_PRIVATE_KEY,
    DEFAULT_DEV_EC_PUBLIC_KEY,
    DEFAULT_JWT_ALGORITHM,
+   DEFAULT_JWT_AUDIENCE,
+   DEFAULT_JWT_ISSUER,
    DEFAULT_JWT_KEY_ID,
 } from '@common/constants/jwt.constant';
+import { isDevelopment, isProduction, isTest, type NodeEnvValue } from '@common/constants/environment.constant';
 import { ENV_KEYS } from '@common/constants/env-keys.constant';
 import { JwtUtil } from '@common/utils/jwt.util';
 
 @Injectable()
 export class CommonConfigService {
+   private _cachedJwtPublicKey?: string;
+   private _cachedJwtPrivateKey?: string;
+
    constructor(protected readonly configService: ConfigService<SharedEnvConfig, true>) {}
 
-   get nodeEnv(): 'development' | 'production' | 'test' {
+   clearKeyCache(): void {
+      this._cachedJwtPublicKey = undefined;
+      this._cachedJwtPrivateKey = undefined;
+   }
+
+   get nodeEnv(): NodeEnvValue {
       return this.configService.get(ENV_KEYS.NODE_ENV, { infer: true });
    }
 
    get isProduction(): boolean {
-      return this.nodeEnv === 'production';
+      return isProduction(this.nodeEnv);
    }
 
    get isDevelopment(): boolean {
-      return this.nodeEnv === 'development';
+      return isDevelopment(this.nodeEnv);
    }
 
    get isTest(): boolean {
-      return this.nodeEnv === 'test';
+      return isTest(this.nodeEnv);
    }
 
    get serviceName(): string {
@@ -55,21 +66,44 @@ export class CommonConfigService {
    }
 
    get jwtPublicKey(): string {
-      const fromFile = this.jwtPublicKeyPath ? JwtUtil.readKeyFile(this.jwtPublicKeyPath) : null;
-      if (fromFile) {
-         return fromFile;
+      if (this._cachedJwtPublicKey !== undefined) {
+         return this._cachedJwtPublicKey;
       }
-      const rawKey = this.configService.get(ENV_KEYS.JWT_PUBLIC_KEY, { infer: true });
-      return (rawKey ? JwtUtil.formatPemKey(rawKey) : '') || DEFAULT_DEV_EC_PUBLIC_KEY;
+      const fromFile = this.jwtPublicKeyPath ? JwtUtil.readKeyFile(this.jwtPublicKeyPath) : null;
+      let key = fromFile;
+      if (!key) {
+         const rawKey = this.configService.get(ENV_KEYS.JWT_PUBLIC_KEY, { infer: true });
+         key = rawKey ? JwtUtil.formatPemKey(rawKey) : '';
+      }
+      if (!key) {
+         if (this.isProduction) {
+            throw new Error('FATAL: JWT public key missing in production');
+         }
+         key = DEFAULT_DEV_EC_PUBLIC_KEY;
+      }
+      this._cachedJwtPublicKey = key;
+      return key;
    }
 
    get jwtPrivateKey(): string {
-      const fromFile = this.jwtPrivateKeyPath ? JwtUtil.readKeyFile(this.jwtPrivateKeyPath) : null;
-      if (fromFile) {
-         return fromFile;
+      if (this._cachedJwtPrivateKey !== undefined) {
+         return this._cachedJwtPrivateKey;
       }
-      const rawKey = this.configService.get(ENV_KEYS.JWT_PRIVATE_KEY, { infer: true });
-      return (rawKey ? JwtUtil.formatPemKey(rawKey) : '') || DEFAULT_DEV_EC_PRIVATE_KEY;
+      const fromFile = this.jwtPrivateKeyPath ? JwtUtil.readKeyFile(this.jwtPrivateKeyPath) : null;
+      let key = fromFile;
+      if (!key) {
+         const rawKey = this.configService.get(ENV_KEYS.JWT_PRIVATE_KEY, { infer: true });
+         key = rawKey ? JwtUtil.formatPemKey(rawKey) : '';
+      }
+      if (!key) {
+         if (this.isProduction) {
+            throw new Error('FATAL: JWT private key missing in production');
+         }
+         key = DEFAULT_DEV_EC_PRIVATE_KEY;
+      }
+
+      this._cachedJwtPrivateKey = key;
+      return key;
    }
 
    get jwtKeyId(): string {
@@ -78,6 +112,14 @@ export class CommonConfigService {
 
    get jwtAlgorithm(): string {
       return this.configService.get(ENV_KEYS.JWT_ALGORITHM, { infer: true }) || DEFAULT_JWT_ALGORITHM;
+   }
+
+   get jwtIssuer(): string {
+      return this.configService.get(ENV_KEYS.JWT_ISSUER, { infer: true }) || DEFAULT_JWT_ISSUER;
+   }
+
+   get jwtAudience(): string {
+      return this.configService.get(ENV_KEYS.JWT_AUDIENCE, { infer: true }) || DEFAULT_JWT_AUDIENCE;
    }
 
    get jwtSecret(): string {

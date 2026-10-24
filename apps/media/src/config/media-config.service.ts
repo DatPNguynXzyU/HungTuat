@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { isDevelopment, isProduction } from '@common';
 import { MEDIA_ENV_KEYS, type MediaEnvConfig } from '@media/config/media-env.schema';
 
 @Injectable()
@@ -11,7 +12,11 @@ export class MediaConfigService {
    }
 
    get isProduction(): boolean {
-      return this.configService.get(MEDIA_ENV_KEYS.NODE_ENV, { infer: true }) === 'production';
+      return isProduction(this.nodeEnv);
+   }
+
+   get isDevelopment(): boolean {
+      return isDevelopment(this.nodeEnv);
    }
 
    get nodeEnv(): string {

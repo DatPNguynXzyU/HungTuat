@@ -1,7 +1,7 @@
 import type { SetOptional } from '@common';
 
 export interface AccountEntity {
-   id: string;
+   accountId: string;
    email: string;
    phoneNumber?: string | null;
    passwordHash: string;
@@ -15,12 +15,12 @@ export interface AccountEntity {
    updatedAt?: string;
 }
 
-export type CreateAccountData = SetOptional<Omit<AccountEntity, 'roles'>, 'id' | 'createdAt'> & {
+export type CreateAccountData = SetOptional<Omit<AccountEntity, 'roles'>, 'accountId' | 'createdAt'> & {
    roleId?: string;
 };
 
 export interface RoleEntity {
-   id: string;
+   roleId: string;
    code: string;
    name: string;
    description?: string | null;
@@ -32,7 +32,7 @@ export interface RoleEntity {
 }
 
 export interface PermissionEntity {
-   id: string;
+   permissionId: string;
    code: string;
    name: string;
    description?: string | null;

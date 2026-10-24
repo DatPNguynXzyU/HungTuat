@@ -234,6 +234,29 @@ export class FollowService {
       return updatedFollow;
    }
 
+   async checkIsFollowing(
+      followerId: string,
+      followingId: string,
+   ): Promise<{ isFollowing: boolean; status?: FollowStatus }> {
+      const follower = await this.getUserById(followerId);
+      const following = await this.getUserById(followingId);
+
+      const inGraph = await this.graphFollowRepository.findFollow(follower.userId, following.userId);
+      if (inGraph) {
+         return { isFollowing: true, status: FollowStatus.ACCEPTED };
+      }
+
+      const follow = await this.followRepository.findByFollowerAndFollowing(follower.userId, following.userId);
+      if (follow) {
+         return {
+            isFollowing: follow.status === FollowStatus.ACCEPTED,
+            status: follow.status,
+         };
+      }
+
+      return { isFollowing: false };
+   }
+
    async getFollowers(userId: string, status?: FollowStatus, skip = 0, take = 20): Promise<FollowEntity[]> {
       const user = await this.getUserById(userId);
 

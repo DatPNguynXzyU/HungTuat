@@ -32,12 +32,18 @@ export class UserConfigService extends CommonConfigService {
    }
 
    get nebula() {
+      const username = this.configService.get(USER_ENV_KEYS.NEBULA_USERNAME, { infer: true }) || 'root';
+      const password = this.configService.get(USER_ENV_KEYS.NEBULA_PASSWORD, { infer: true }) || 'nebula';
       return {
          graphAddress: this.configService.get(USER_ENV_KEYS.NEBULA_GRAPHD_HOST, { infer: true }) || '127.0.0.1',
          graphPort: Number(this.configService.get(USER_ENV_KEYS.NEBULA_GRAPHD_PORT, { infer: true }) || 9669),
-         username: this.configService.get(USER_ENV_KEYS.NEBULA_USERNAME, { infer: true }) || 'root',
-         password: this.configService.get(USER_ENV_KEYS.NEBULA_PASSWORD, { infer: true }) || 'nebula',
+         username,
+         password,
          space: this.configService.get(USER_ENV_KEYS.NEBULA_SPACE, { infer: true }) || 'social_graph',
+         adminUsername: this.configService.get(USER_ENV_KEYS.NEBULA_ADMIN_USERNAME, { infer: true }) || username,
+         adminPassword: this.configService.get(USER_ENV_KEYS.NEBULA_ADMIN_PASSWORD, { infer: true }) || password,
+         storagedHost: this.configService.get(USER_ENV_KEYS.NEBULA_STORAGED_HOST, { infer: true }) || 'nebula-storaged',
+         storagedPort: Number(this.configService.get(USER_ENV_KEYS.NEBULA_STORAGED_PORT, { infer: true }) || 9779),
       };
    }
 

@@ -3,9 +3,11 @@ import { firstValueFrom } from 'rxjs';
 import { CommandBus, createGrpcMetadata, DEFAULT_ROLES, GrpcLoggingInterceptor, GrpcMetricsInterceptor } from '@common';
 import { UserGrpcController } from '@user/adapters/grpc/user-grpc.controller';
 import { CheckUsernameCommand } from '@user/commands/authentication/check-username.command';
+import { CheckIsFollowingCommand } from '@user/commands/follow/check-is-following.command';
 import { USER_PROFILE_REPOSITORY } from '@user/repositories';
 import { UserCoreService } from '@user/services/domain/user-core.service';
 import { FollowStatus, UserEntity, UserStatus } from '@user/entities';
+import { FOLLOW_STATUS } from '@contracts/user';
 
 describe('UserGrpcController', () => {
    let controller: UserGrpcController;
@@ -297,6 +299,23 @@ describe('UserGrpcController', () => {
          expect(result.followersCount).toBe(0);
          expect(result.followingCount).toBe(0);
          expect(result.recipesCount).toBe(0);
+      });
+   });
+
+   describe('checkIsFollowing', () => {
+      it('should delegate to CheckIsFollowingCommand and return result', async () => {
+         commandBus.execute.mockResolvedValueOnce({
+            isFollowing: true,
+            status: FOLLOW_STATUS.ACCEPTED,
+         });
+
+         const result = await firstValueFrom(
+            controller.checkIsFollowing({ followerId: 'usr-1', followingId: 'usr-2' }),
+         );
+
+         expect(commandBus.execute).toHaveBeenCalledWith(expect.any(CheckIsFollowingCommand));
+         expect(result.isFollowing).toBe(true);
+         expect(result.status).toBe(FOLLOW_STATUS.ACCEPTED);
       });
    });
 });
