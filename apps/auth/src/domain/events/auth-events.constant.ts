@@ -1,8 +1,6 @@
 export const AUTH_DOMAIN_EVENTS = {
    USER_REGISTERED: 'user.registered',
    USER_REGISTRATION_FAILED: 'user.registration.failed',
-   SUPPLIER_REGISTERED: 'supplier.registered',
-   SUPPLIER_REGISTRATION_FAILED: 'supplier.registration.failed',
    ACCOUNT_LOCKED: 'account.locked',
    PASSWORD_CHANGED: 'password.changed',
    SESSION_REVOKED: 'session.revoked',

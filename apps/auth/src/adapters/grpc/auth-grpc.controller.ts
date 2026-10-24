@@ -44,7 +44,6 @@ import {
    type IRefreshTokenRequest,
    type IRefreshTokenResponse,
    type IRegisterRequest,
-   type IRegisterSupplierRequest,
    type IRevokeAllUserTokensRequest,
    type IRevokeOtherSessionsRequest,
    type IRevokeOtherSessionsResponse,
@@ -88,7 +87,6 @@ import {
    RefreshTokenCommand,
    RegisterCommand,
    RegisterServicePermissionsCommand,
-   RegisterSupplierCommand,
    RevokeAllAccountTokensCommand,
    RevokeOtherSessionsCommand,
    RevokeSessionCommand,
@@ -271,26 +269,6 @@ export class AuthGrpcController implements IAuthV1GrpcService {
          this.commandBus
             .execute(
                new RegisterCommand(
-                  {
-                     email: data.email,
-                     password: data.password,
-                     confirmPassword: data.confirmPassword || data.password,
-                     verificationToken: data.verificationToken,
-                  },
-                  deviceInfo,
-               ),
-            )
-            .then((result: IAuthResult): ILoginResponse => this.mapAuthResult(result)),
-      );
-   }
-
-   @GrpcMethod(AUTH_V1_GRPC_SERVICE_NAME, AUTH_V1_GRPC_METHODS.REGISTER_SUPPLIER)
-   registerSupplier(data: IRegisterSupplierRequest): Observable<ILoginResponse> {
-      const deviceInfo = this.mapDeviceInfo(data.deviceInfo);
-      return from(
-         this.commandBus
-            .execute(
-               new RegisterSupplierCommand(
                   {
                      email: data.email,
                      password: data.password,

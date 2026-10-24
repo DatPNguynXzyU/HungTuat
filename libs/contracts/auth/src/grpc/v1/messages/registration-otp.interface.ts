@@ -31,11 +31,3 @@ export interface IRegisterRequest {
    verificationToken: string;
    deviceInfo?: IDeviceInfoProto;
 }
-
-export interface IRegisterSupplierRequest {
-   email: string;
-   password: string;
-   confirmPassword?: string;
-   verificationToken: string;
-   deviceInfo?: IDeviceInfoProto;
-}

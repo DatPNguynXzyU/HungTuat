@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SharedEnvConfig } from '@common/config/shared-env.schema';
 import {
-   DEFAULT_DEV_RSA_PRIVATE_KEY,
-   DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_DEV_EC_PRIVATE_KEY,
+   DEFAULT_DEV_EC_PUBLIC_KEY,
    DEFAULT_JWT_ALGORITHM,
    DEFAULT_JWT_KEY_ID,
 } from '@common/constants/jwt.constant';
@@ -60,7 +60,7 @@ export class CommonConfigService {
          return fromFile;
       }
       const rawKey = this.configService.get(ENV_KEYS.JWT_PUBLIC_KEY, { infer: true });
-      return (rawKey ? JwtUtil.formatPemKey(rawKey) : '') || DEFAULT_DEV_RSA_PUBLIC_KEY;
+      return (rawKey ? JwtUtil.formatPemKey(rawKey) : '') || DEFAULT_DEV_EC_PUBLIC_KEY;
    }
 
    get jwtPrivateKey(): string {
@@ -69,7 +69,7 @@ export class CommonConfigService {
          return fromFile;
       }
       const rawKey = this.configService.get(ENV_KEYS.JWT_PRIVATE_KEY, { infer: true });
-      return (rawKey ? JwtUtil.formatPemKey(rawKey) : '') || DEFAULT_DEV_RSA_PRIVATE_KEY;
+      return (rawKey ? JwtUtil.formatPemKey(rawKey) : '') || DEFAULT_DEV_EC_PRIVATE_KEY;
    }
 
    get jwtKeyId(): string {

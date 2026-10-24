@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { SignOptions, VerifyOptions } from 'jsonwebtoken';
-import { DEFAULT_DEV_RSA_PUBLIC_KEY, type JwtPayload, JwtUtil } from '@common';
+import { DEFAULT_DEV_EC_PUBLIC_KEY, type JwtPayload, JwtUtil } from '@common';
 import { type IJwksResponse } from '@contracts/auth';
 import { AuthConfigService } from '@auth/config';
 import type { IJwtService } from '@auth/services/infrastructure/token.service.interface';
@@ -15,7 +15,7 @@ export class JwtService implements IJwtService {
 
    constructor(private readonly config: AuthConfigService) {
       this.jwtPrivateKey = this.config.jwtPrivateKey;
-      this.jwtPublicKey = this.config.jwtPublicKey || DEFAULT_DEV_RSA_PUBLIC_KEY;
+      this.jwtPublicKey = this.config.jwtPublicKey || DEFAULT_DEV_EC_PUBLIC_KEY;
       this.jwtKeyId = this.config.jwtKeyId;
       this._accessTokenExpiresIn = this.config.jwtAccessTokenExpiresIn;
       this._refreshTokenExpiresIn = this.config.jwtRefreshTokenExpiresIn;

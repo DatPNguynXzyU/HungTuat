@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import { DEFAULT_DEV_RSA_PRIVATE_KEY, type JwtPayload } from '@common';
-import { DEFAULT_DEV_RSA_PUBLIC_KEY, DEFAULT_JWT_ALGORITHM, DEFAULT_JWT_KEY_ID, JWT_TOKEN_TYPE } from '@contracts/auth';
+import { DEFAULT_DEV_EC_PRIVATE_KEY, type JwtPayload } from '@common';
+import { DEFAULT_DEV_EC_PUBLIC_KEY, DEFAULT_JWT_ALGORITHM, DEFAULT_JWT_KEY_ID, JWT_TOKEN_TYPE } from '@contracts/auth';
 import { AuthConfigService } from '@auth/config';
 import { JwtService } from '@auth/services/infrastructure/jwt.service';
 
@@ -8,8 +8,8 @@ describe('JwtService', () => {
    let service: JwtService;
 
    const mockConfigService = {
-      jwtPrivateKey: DEFAULT_DEV_RSA_PRIVATE_KEY,
-      jwtPublicKey: DEFAULT_DEV_RSA_PUBLIC_KEY,
+      jwtPrivateKey: DEFAULT_DEV_EC_PRIVATE_KEY,
+      jwtPublicKey: DEFAULT_DEV_EC_PUBLIC_KEY,
       jwtKeyId: DEFAULT_JWT_KEY_ID,
       jwtAccessTokenExpiresIn: 900,
       jwtRefreshTokenExpiresIn: 604800,
@@ -31,8 +31,8 @@ describe('JwtService', () => {
 
    describe('configuration getters', () => {
       it('should expose public and private keys, keyId and expiration times', () => {
-         expect(service.publicKey).toBe(DEFAULT_DEV_RSA_PUBLIC_KEY);
-         expect(service.privateKey).toBe(DEFAULT_DEV_RSA_PRIVATE_KEY);
+         expect(service.publicKey).toBe(DEFAULT_DEV_EC_PUBLIC_KEY);
+         expect(service.privateKey).toBe(DEFAULT_DEV_EC_PRIVATE_KEY);
          expect(service.keyId).toBe(DEFAULT_JWT_KEY_ID);
          expect(service.accessTokenExpiresIn).toBe(900);
          expect(service.refreshTokenExpiresIn).toBe(604800);
@@ -40,11 +40,14 @@ describe('JwtService', () => {
    });
 
    describe('getJwks', () => {
-      it('should return valid JWKS structure with RSA public key', () => {
+      it('should return valid JWKS structure with EC public key (P-256)', () => {
          const jwks = service.getJwks();
          expect(jwks).toBeDefined();
          expect(Array.isArray(jwks.keys)).toBe(true);
-         expect(jwks.keys[0].kty).toBe('RSA');
+         expect(jwks.keys[0].kty).toBe('EC');
+         expect(jwks.keys[0].crv).toBe('P-256');
+         expect(jwks.keys[0].x).toBeDefined();
+         expect(jwks.keys[0].y).toBeDefined();
          expect(jwks.keys[0].kid).toBe(DEFAULT_JWT_KEY_ID);
          expect(jwks.keys[0].alg).toBe(DEFAULT_JWT_ALGORITHM);
          expect(jwks.keys[0].use).toBe('sig');

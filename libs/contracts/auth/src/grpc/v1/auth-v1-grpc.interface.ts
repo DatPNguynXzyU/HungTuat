@@ -12,7 +12,6 @@ import type {
    IVerifyRegisterOtpRequest,
    IVerifyRegisterOtpResponse,
    IRegisterRequest,
-   IRegisterSupplierRequest,
    IGetSessionsRequest,
    IGetSessionsResponse,
    IRevokeSessionRequest,
@@ -52,7 +51,6 @@ export interface IAuthV1GrpcService {
    sendRegisterOtp(request: ISendRegisterOtpRequest, metadata?: Metadata): Observable<ISendRegisterOtpResponse>;
    verifyRegisterOtp(request: IVerifyRegisterOtpRequest, metadata?: Metadata): Observable<IVerifyRegisterOtpResponse>;
    register(request: IRegisterRequest, metadata?: Metadata): Observable<ILoginResponse>;
-   registerSupplier(request: IRegisterSupplierRequest, metadata?: Metadata): Observable<ILoginResponse>;
 
    getSessions(request: IGetSessionsRequest, metadata?: Metadata): Observable<IGetSessionsResponse>;
    revokeSession(request: IRevokeSessionRequest, metadata?: Metadata): Observable<IRevokeTokenResponse>;

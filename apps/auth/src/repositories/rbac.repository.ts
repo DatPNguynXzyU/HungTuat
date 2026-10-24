@@ -138,6 +138,25 @@ export class RbacRepository implements IRbacRepository {
       return accountRoles.filter((ar) => ar.role && !ar.role.deletedAt).map((ar) => this.toRoleEntity(ar.role));
    }
 
+   async createRole(data: { code: string; name?: string; description?: string }): Promise<RoleEntity> {
+      const created = await this.prisma.role.create({
+         data: {
+            code: data.code,
+            name: data.name || data.code,
+            description: data.description || null,
+         },
+         include: {
+            rolePermissions: {
+               include: {
+                  permission: true,
+               },
+            },
+         },
+      });
+
+      return this.toRoleEntity(created);
+   }
+
    async upsertPermissions(permissions: Array<{ code: string; name: string; description?: string }>): Promise<number> {
       let count = 0;
       for (const p of permissions) {

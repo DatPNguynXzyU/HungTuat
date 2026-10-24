@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { DEFAULT_ROLES, JwtUtil, SERVICES } from '@common';
-import { AUTH_PATTERNS, AUTH_RESPONSE_MESSAGES, DEFAULT_DEV_RSA_PRIVATE_KEY, USER_STATUS } from '@contracts/auth';
+import { AUTH_PATTERNS, AUTH_RESPONSE_MESSAGES, DEFAULT_DEV_EC_PRIVATE_KEY, USER_STATUS } from '@contracts/auth';
 import { GatewayConfigService } from '@/config';
 import { GatewayModule } from '@/gateway.module';
 import { App } from 'supertest/types';
@@ -194,7 +194,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
       });
 
       it('should get sessions list using cookie authentication', async () => {
-         const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_RSA_PRIVATE_KEY;
+         const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_EC_PRIVATE_KEY;
          const accessToken = JwtUtil.sign(
             { sub: mockUser.id, email: mockUser.email, roles: mockUser.roles, tokenType: 'access' },
             privateKey,
@@ -221,7 +221,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
       });
 
       it('should revoke other sessions using cookie authentication', async () => {
-         const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_RSA_PRIVATE_KEY;
+         const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_EC_PRIVATE_KEY;
          const accessToken = JwtUtil.sign(
             { sub: mockUser.id, email: mockUser.email, roles: mockUser.roles, tokenType: 'access' },
             privateKey,
@@ -350,7 +350,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
       });
 
       it('should get sessions list using Bearer token authentication', async () => {
-         const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_RSA_PRIVATE_KEY;
+         const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_EC_PRIVATE_KEY;
          const accessToken = JwtUtil.sign(
             { sub: mockUser.id, email: mockUser.email, roles: mockUser.roles, tokenType: 'access', jti: 'jti-mobile' },
             privateKey,
@@ -408,7 +408,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
       });
 
       it('should access protected endpoint with Bearer token', async () => {
-         const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_RSA_PRIVATE_KEY;
+         const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_EC_PRIVATE_KEY;
          const accessToken = JwtUtil.sign(
             { sub: mockUser.id, email: mockUser.email, roles: mockUser.roles, tokenType: 'access' },
             privateKey,
@@ -430,7 +430,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
 
    describe('Cross-platform compatibility', () => {
       it('should handle web client using Bearer token (backward compatibility)', async () => {
-         const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_RSA_PRIVATE_KEY;
+         const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_EC_PRIVATE_KEY;
          const accessToken = JwtUtil.sign(
             { sub: mockUser.id, email: mockUser.email, roles: mockUser.roles, tokenType: 'access' },
             privateKey,
@@ -465,7 +465,7 @@ describe('Multi-Platform Auth E2E Tests (Web + Mobile)', () => {
       });
 
       it('should prioritize cookie over Bearer token when both are present', async () => {
-         const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_RSA_PRIVATE_KEY;
+         const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_EC_PRIVATE_KEY;
          const cookieToken = JwtUtil.sign(
             { sub: 'cookie-user-id', email: 'cookie@example.com', roles: [DEFAULT_ROLES.USER], tokenType: 'access' },
             privateKey,

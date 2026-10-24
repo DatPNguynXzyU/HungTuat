@@ -18,3 +18,5 @@ export * from '@auth/commands/auth/get-email.command';
 export * from '@auth/commands/auth/get-email.handler';
 export * from '@auth/commands/auth/register-service-permissions.command';
 export * from '@auth/commands/auth/register-service-permissions.handler';
+export * from '@auth/commands/auth/elevate-account-role.command';
+export * from '@auth/commands/auth/elevate-account-role.handler';

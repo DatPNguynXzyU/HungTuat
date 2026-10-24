@@ -2,7 +2,11 @@ import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CommonConfigService } from '@common/config/common-config.service';
 import { AUTH_ERROR_REASONS } from '@common/constants/jwt.constant';
-import { DEFAULT_DEV_RSA_PRIVATE_KEY, DEFAULT_DEV_RSA_PUBLIC_KEY } from '@common/constants/jwt.constant';
+import {
+   DEFAULT_DEV_EC_PRIVATE_KEY,
+   DEFAULT_DEV_EC_PUBLIC_KEY,
+   DEFAULT_DEV_RSA_PRIVATE_KEY,
+} from '@common/constants/jwt.constant';
 import { REDIS_KEY_PREFIX } from '@common/constants/redis.constant';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
 import { UnauthorizedException } from '@common/exceptions/http.exceptions';
@@ -16,8 +20,8 @@ describe('JwtAuthGuard', () => {
    let mockReflector: jest.Mocked<Reflector>;
    let mockRedisService: jest.Mocked<RedisService>;
 
-   const privateKey = DEFAULT_DEV_RSA_PRIVATE_KEY;
-   const publicKey = DEFAULT_DEV_RSA_PUBLIC_KEY;
+   const privateKey = DEFAULT_DEV_EC_PRIVATE_KEY;
+   const publicKey = DEFAULT_DEV_EC_PUBLIC_KEY;
 
    beforeEach(() => {
       mockConfigService = {
@@ -266,5 +270,33 @@ describe('JwtAuthGuard', () => {
          expect((err as UnauthorizedException).errorCode).toBe(COMMON_ERROR_CODES.UNAUTHORIZED);
          expect((err as UnauthorizedException).params).toEqual({ reason: AUTH_ERROR_REASONS.INVALID_TOKEN_TYPE });
       }
+   });
+
+   it('should authenticate legacy RS256 token during zero-downtime rollout window', async () => {
+      const legacyToken = JwtUtil.sign(
+         { sub: 'legacy-user-1', email: 'legacy@example.com', tokenType: 'access' },
+         DEFAULT_DEV_RSA_PRIVATE_KEY,
+         3600,
+         { algorithm: 'RS256' },
+      );
+      const mockRequest = {
+         headers: {
+            authorization: `Bearer ${legacyToken}`,
+         },
+         cookies: {},
+      } as unknown as { headers: Record<string, string>; cookies: Record<string, string>; user?: unknown };
+
+      const mockContext = {
+         getHandler: () => {},
+         getClass: () => {},
+         switchToHttp: () => ({
+            getRequest: () => mockRequest,
+         }),
+      } as unknown as ExecutionContext;
+
+      const result = await guard.canActivate(mockContext);
+      expect(result).toBe(true);
+      expect(mockRequest.user).toBeDefined();
+      expect((mockRequest.user as { sub: string }).sub).toBe('legacy-user-1');
    });
 });

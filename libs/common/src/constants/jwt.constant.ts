@@ -1,5 +1,15 @@
 export const DEFAULT_JWT_KEY_ID = 'omni-auth-key-1';
-export const DEFAULT_JWT_ALGORITHM = 'RS256';
+
+export const JWT_ALGORITHM = {
+   ES256: 'ES256',
+   RS256: 'RS256',
+} as const;
+
+export type JwtAlgorithm = (typeof JWT_ALGORITHM)[keyof typeof JWT_ALGORITHM];
+
+export const DEFAULT_JWT_ALGORITHM = JWT_ALGORITHM.ES256;
+export const SUPPORTED_JWT_ALGORITHMS = [JWT_ALGORITHM.ES256, JWT_ALGORITHM.RS256] as const;
+export type SupportedJwtAlgorithm = (typeof SUPPORTED_JWT_ALGORITHMS)[number];
 
 export const JWT_TOKEN_TYPE = {
    ACCESS: 'access',
@@ -29,6 +39,32 @@ export const AUTH_ERROR_REASONS = {
 export type AuthCookie = (typeof AUTH_COOKIES)[keyof typeof AUTH_COOKIES];
 export type AuthErrorReason = (typeof AUTH_ERROR_REASONS)[keyof typeof AUTH_ERROR_REASONS];
 
+/**
+ * Default NIST P-256 (prime256v1 / secp256r1) EC Private Key (PKCS#8 PEM) for development and tests.
+ */
+export const DEFAULT_DEV_EC_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg0VmXM4qElaZYtAzU
+1sGoPWlpgHEjMUAjCL45o95V33ShRANCAAR2SDmgBI30jDoKwdk2VoSn4vK26f4m
+xviwGK7eGU+CYcPML5Y5zKCVvaNcJM5BAyYXgRyqj/6sp9vGm80y9siH
+-----END PRIVATE KEY-----`;
+
+/**
+ * Default NIST P-256 (prime256v1 / secp256r1) EC Public Key (SPKI PEM) for development and tests.
+ */
+export const DEFAULT_DEV_EC_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEdkg5oASN9Iw6CsHZNlaEp+Lytun+
+Jsb4sBiu3hlPgmHDzC+WOcyglb2jXCTOQQMmF4Ecqo/+rKfbxpvNMvbIhw==
+-----END PUBLIC KEY-----`;
+
+/**
+ * Default dev key aliases pointing to the primary ECDSA key pair.
+ */
+export const DEFAULT_DEV_PRIVATE_KEY = DEFAULT_DEV_EC_PRIVATE_KEY;
+export const DEFAULT_DEV_PUBLIC_KEY = DEFAULT_DEV_EC_PUBLIC_KEY;
+
+/**
+ * Legacy RSA-2048 Private Key retained for backward compatibility & zero-downtime transition tests.
+ */
 export const DEFAULT_DEV_RSA_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCx/CvjH0K6nAfI
 yEh2cMhJrYyMrmmXgKA39rKdH43qihXS9a155y/TRBKQ/3xe+pVOBNOCh7Nbx+vS
@@ -58,6 +94,9 @@ VW+SefGub+D1mr+EOjDcKuYZ+BWGahisLGMyhhpbHmUY2TT/6n1QyvEZaNTJjN9L
 lgw10Sms31Q1T1wq1uLchk3v
 -----END PRIVATE KEY-----`;
 
+/**
+ * Legacy RSA-2048 Public Key retained for backward compatibility & zero-downtime transition tests.
+ */
 export const DEFAULT_DEV_RSA_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsfwr4x9CupwHyMhIdnDI
 Sa2MjK5pl4CgN/aynR+N6ooV0vWteecv00QSkP98XvqVTgTTgoezW8fr0jrq7ZeQ

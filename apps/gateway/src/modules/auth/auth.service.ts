@@ -26,7 +26,6 @@ import {
    type IValidateTokenResult,
    type LoginDto,
    type RegisterDto,
-   type RegisterSupplierAccountDto,
    type SendRegisterOtpDto,
    type SendRegisterOtpResponseDto,
    type UserEmailResponseDto,
@@ -226,38 +225,6 @@ export class AuthService implements OnModuleInit {
             return await firstValueFrom(
                defer(() =>
                   this.authGrpcService.register(
-                     {
-                        email: registerDto.email,
-                        password: registerDto.password,
-                        confirmPassword: registerDto.confirmPassword,
-                        verificationToken: registerDto.verificationToken || '',
-                        deviceInfo: this.toProtoDeviceInfo(deviceInfo),
-                     },
-                     metadata,
-                  ),
-               ).pipe(withGrpcRetry(this.authGrpcRetryPolicy)),
-            );
-         });
-         return this.mapGrpcAuthResponse(response);
-      } catch (error: unknown) {
-         return handleGrpcError(error);
-      }
-   }
-
-   async registerSupplier(
-      registerDto: RegisterSupplierAccountDto,
-      deviceInfo?: IDeviceInfo,
-      correlationId?: string,
-   ): Promise<IAuthResult> {
-      try {
-         const metadata = createGrpcMetadata({
-            correlationId,
-            callerService: SERVICE_NAMES.GATEWAY,
-         });
-         const response = await this.authGrpcBreaker.execute(async () => {
-            return await firstValueFrom(
-               defer(() =>
-                  this.authGrpcService.registerSupplier(
                      {
                         email: registerDto.email,
                         password: registerDto.password,

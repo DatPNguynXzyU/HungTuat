@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
-import { DEFAULT_DEV_RSA_PRIVATE_KEY, DEFAULT_ROLES, JwtUtil, SERVICES } from '@common';
+import { DEFAULT_DEV_EC_PRIVATE_KEY, DEFAULT_ROLES, JwtUtil, SERVICES } from '@common';
 import { AUTH_PATTERNS, DEFAULT_JWT_ALGORITHM, DEFAULT_JWT_KEY_ID } from '@contracts/auth';
 import { GatewayConfigService } from '@/config';
 import { GatewayModule } from '@/gateway.module';
@@ -113,7 +113,7 @@ describe('GatewayController (e2e)', () => {
       const body = res.body as { keys: Array<{ kty: string; alg: string }> };
       expect(body.keys).toBeDefined();
       expect(body.keys.length).toBeGreaterThan(0);
-      expect(body.keys[0].kty).toBe('RSA');
+      expect(body.keys[0].kty).toBe('EC');
       expect(body.keys[0].alg).toBe(DEFAULT_JWT_ALGORITHM);
    });
 
@@ -125,7 +125,7 @@ describe('GatewayController (e2e)', () => {
       const body = res.body as { keys: Array<{ kty: string; alg: string }> };
       expect(body.keys).toBeDefined();
       expect(body.keys.length).toBeGreaterThan(0);
-      expect(body.keys[0].kty).toBe('RSA');
+      expect(body.keys[0].kty).toBe('EC');
    });
 
    describe('Dual-mode authentication (cookies + response body tokens)', () => {
@@ -227,7 +227,7 @@ describe('GatewayController (e2e)', () => {
    });
 
    it('/auth/me (GET) - protected route should allow valid Bearer token', async () => {
-      const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_RSA_PRIVATE_KEY;
+      const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_EC_PRIVATE_KEY;
 
       const token = JwtUtil.sign(
          { sub: 'usr_mock_123', email: 'john@example.com', roles: [DEFAULT_ROLES.USER], tokenType: 'access' },
@@ -247,7 +247,7 @@ describe('GatewayController (e2e)', () => {
    });
 
    it('/auth/me (GET) - mobile client should use Bearer token from response body', async () => {
-      const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_RSA_PRIVATE_KEY;
+      const privateKey = JwtUtil.readKeyFile('apps/auth/keys/private.key') || DEFAULT_DEV_EC_PRIVATE_KEY;
 
       const token = JwtUtil.sign(
          { sub: 'usr_mobile_456', email: 'mobile@example.com', roles: [DEFAULT_ROLES.USER], tokenType: 'access' },

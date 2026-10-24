@@ -8,6 +8,7 @@ describe('RbacRepository', () => {
    let prismaService: {
       role: {
          findFirst: jest.Mock;
+         create: jest.Mock;
       };
       rolePermission: {
          findMany: jest.Mock;
@@ -23,6 +24,7 @@ describe('RbacRepository', () => {
       prismaService = {
          role: {
             findFirst: jest.fn(),
+            create: jest.fn(),
          },
          rolePermission: {
             findMany: jest.fn(),
@@ -178,5 +180,34 @@ describe('RbacRepository', () => {
       const roles = await repository.getAccountRoles('acc-1');
       expect(roles).toHaveLength(1);
       expect(roles[0].code).toBe(DEFAULT_ROLES.USER);
+   });
+
+   it('should create a role and return RoleEntity', async () => {
+      const mockRoleData = {
+         code: 'MODERATOR',
+         name: 'Content Moderator',
+         description: 'Role for moderating community content',
+      };
+
+      prismaService.role.create.mockResolvedValue({
+         roleId: 'role-mod-1',
+         code: mockRoleData.code,
+         name: mockRoleData.name,
+         description: mockRoleData.description,
+         version: 1,
+         deletedAt: null,
+         createdAt: new Date('2026-10-24T00:00:00.000Z'),
+         updatedAt: new Date('2026-10-24T00:00:00.000Z'),
+         rolePermissions: [],
+      });
+
+      const role = await repository.createRole(mockRoleData);
+      expect(role).toBeDefined();
+      expect(role.code).toBe(mockRoleData.code);
+      expect(prismaService.role.create).toHaveBeenCalledWith(
+         expect.objectContaining({
+            data: expect.objectContaining({ code: mockRoleData.code }),
+         }),
+      );
    });
 });

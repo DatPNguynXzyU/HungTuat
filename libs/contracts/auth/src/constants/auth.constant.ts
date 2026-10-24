@@ -10,7 +10,6 @@ export const USER_STATUS = {
 
 export const AUTH_PATTERNS = {
    REGISTER: 'auth.register',
-   REGISTER_SUPPLIER: 'auth.register_supplier',
    REVOKE_TOKEN: 'auth.revoke_token',
    REVOKE_ALL_USER_TOKENS: 'auth.revoke_all_user_tokens',
    LOGOUT_ALL: 'auth.logout_all',
@@ -42,7 +41,6 @@ export const AUTH_SECURITY = {
 
 export const AUTH_RESPONSE_MESSAGES = {
    REGISTER_SUCCESS: 'AUTH.REGISTER_SUCCESS',
-   REGISTER_SUPPLIER_SUCCESS: 'AUTH.REGISTER_SUPPLIER_SUCCESS',
    LOGIN_SUCCESS: 'AUTH.LOGIN_SUCCESS',
    LOGOUT_SUCCESS: 'AUTH.LOGOUT_SUCCESS',
    LOGOUT_ALL_SUCCESS: 'AUTH.LOGOUT_ALL_SUCCESS',

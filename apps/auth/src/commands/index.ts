@@ -1,11 +1,11 @@
 import {
    CheckEmailHandler,
    RegisterHandler,
-   RegisterSupplierHandler,
    SendRegisterOtpHandler,
    VerifyRegisterOtpHandler,
 } from '@auth/commands/registration';
 import {
+   ElevateAccountRoleHandler,
    GetEmailHandler,
    GetJwksHandler,
    GetRolePermissionsHandler,
@@ -38,7 +38,6 @@ export const AUTH_COMMAND_HANDLERS = [
    SendRegisterOtpHandler,
    VerifyRegisterOtpHandler,
    RegisterHandler,
-   RegisterSupplierHandler,
 
    // Auth Handlers
    GetJwksHandler,
@@ -51,6 +50,7 @@ export const AUTH_COMMAND_HANDLERS = [
    GetRolePermissionsHandler,
    GetEmailHandler,
    RegisterServicePermissionsHandler,
+   ElevateAccountRoleHandler,
 
    // Session Handlers
    GetSessionsHandler,

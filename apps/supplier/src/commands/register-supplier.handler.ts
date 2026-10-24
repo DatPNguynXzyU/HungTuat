@@ -10,6 +10,7 @@ import {
 import { SupplierService } from '@supplier/services/supplier.service';
 import { RegisterSupplierCommand } from '@supplier/commands/register-supplier.command';
 import { SUPPLIER_MEMBER_REPOSITORY, type ISupplierMemberRepository } from '@supplier/repositories';
+import { SUPPLIER_EVENT_PUBLISHER, type ISupplierEventPublisher } from '@supplier/publishers';
 
 @Injectable()
 @CommandHandler(RegisterSupplierCommand)
@@ -18,6 +19,8 @@ export class RegisterSupplierHandler implements ICommandHandler<RegisterSupplier
       private readonly supplierService: SupplierService,
       @Inject(SUPPLIER_MEMBER_REPOSITORY)
       private readonly supplierMemberRepository: ISupplierMemberRepository,
+      @Inject(SUPPLIER_EVENT_PUBLISHER)
+      private readonly eventPublisher: ISupplierEventPublisher,
    ) {}
 
    async execute(command: RegisterSupplierCommand): Promise<SupplierItemDto> {
@@ -48,6 +51,14 @@ export class RegisterSupplierHandler implements ICommandHandler<RegisterSupplier
                joinedAt: new Date(),
             });
          }
+
+         await this.eventPublisher.publishOnboardingCompleted({
+            accountId: command.userId,
+            supplierId: created.supplierId,
+            role: SUPPLIER_ROLES.SUPPLIER_ADMIN,
+            email: created.contactEmail || undefined,
+            supplierName: created.supplierName,
+         });
       }
 
       return {

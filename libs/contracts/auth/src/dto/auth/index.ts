@@ -1,6 +1,5 @@
 export * from '@contracts/auth/dto/auth/login.dto';
 export * from '@contracts/auth/dto/auth/register.dto';
-export * from '@contracts/auth/dto/auth/register-supplier-account.dto';
 export * from '@contracts/auth/dto/auth/change-password.dto';
 export * from '@contracts/auth/dto/auth/device-session.dto';
 export * from '@contracts/auth/dto/auth/refresh-token.dto';

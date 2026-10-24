@@ -76,5 +76,13 @@
       "uuidv",
       "vtok",
       "zeion"
-   ]
+   ],
+   "explorer.fileNesting.enabled": true,
+   "explorer.fileNesting.expand": false,
+   "explorer.fileNesting.patterns": {
+      "*.ts": "$(capture).spec.ts, $(capture).test.ts, $(capture).d.ts, $(capture).js",
+      "*.js": "$(capture).js.map, $(capture).spec.js, $(capture).test.js",
+      "package.json": "pnpm-lock.yaml, pnpm-workspace.yaml, .npmrc, .nvmrc, nest-cli.json, tsconfig.json, tsconfig.*.json",
+      "Dockerfile": "Dockerfile*, .dockerignore, docker-compose*.yml, docker-compose*.yaml"
+   }
 }

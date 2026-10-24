@@ -24,4 +24,13 @@ export const QUEUES = {
 
 export const RBAC_INTERNAL_PATTERNS = {
    GET_ROLE_PERMISSIONS: 'auth.get_role_permissions',
+   SUPPLIER_ONBOARDING_COMPLETED: 'supplier.onboarding.completed',
 } as const;
+
+export interface ISupplierOnboardingCompletedEvent {
+   accountId: string;
+   supplierId: string;
+   role: string;
+   email?: string;
+   supplierName?: string;
+}

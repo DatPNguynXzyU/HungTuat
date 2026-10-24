@@ -10,6 +10,7 @@ import {
    GrpcMetricsInterceptor,
    RedisModule,
    RmqModule,
+   SERVICES,
    type ICommandHandler,
 } from '@common';
 import { SupplierConfigModule } from '@supplier/config';
@@ -27,6 +28,7 @@ import { SUPPLIER_QUERY_HANDLERS } from '@supplier/queries';
 import { SUPPLIER_COMMAND_HANDLERS } from '@supplier/commands';
 import { SupplierGrpcController, SupplierRmqController } from '@supplier/adapters';
 import { SupplierMetricsController } from '@supplier/supplier-metrics.controller';
+import { SUPPLIER_EVENT_PUBLISHER, SupplierEventPublisher } from '@supplier/publishers';
 
 @Module({
    imports: [
@@ -40,6 +42,12 @@ import { SupplierMetricsController } from '@supplier/supplier-metrics.controller
       UnitOfWorkModule,
       RedisModule,
       RmqModule,
+      RmqModule.register({
+         name: SERVICES.AUTH_SERVICE,
+      }),
+      RmqModule.register({
+         name: SERVICES.NOTIFICATION_SERVICE,
+      }),
       GrpcHealthModule,
    ],
    controllers: [SupplierGrpcController, SupplierMetricsController, SupplierRmqController],
@@ -72,6 +80,13 @@ import { SupplierMetricsController } from '@supplier/supplier-metrics.controller
       GrpcLoggingInterceptor,
       GrpcMetricsInterceptor,
 
+      // Event Publishers
+      SupplierEventPublisher,
+      {
+         provide: SUPPLIER_EVENT_PUBLISHER,
+         useExisting: SupplierEventPublisher,
+      },
+
       // CQRS Command Bus & Handlers
       CommandBus,
       {
@@ -81,7 +96,13 @@ import { SupplierMetricsController } from '@supplier/supplier-metrics.controller
       ...SUPPLIER_QUERY_HANDLERS,
       ...SUPPLIER_COMMAND_HANDLERS,
    ],
-   exports: [SupplierService, SupplierMetricsService, SUPPLIER_REPOSITORY, SUPPLIER_MEMBER_REPOSITORY],
+   exports: [
+      SupplierService,
+      SupplierMetricsService,
+      SUPPLIER_REPOSITORY,
+      SUPPLIER_MEMBER_REPOSITORY,
+      SUPPLIER_EVENT_PUBLISHER,
+   ],
 })
 export class SupplierModule implements OnModuleInit {
    constructor(

@@ -31,6 +31,7 @@ import type {
    UpdateSupplierData,
    UpdateSupplierMemberData,
 } from '@supplier/entities';
+import { SUPPLIER_EVENT_PUBLISHER } from '@supplier/publishers';
 
 describe('Supplier Onboarding Integration Flow (gRPC & RabbitMQ)', () => {
    let grpcController: SupplierGrpcController;
@@ -131,9 +132,14 @@ describe('Supplier Onboarding Integration Flow (gRPC & RabbitMQ)', () => {
       grpcPort: 50054,
    };
 
+   let mockEventPublisher: { publishOnboardingCompleted: jest.Mock };
+
    beforeAll(async () => {
       mockRmqService = {
          ack: jest.fn(),
+      };
+      mockEventPublisher = {
+         publishOnboardingCompleted: jest.fn().mockResolvedValue(undefined),
       };
 
       const module: TestingModule = await Test.createTestingModule({
@@ -150,6 +156,7 @@ describe('Supplier Onboarding Integration Flow (gRPC & RabbitMQ)', () => {
             { provide: CommonConfigService, useValue: mockConfigService },
             { provide: SUPPLIER_REPOSITORY, useValue: mockSupplierRepo },
             { provide: SUPPLIER_MEMBER_REPOSITORY, useValue: mockMemberRepo },
+            { provide: SUPPLIER_EVENT_PUBLISHER, useValue: mockEventPublisher },
             { provide: RmqService, useValue: mockRmqService },
          ],
       }).compile();
@@ -209,6 +216,13 @@ describe('Supplier Onboarding Integration Flow (gRPC & RabbitMQ)', () => {
          // Verify that member is now linked to the newly registered supplier
          const linkedMember = mockMembers.get(accountId);
          expect(linkedMember?.supplierId).toBe('supp-0192e21b-0001');
+         expect(mockEventPublisher.publishOnboardingCompleted).toHaveBeenCalledWith({
+            accountId,
+            supplierId: 'supp-0192e21b-0001',
+            role: SUPPLIER_ROLES.SUPPLIER_ADMIN,
+            email: 'supplier.owner@omni.vn',
+            supplierName: 'Test Organic Farm',
+         });
       });
 
       it('should extract accountId from x-account-id metadata header as fallback', async () => {

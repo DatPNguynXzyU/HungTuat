@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DEFAULT_ROLES, RbacCacheService } from '@common';
+import { DEFAULT_ROLES, RbacCacheService, SYSTEM_ROLES } from '@common';
 import { RBAC_REPOSITORY } from '@auth/repositories';
 import { AuthRbacService } from '@auth/services/domain/auth-rbac.service';
 
@@ -8,11 +8,14 @@ describe('AuthRbacService', () => {
 
    const mockRbacRepository = {
       findRoleByCode: jest.fn(),
+      createRole: jest.fn(),
+      assignRoleToAccount: jest.fn(),
    };
 
    const mockRbacCacheService = {
       getRole: jest.fn(),
       setRole: jest.fn(),
+      invalidateRole: jest.fn(),
    };
 
    beforeEach(async () => {
@@ -102,6 +105,37 @@ describe('AuthRbacService', () => {
          const permissions = await service.getRolePermissions('NON_EXISTENT');
 
          expect(permissions).toEqual([]);
+      });
+   });
+
+   describe('assignRoleToAccount', () => {
+      it('should assign existing role to account and invalidate role cache', async () => {
+         mockRbacRepository.findRoleByCode.mockResolvedValueOnce({
+            id: 'role-123',
+            code: SYSTEM_ROLES.SUPER_ADMIN,
+         });
+
+         await service.assignRoleToAccount('acc-1', SYSTEM_ROLES.SUPER_ADMIN);
+
+         expect(mockRbacRepository.assignRoleToAccount).toHaveBeenCalledWith('acc-1', 'role-123');
+         expect(mockRbacCacheService.invalidateRole).toHaveBeenCalledWith(SYSTEM_ROLES.SUPER_ADMIN);
+         expect(mockRbacRepository.createRole).not.toHaveBeenCalled();
+      });
+
+      it('should dynamically create role if not present, then assign and invalidate cache', async () => {
+         mockRbacRepository.findRoleByCode.mockResolvedValueOnce(null);
+         mockRbacRepository.createRole.mockResolvedValueOnce({
+            id: 'role-new',
+            code: SYSTEM_ROLES.SUPER_ADMIN,
+         });
+
+         await service.assignRoleToAccount('acc-2', SYSTEM_ROLES.SUPER_ADMIN);
+
+         expect(mockRbacRepository.createRole).toHaveBeenCalledWith(
+            expect.objectContaining({ code: SYSTEM_ROLES.SUPER_ADMIN }),
+         );
+         expect(mockRbacRepository.assignRoleToAccount).toHaveBeenCalledWith('acc-2', 'role-new');
+         expect(mockRbacCacheService.invalidateRole).toHaveBeenCalledWith(SYSTEM_ROLES.SUPER_ADMIN);
       });
    });
 });

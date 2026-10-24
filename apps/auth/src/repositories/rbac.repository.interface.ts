@@ -9,5 +9,6 @@ export interface IRbacRepository {
    assignRoleToAccount(accountId: string, roleId: string): Promise<void>;
    removeRoleFromAccount(accountId: string, roleId: string): Promise<void>;
    getAccountRoles(accountId: string): Promise<RoleEntity[]>;
+   createRole(data: { code: string; name?: string; description?: string }): Promise<RoleEntity>;
    upsertPermissions(permissions: Array<{ code: string; name: string; description?: string }>): Promise<number>;
 }

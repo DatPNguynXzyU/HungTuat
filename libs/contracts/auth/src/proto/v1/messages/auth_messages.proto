@@ -78,14 +78,6 @@ message RegisterRequest {
   DeviceInfoProto deviceInfo = 5;
 }
 
-message RegisterSupplierRequest {
-  string email = 1;
-  string password = 2;
-  string confirmPassword = 3;
-  string verificationToken = 4;
-  DeviceInfoProto deviceInfo = 5;
-}
-
 message GetSessionsRequest {
   string userId = 1;
   string currentJti = 2;

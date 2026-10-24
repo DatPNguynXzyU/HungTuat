@@ -9,14 +9,12 @@ import {
    AUTH_SECURITY,
    USER_STATUS,
    RegisterDto,
-   RegisterSupplierAccountDto,
    SendRegisterOtpDto,
    type SendRegisterOtpResponseDto,
    VerifyRegisterOtpDto,
    type VerifyRegisterOtpResponseDto,
    type IAuthResult,
 } from '@contracts/auth';
-import { SUPPLIER_ROLES } from '@contracts/supplier';
 import { NOTIFICATION_EVENTS } from '@contracts/notification';
 import { NOTIFICATION_ADAPTER, type INotificationAdapter } from '@auth/adapters';
 import { SYSTEM_ROLES, type IDeviceInfo } from '@common';
@@ -335,21 +333,6 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
    }
 
    /**
-    * Public entry point for supplier admin registration.
-    * Provisions supplier account with SUPPLIER_ADMIN role and emits SUPPLIER_REGISTERED outbox event.
-    */
-   async registerSupplier(dto: RegisterSupplierAccountDto, deviceInfo?: IDeviceInfo): Promise<IAuthResult> {
-      return this.execute(
-         {
-            ...dto,
-            targetRole: SUPPLIER_ROLES.SUPPLIER_ADMIN,
-            outboxEventType: NOTIFICATION_EVENTS.SUPPLIER_REGISTERED,
-         },
-         deviceInfo,
-      );
-   }
-
-   /**
     * Primitive step: Validates registration payload, hashes password, executes transaction, and prepares saga.
     */
    protected async authenticateOrProvision(
@@ -399,13 +382,9 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
       if (mightContain) {
          const existing = await this.accountRepository.findByEmail(normalizedEmail);
          if (existing) {
-            const auditAction =
-               dto.targetRole === SUPPLIER_ROLES.SUPPLIER_ADMIN
-                  ? AUDIT_ACTIONS.AUTH_REGISTER_SUPPLIER
-                  : AUDIT_ACTIONS.AUTH_REGISTER;
             await this.auditLogService.record(
                AuditLogBuilder.create()
-                  .withAction(auditAction)
+                  .withAction(AUDIT_ACTIONS.AUTH_REGISTER)
                   .asFailure(AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS)
                   .withActorEmail(normalizedEmail)
                   .withDeviceInfo(deviceInfo)
@@ -487,11 +466,10 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
     * Hook: Dispatches structured audit log with context-aware action identifier.
     */
    protected override recordAudit(context: AuthFlowContext<RegistrationFlowDto, RegisterSaga>): void {
-      const isSupplier = context.dto.targetRole === SUPPLIER_ROLES.SUPPLIER_ADMIN;
       this.auditLogService
          .record(
             AuditLogBuilder.create()
-               .withAction(isSupplier ? AUDIT_ACTIONS.AUTH_REGISTER_SUPPLIER : this.getAuditAction())
+               .withAction(this.getAuditAction())
                .asSuccess()
                .withAccount(context.account)
                .withDeviceInfo(context.deviceInfo)
@@ -507,9 +485,8 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
     * Primitive step: Emits domain event for registration.
     */
    protected emitSuccessEvent(context: AuthFlowContext<RegistrationFlowDto, RegisterSaga>): void {
-      const isSupplier = context.dto.targetRole === SUPPLIER_ROLES.SUPPLIER_ADMIN;
       this.eventEmitter.emit(
-         isSupplier ? AUTH_DOMAIN_EVENTS.SUPPLIER_REGISTERED : AUTH_DOMAIN_EVENTS.USER_REGISTERED,
+         AUTH_DOMAIN_EVENTS.USER_REGISTERED,
          new UserRegisteredEvent(context.account.id, context.account.email, new Date(), context.deviceInfo),
       );
    }
@@ -519,9 +496,8 @@ export class AuthRegistrationService extends AbstractAuthFlow<RegistrationFlowDt
     */
    protected emitFailureEvent(error: unknown, dto: RegistrationFlowDto, deviceInfo?: IDeviceInfo): void {
       const reason = this.extractFailureReason(error);
-      const isSupplier = dto.targetRole === SUPPLIER_ROLES.SUPPLIER_ADMIN;
       this.eventEmitter.emit(
-         isSupplier ? AUTH_DOMAIN_EVENTS.SUPPLIER_REGISTRATION_FAILED : AUTH_DOMAIN_EVENTS.USER_REGISTRATION_FAILED,
+         AUTH_DOMAIN_EVENTS.USER_REGISTRATION_FAILED,
          new UserRegistrationFailedEvent(dto.email, reason, new Date(), deviceInfo),
       );
    }

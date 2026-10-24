@@ -3,8 +3,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DEFAULT_ROLES, RedisService, UnauthorizedException, uuidv7 } from '@common';
 import {
    AUTH_ERROR_CODES,
-   DEFAULT_DEV_RSA_PRIVATE_KEY,
-   DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_DEV_EC_PRIVATE_KEY,
+   DEFAULT_DEV_EC_PUBLIC_KEY,
    DEFAULT_JWT_KEY_ID,
    ITokenAccountPayload,
    JWT_TOKEN_TYPE,
@@ -46,8 +46,8 @@ describe('TokenLifecycleService', () => {
    const mockRevokeAllSessions = jest.fn();
 
    const mockConfigService = {
-      jwtPrivateKey: DEFAULT_DEV_RSA_PRIVATE_KEY,
-      jwtPublicKey: DEFAULT_DEV_RSA_PUBLIC_KEY,
+      jwtPrivateKey: DEFAULT_DEV_EC_PRIVATE_KEY,
+      jwtPublicKey: DEFAULT_DEV_EC_PUBLIC_KEY,
       jwtKeyId: DEFAULT_JWT_KEY_ID,
       jwtAccessTokenExpiresIn: 900,
       jwtRefreshTokenExpiresIn: 604800,
@@ -95,7 +95,7 @@ describe('TokenLifecycleService', () => {
    });
 
    describe('generateTokenPair', () => {
-      it('should generate a pair of RSA access token and opaque refresh token (<jti>.<secret>) with HMAC-SHA256', async () => {
+      it('should generate a pair of ECDSA (ES256) access token and opaque refresh token (<jti>.<secret>) with HMAC-SHA256', async () => {
          const user: ITokenAccountPayload = {
             id: 'user-id-1',
             email: 'test@example.com',

@@ -42,4 +42,18 @@ export class AuthRbacService {
    ): Promise<number> {
       return this.rbacRepository.upsertPermissions(permissions);
    }
+
+   async assignRoleToAccount(accountId: string, roleCode: string): Promise<void> {
+      let role = await this.rbacRepository.findRoleByCode(roleCode);
+      if (!role) {
+         role = await this.rbacRepository.createRole({
+            code: roleCode,
+            name: roleCode,
+            description: `Domain role ${roleCode}`,
+         });
+      }
+
+      await this.rbacRepository.assignRoleToAccount(accountId, role.id);
+      await this.rbacCacheService.invalidateRole(roleCode);
+   }
 }

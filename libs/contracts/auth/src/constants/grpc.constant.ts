@@ -31,7 +31,6 @@ export const AUTH_V1_GRPC_METHODS = {
    SEND_REGISTER_OTP: 'SendRegisterOtp',
    VERIFY_REGISTER_OTP: 'VerifyRegisterOtp',
    REGISTER: 'Register',
-   REGISTER_SUPPLIER: 'RegisterSupplier',
    GET_SESSIONS: 'GetSessions',
    REVOKE_SESSION: 'RevokeSession',
    REVOKE_OTHER_SESSIONS: 'RevokeOtherSessions',

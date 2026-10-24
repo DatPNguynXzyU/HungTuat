@@ -1,25 +1,30 @@
-import { Controller, Get } from '@nestjs/common';
-import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { CommandBus, IDeviceInfo, RmqService } from '@common';
+import { Controller, Get, Logger } from '@nestjs/common';
+import { Ctx, EventPattern, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
+import {
+   CommandBus,
+   IDeviceInfo,
+   type ISupplierOnboardingCompletedEvent,
+   RBAC_INTERNAL_PATTERNS,
+   RmqService,
+} from '@common';
 import {
    AUTH_PATTERNS,
    ChangePasswordDto,
    CreateAuditLogDto,
    QueryAuditLogDto,
    RegisterDto,
-   RegisterSupplierAccountDto,
    SendRegisterOtpDto,
    VerifyChangePasswordOtpDto,
    VerifyRegisterOtpDto,
 } from '@contracts/auth';
 import type { IServiceMessage } from '@common';
 import {
+   ElevateAccountRoleCommand,
    GetEmailCommand,
    GetJwksCommand,
    GetRolePermissionsCommand,
    LogoutAllCommand,
    RegisterCommand,
-   RegisterSupplierCommand,
    RevokeAllAccountTokensCommand,
    RevokeTokenCommand,
    SendRegisterOtpCommand,
@@ -43,6 +48,8 @@ import {
  */
 @Controller()
 export class AuthController {
+   private readonly logger = new Logger(AuthController.name);
+
    constructor(
       private readonly commandBus: CommandBus,
       private readonly rmqService: RmqService,
@@ -107,15 +114,20 @@ export class AuthController {
       }
    }
 
-   @MessagePattern({ cmd: AUTH_PATTERNS.REGISTER_SUPPLIER })
-   async registerSupplier(
-      @Payload() data: RegisterSupplierAccountDto & { deviceInfo?: IDeviceInfo },
+   @EventPattern(RBAC_INTERNAL_PATTERNS.SUPPLIER_ONBOARDING_COMPLETED)
+   async handleSupplierOnboardingCompleted(
+      @Payload() data: ISupplierOnboardingCompletedEvent,
       @Ctx() context: RmqContext,
    ) {
       try {
-         const result = await this.commandBus.execute(new RegisterSupplierCommand(data, data.deviceInfo));
+         if (data?.accountId && data?.role) {
+            await this.commandBus.execute(new ElevateAccountRoleCommand(data.accountId, data.role));
+         } else {
+            this.logger.warn(
+               `[handleSupplierOnboardingCompleted] Missing required fields accountId or role in payload: ${JSON.stringify(data)}`,
+            );
+         }
          this.rmqService.ack(context);
-         return result;
       } catch (error) {
          this.rmqService.ack(context);
          throw error;

@@ -5,7 +5,7 @@ import { UserEmailResponseDto } from '@contracts/auth/dto/auth/user-email-respon
 describe('UserEmailResponseDto', () => {
    it('should validate valid email response data', async () => {
       const plain = {
-         id: '018dc3bc-11a2-7f28-9842-bc08684d0001',
+         accountId: '018dc3bc-11a2-7f28-9842-bc08684d0001',
          email: 'test@example.com',
          isEmailVerified: true,
       };
@@ -15,9 +15,9 @@ describe('UserEmailResponseDto', () => {
       expect(errors).toHaveLength(0);
    });
 
-   it('should fail when id is not a valid uuid', async () => {
+   it('should fail when accountId is not a valid uuid', async () => {
       const plain = {
-         id: 'not-a-uuid',
+         accountId: 'not-a-uuid',
          email: 'test@example.com',
          isEmailVerified: true,
       };
@@ -25,12 +25,12 @@ describe('UserEmailResponseDto', () => {
       const dto = plainToInstance(UserEmailResponseDto, plain);
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].property).toBe('id');
+      expect(errors[0].property).toBe('accountId');
    });
 
    it('should fail when email is invalid', async () => {
       const plain = {
-         id: '018dc3bc-11a2-7f28-9842-bc08684d0001',
+         accountId: '018dc3bc-11a2-7f28-9842-bc08684d0001',
          email: 'invalid-email',
          isEmailVerified: false,
       };

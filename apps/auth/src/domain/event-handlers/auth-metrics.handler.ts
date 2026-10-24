@@ -63,7 +63,6 @@ export class AuthMetricsHandler {
    }
 
    @OnEvent(AUTH_DOMAIN_EVENTS.USER_REGISTERED, { async: true })
-   @OnEvent(AUTH_DOMAIN_EVENTS.SUPPLIER_REGISTERED, { async: true })
    handleUserRegistered(_event: UserRegisteredEvent): void {
       try {
          this.metricsService.recordRegistrationAttempt(AUTH_METRICS_STATUS.SUCCESS);
@@ -73,7 +72,6 @@ export class AuthMetricsHandler {
    }
 
    @OnEvent(AUTH_DOMAIN_EVENTS.USER_REGISTRATION_FAILED, { async: true })
-   @OnEvent(AUTH_DOMAIN_EVENTS.SUPPLIER_REGISTRATION_FAILED, { async: true })
    handleUserRegistrationFailed(event: UserRegistrationFailedEvent): void {
       try {
          const reason = this.mapRegistrationFailureReason(event.reason);

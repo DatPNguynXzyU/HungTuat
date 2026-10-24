@@ -3,7 +3,6 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RbacCacheService, RedisService, SYSTEM_ROLES, UnauthorizedException } from '@common';
 import { NOTIFICATION_ADAPTER } from '@auth/adapters';
 import { AUTH_AGGREGATES, AUTH_ERROR_CODES, USER_STATUS } from '@contracts/auth';
-import { SUPPLIER_ROLES } from '@contracts/supplier';
 import { NOTIFICATION_EVENTS } from '@contracts/notification';
 import { AuthRegistrationService } from '@auth/services/domain/auth-registration.service';
 import { ACCOUNT_REPOSITORY, RBAC_REPOSITORY } from '@auth/repositories';
@@ -350,28 +349,6 @@ describe('AuthRegistrationService', () => {
 
          expect(result.user.userId).toBe('new-account-id');
          expect(result.accessToken).toBe('mock-reg-access');
-      });
-
-      it('should successfully register supplier admin and emit SUPPLIER_REGISTERED event', async () => {
-         mockRbacRepository.findRoleByCode.mockResolvedValue({
-            id: 'role-supplier-admin-id',
-            code: SUPPLIER_ROLES.SUPPLIER_ADMIN,
-         });
-         const result = await service.registerSupplier({
-            email: 'newuser@example.com',
-            password: 'Password123!',
-            confirmPassword: 'Password123!',
-         });
-
-         expect(result.user.userId).toBe('new-account-id');
-         expect(mockOutboxRepository.create).toHaveBeenCalledWith(
-            expect.objectContaining({
-               eventType: NOTIFICATION_EVENTS.SUPPLIER_REGISTERED,
-               payload: expect.objectContaining({
-                  role: SUPPLIER_ROLES.SUPPLIER_ADMIN,
-               }),
-            }),
-         );
       });
    });
 });

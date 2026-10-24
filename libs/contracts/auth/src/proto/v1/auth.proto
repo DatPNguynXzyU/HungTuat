@@ -12,7 +12,6 @@ service AuthService {
   rpc SendRegisterOtp (SendRegisterOtpRequest) returns (SendRegisterOtpResponse);
   rpc VerifyRegisterOtp (VerifyRegisterOtpRequest) returns (VerifyRegisterOtpResponse);
   rpc Register (RegisterRequest) returns (LoginResponse);
-  rpc RegisterSupplier (RegisterSupplierRequest) returns (LoginResponse);
 
   // Session Management & Token Revocation
   rpc GetSessions (GetSessionsRequest) returns (GetSessionsResponse);

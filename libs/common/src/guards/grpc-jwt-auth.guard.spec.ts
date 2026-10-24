@@ -4,8 +4,8 @@ import { Metadata } from '@grpc/grpc-js';
 import { CommonConfigService } from '@common/config/common-config.service';
 import {
    AUTH_ERROR_REASONS,
-   DEFAULT_DEV_RSA_PRIVATE_KEY,
-   DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_DEV_EC_PRIVATE_KEY,
+   DEFAULT_DEV_EC_PUBLIC_KEY,
 } from '@common/constants/jwt.constant';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
 import { UnauthorizedException } from '@common/exceptions/http.exceptions';
@@ -19,8 +19,8 @@ describe('GrpcJwtAuthGuard', () => {
    let mockReflector: jest.Mocked<Reflector>;
    let mockRedisService: jest.Mocked<RedisService>;
 
-   const privateKey = DEFAULT_DEV_RSA_PRIVATE_KEY;
-   const publicKey = DEFAULT_DEV_RSA_PUBLIC_KEY;
+   const privateKey = DEFAULT_DEV_EC_PRIVATE_KEY;
+   const publicKey = DEFAULT_DEV_EC_PUBLIC_KEY;
 
    beforeEach(() => {
       mockConfigService = {

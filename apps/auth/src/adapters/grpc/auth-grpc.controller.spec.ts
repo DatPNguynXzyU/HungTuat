@@ -4,7 +4,6 @@ import { CommandBus, DEFAULT_ROLES, GrpcLoggingInterceptor, GrpcMetricsIntercept
 import { AUDIT_ACTIONS, AUDIT_STATUS, USER_STATUS } from '@contracts/auth';
 import { AuthGrpcController } from '@auth/adapters/grpc/auth-grpc.controller';
 import { CheckEmailCommand } from '@auth/commands/registration/check-email.command';
-import { SUPPLIER_ROLES } from '@contracts/supplier';
 
 const TEST_PERMISSIONS = {
    AUTH_LOGIN: 'auth:login',
@@ -262,32 +261,6 @@ describe('AuthGrpcController', () => {
          expect(commandBus.execute).toHaveBeenCalled();
          expect(result.user.userId).toBe('user-new');
          expect(result.accessToken).toBe('reg-access-token');
-      });
-
-      it('should execute registerSupplier command successfully', async () => {
-         const mockAuthResult = {
-            user: {
-               id: 'supplier-uuid',
-               email: 'supplier@example.com',
-               roles: [SUPPLIER_ROLES.SUPPLIER],
-               createdAt: '2026-10-22T00:00:00.000Z',
-            },
-            accessToken: 'sup-access-token',
-            refreshToken: 'sup-refresh-token',
-         };
-         commandBus.execute.mockResolvedValue(mockAuthResult);
-
-         const result = await firstValueFrom(
-            controller.registerSupplier({
-               email: 'supplier@example.com',
-               password: 'Password123!',
-               verificationToken: 'vtok_123',
-            }),
-         );
-
-         expect(commandBus.execute).toHaveBeenCalled();
-         expect(result.user.userId).toBe('supplier-uuid');
-         expect(result.accessToken).toBe('sup-access-token');
       });
    });
 

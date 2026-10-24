@@ -6,6 +6,7 @@ import {
    BloomFilterService,
    CommandBus,
    DEFAULT_ROLES,
+   ISupplierOnboardingCompletedEvent,
    RbacCacheService,
    RedisService,
    RmqService,
@@ -13,8 +14,8 @@ import {
    type ICommandHandler,
 } from '@common';
 import {
-   DEFAULT_DEV_RSA_PRIVATE_KEY,
-   DEFAULT_DEV_RSA_PUBLIC_KEY,
+   DEFAULT_DEV_EC_PRIVATE_KEY,
+   DEFAULT_DEV_EC_PUBLIC_KEY,
    DEFAULT_JWT_ALGORITHM,
    DEFAULT_JWT_KEY_ID,
 } from '@contracts/auth';
@@ -89,6 +90,7 @@ describe('AuthController', () => {
    let sessionManagementService: SessionManagementService;
    let passwordManagementService: PasswordManagementService;
    let redisService: RedisService;
+   let authRbacService: AuthRbacService;
 
    beforeEach(async () => {
       const usersMap = new Map<string, MockUserRecord>();
@@ -475,8 +477,8 @@ describe('AuthController', () => {
             {
                provide: AuthConfigService,
                useValue: {
-                  jwtPrivateKey: DEFAULT_DEV_RSA_PRIVATE_KEY,
-                  jwtPublicKey: DEFAULT_DEV_RSA_PUBLIC_KEY,
+                  jwtPrivateKey: DEFAULT_DEV_EC_PRIVATE_KEY,
+                  jwtPublicKey: DEFAULT_DEV_EC_PUBLIC_KEY,
                   jwtKeyId: DEFAULT_JWT_KEY_ID,
                   jwtAccessTokenExpiresIn: 900,
                   jwtRefreshTokenExpiresIn: 604800,
@@ -522,6 +524,7 @@ describe('AuthController', () => {
       sessionManagementService = module.get<SessionManagementService>(SessionManagementService);
       passwordManagementService = module.get<PasswordManagementService>(PasswordManagementService);
       redisService = module.get<RedisService>(RedisService);
+      authRbacService = module.get<AuthRbacService>(AuthRbacService);
    });
 
    it('should be defined', () => {
@@ -541,7 +544,8 @@ describe('AuthController', () => {
       const jwks = await authController.getJwks(mockContext);
       expect(jwks).toBeDefined();
       expect(Array.isArray(jwks.keys)).toBe(true);
-      expect(jwks.keys[0].kty).toBe('RSA');
+      expect(jwks.keys[0].kty).toBe('EC');
+      expect(jwks.keys[0].crv).toBe('P-256');
       expect(jwks.keys[0].alg).toBe(DEFAULT_JWT_ALGORITHM);
    });
 
@@ -702,5 +706,41 @@ describe('AuthController', () => {
       } as unknown as RmqContext;
 
       await expect(authController.getEmail({ accountId: '' }, mockContext)).rejects.toThrow();
+   });
+
+   it('should handle handleSupplierOnboardingCompleted event and ack context', async () => {
+      const mockContext = {
+         getChannelRef: jest.fn(),
+         getMessage: jest.fn(),
+      } as unknown as RmqContext;
+
+      jest.spyOn(authRbacService, 'assignRoleToAccount').mockResolvedValue(undefined);
+
+      const mockEvent: ISupplierOnboardingCompletedEvent = {
+         accountId: 'acc-onboard-1',
+         supplierId: 'sup-1',
+         role: 'SUPPLIER_ADMIN',
+      };
+
+      await authController.handleSupplierOnboardingCompleted(mockEvent, mockContext);
+
+      expect(authRbacService.assignRoleToAccount).toHaveBeenCalledWith(mockEvent.accountId, mockEvent.role);
+   });
+
+   it('should skip elevation if required fields are missing in supplier onboarding event', async () => {
+      const mockContext = {
+         getChannelRef: jest.fn(),
+         getMessage: jest.fn(),
+      } as unknown as RmqContext;
+
+      const assignSpy = jest.spyOn(authRbacService, 'assignRoleToAccount').mockResolvedValue(undefined);
+      assignSpy.mockClear();
+
+      await authController.handleSupplierOnboardingCompleted(
+         { accountId: '', supplierId: 'sup-1', role: '' },
+         mockContext,
+      );
+
+      expect(assignSpy).not.toHaveBeenCalled();
    });
 });
