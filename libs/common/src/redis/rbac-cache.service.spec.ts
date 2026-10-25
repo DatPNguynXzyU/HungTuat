@@ -1,7 +1,7 @@
 import { ClientProxy } from '@nestjs/microservices';
 import { of, throwError } from 'rxjs';
-import { REDIS_KEY_PREFIX } from '@common/constants';
-import { RbacCacheService } from '@common/redis/rbac-cache.service';
+import { RbacRedisKeys } from '@common/constants';
+import { CachedRoleData, RbacCacheService } from '@common/redis/rbac-cache.service';
 import { RedisService } from '@common/redis/redis.service';
 import { RBAC_INTERNAL_PATTERNS } from '@common/rmq/rmq.constants';
 
@@ -33,8 +33,8 @@ describe('RbacCacheService', () => {
    });
 
    it('should get role from Redis by key', async () => {
-      const mockRole = {
-         id: 'role-1',
+      const mockRole: CachedRoleData = {
+         roleId: 'role-1',
          code: 'USER',
          name: 'Standard User',
          description: 'desc',
@@ -43,13 +43,13 @@ describe('RbacCacheService', () => {
       mockGetJson.mockResolvedValue(mockRole);
 
       const result = await service.getRole('USER');
-      expect(mockGetJson).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.ROLE}USER`);
+      expect(mockGetJson).toHaveBeenCalledWith(RbacRedisKeys.role('USER'));
       expect(result).toEqual(mockRole);
    });
 
    it('should set role and permissions in Redis', async () => {
-      const roleData = {
-         id: 'role-1',
+      const roleData: CachedRoleData = {
+         roleId: 'role-1',
          code: 'USER',
          name: 'Standard User',
          description: 'desc',
@@ -57,9 +57,9 @@ describe('RbacCacheService', () => {
       };
 
       await service.setRole('USER', roleData);
-      expect(mockSetJson).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.ROLE}USER`, roleData, expect.any(Number));
+      expect(mockSetJson).toHaveBeenCalledWith(RbacRedisKeys.role('USER'), roleData, expect.any(Number));
       expect(mockSetJson).toHaveBeenCalledWith(
-         `${REDIS_KEY_PREFIX.ROLE_PERMISSIONS}USER`,
+         RbacRedisKeys.rolePermissions('USER'),
          roleData.permissions,
          expect.any(Number),
       );
@@ -69,7 +69,7 @@ describe('RbacCacheService', () => {
       mockGetJson.mockResolvedValue(['USERS:READ', 'USERS:UPDATE']);
 
       const perms = await service.getRolePermissions('USER');
-      expect(mockGetJson).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.ROLE_PERMISSIONS}USER`);
+      expect(mockGetJson).toHaveBeenCalledWith(RbacRedisKeys.rolePermissions('USER'));
       expect(perms).toEqual(['USERS:READ', 'USERS:UPDATE']);
    });
 
@@ -95,7 +95,7 @@ describe('RbacCacheService', () => {
 
    it('should invalidate role and permissions keys', async () => {
       await service.invalidateRole('USER');
-      expect(mockDel).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.ROLE}USER`);
-      expect(mockDel).toHaveBeenCalledWith(`${REDIS_KEY_PREFIX.ROLE_PERMISSIONS}USER`);
+      expect(mockDel).toHaveBeenCalledWith(RbacRedisKeys.role('USER'));
+      expect(mockDel).toHaveBeenCalledWith(RbacRedisKeys.rolePermissions('USER'));
    });
 });

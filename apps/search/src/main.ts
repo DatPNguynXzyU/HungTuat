@@ -19,6 +19,9 @@ async function bootstrap() {
    app.useGlobalFilters(new AllRpcExceptionsFilter());
    app.useGlobalInterceptors(new TracingInterceptor());
 
+   // Initialize RabbitMQ topology (Primary, DLX, DLQ, Delayed Retry Queues)
+   await rmqService.setupQueueTopology(SERVICES.SEARCH_SERVICE);
+
    // Connect RabbitMQ microservice (Async Event indexing)
    app.connectMicroservice(rmqService.getOptions(SERVICES.SEARCH_SERVICE), {
       inheritAppConfig: true,

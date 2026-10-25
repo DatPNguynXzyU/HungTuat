@@ -32,7 +32,45 @@ export class NotificationService {
       eventId?: string,
    ): Promise<SendEmailResult> {
       let logId: string | null = null;
-      if (this.prisma) {
+
+      if (this.prisma && eventId) {
+         try {
+            const existingLog = await this.prisma.notificationLog.findUnique({
+               where: { eventId },
+            });
+
+            // 1. If notification was already sent successfully, idempotent return (skip sending duplicate email)
+            if (existingLog?.status === NOTIFICATION_STATUS.SENT) {
+               this.logger.log(
+                  `[Idempotency Guard] Notification for eventId ${eventId} already sent (logId: ${existingLog.notificationLogId}). Skipping duplicate dispatch.`,
+               );
+               return {
+                  id: existingLog.notificationLogId,
+                  to: recipient,
+                  subject: typeof payload.subject === 'string' ? payload.subject : template,
+               };
+            }
+
+            // 2. If previously failed or pending, reset status to PENDING for retry
+            if (existingLog) {
+               const updated = await this.prisma.notificationLog.update({
+                  where: { eventId },
+                  data: {
+                     status: NOTIFICATION_STATUS.PENDING,
+                     errorMessage: null,
+                     payload: payload as Prisma.InputJsonValue,
+                  },
+               });
+               logId = updated.notificationLogId;
+            }
+         } catch (lookupErr: unknown) {
+            const msg = lookupErr instanceof Error ? lookupErr.message : String(lookupErr);
+            this.logger.warn(`Could not check existing notification log for eventId ${eventId}: ${msg}`);
+         }
+      }
+
+      // If record not yet tracked and logId not set, create initial log record
+      if (this.prisma && !logId) {
          try {
             const log = await this.prisma.notificationLog.create({
                data: {
@@ -45,9 +83,34 @@ export class NotificationService {
                },
             });
             logId = log.notificationLogId;
-         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            this.logger.warn(`Could not create notification log in DB: ${msg}`);
+         } catch (createErr: unknown) {
+            // Handle race condition: concurrent message may have inserted eventId
+            if (eventId) {
+               try {
+                  const concurrentLog = await this.prisma.notificationLog.findUnique({
+                     where: { eventId },
+                  });
+                  if (concurrentLog?.status === NOTIFICATION_STATUS.SENT) {
+                     this.logger.log(
+                        `[Idempotency Guard] Concurrent notification for eventId ${eventId} already completed. Skipping duplicate dispatch.`,
+                     );
+                     return {
+                        id: concurrentLog.notificationLogId,
+                        to: recipient,
+                        subject: typeof payload.subject === 'string' ? payload.subject : template,
+                     };
+                  }
+                  if (concurrentLog) {
+                     logId = concurrentLog.notificationLogId;
+                  }
+               } catch {
+                  // Ignore secondary lookup errors
+               }
+            }
+            if (!logId) {
+               const msg = createErr instanceof Error ? createErr.message : String(createErr);
+               this.logger.warn(`Could not create notification log in DB: ${msg}`);
+            }
          }
       }
 
@@ -82,80 +145,88 @@ export class NotificationService {
       }
    }
 
-   async sendEmail(dto: SendEmailDto): Promise<SendEmailResult> {
+   async sendEmail(dto: SendEmailDto, eventId?: string): Promise<SendEmailResult> {
       const recipient = Array.isArray(dto.to) ? dto.to.join(',') : dto.to;
+      const resolvedEventId = eventId ?? dto.eventId;
       this.logger.log(`Processing custom email notification to: ${recipient}`);
       return this.logNotification(
          recipient,
          NOTIFICATION_TEMPLATES.CUSTOM_EMAIL,
          dto as unknown as Record<string, unknown>,
          () => this.resendService.sendEmail(dto),
+         resolvedEventId,
       );
    }
 
    async sendWelcomeEmail(dto: SendWelcomeEmailDto, eventId?: string): Promise<SendEmailResult> {
+      const resolvedEventId = eventId ?? dto.eventId;
       this.logger.log(`Processing welcome email notification for: ${dto.to}`);
       return this.logNotification(
          dto.to,
          NOTIFICATION_TEMPLATES.WELCOME_EMAIL,
          dto as unknown as Record<string, unknown>,
          () => this.resendService.sendWelcomeEmail(dto),
-         eventId,
+         resolvedEventId,
       );
    }
 
    async sendSupplierWelcomeEmail(dto: SendSupplierWelcomeEmailDto, eventId?: string): Promise<SendEmailResult> {
+      const resolvedEventId = eventId ?? dto.eventId;
       this.logger.log(`Processing supplier welcome email notification for: ${dto.to}`);
       return this.logNotification(
          dto.to,
          NOTIFICATION_TEMPLATES.SUPPLIER_WELCOME_EMAIL,
          dto as unknown as Record<string, unknown>,
          () => this.resendService.sendSupplierWelcomeEmail(dto),
-         eventId,
+         resolvedEventId,
       );
    }
 
    async sendVerificationEmail(dto: SendVerificationEmailDto, eventId?: string): Promise<SendEmailResult> {
+      const resolvedEventId = eventId ?? dto.eventId;
       this.logger.log(`Processing verification email notification for: ${dto.to}`);
       return this.logNotification(
          dto.to,
          NOTIFICATION_TEMPLATES.VERIFICATION_EMAIL,
          dto as unknown as Record<string, unknown>,
          () => this.resendService.sendVerificationEmail(dto),
-         eventId,
+         resolvedEventId,
       );
    }
 
    async sendResetPasswordEmail(dto: SendResetPasswordEmailDto, eventId?: string): Promise<SendEmailResult> {
+      const resolvedEventId = eventId ?? dto.eventId;
       this.logger.log(`Processing reset password email notification for: ${dto.to}`);
       return this.logNotification(
          dto.to,
          NOTIFICATION_TEMPLATES.RESET_PASSWORD_EMAIL,
          dto as unknown as Record<string, unknown>,
          () => this.resendService.sendResetPasswordEmail(dto),
-         eventId,
+         resolvedEventId,
       );
    }
 
    async sendOtpEmail(dto: SendOtpEmailDto, eventId?: string): Promise<SendEmailResult> {
+      const resolvedEventId = eventId ?? dto.eventId;
       this.logger.log(`Processing OTP email notification for: ${dto.to}`);
       return this.logNotification(
          dto.to,
          NOTIFICATION_TEMPLATES.OTP_EMAIL,
          dto as unknown as Record<string, unknown>,
          () => this.resendService.sendOtpEmail(dto),
-         eventId,
+         resolvedEventId,
       );
    }
 
    async sendChangePasswordOtpEmail(dto: SendChangePasswordOtpEmailDto, eventId?: string): Promise<SendEmailResult> {
+      const resolvedEventId = eventId ?? dto.eventId;
       this.logger.log(`Processing change password OTP email notification for: ${dto.to}`);
       return this.logNotification(
          dto.to,
          NOTIFICATION_TEMPLATES.CHANGE_PASSWORD_OTP_EMAIL,
          dto as unknown as Record<string, unknown>,
          () => this.resendService.sendChangePasswordOtpEmail(dto),
-         eventId,
+         resolvedEventId,
       );
    }
 }

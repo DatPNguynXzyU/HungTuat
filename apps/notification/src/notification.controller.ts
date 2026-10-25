@@ -1,6 +1,6 @@
 import { Controller, Logger } from '@nestjs/common';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
-import { RmqService } from '@common';
+import { QUEUES, RmqService } from '@common';
 import {
    NOTIFICATION_EVENTS,
    NOTIFICATION_PATTERNS,
@@ -23,114 +23,87 @@ export class NotificationController {
       private readonly rmqService: RmqService,
    ) {}
 
-   @EventPattern(NOTIFICATION_PATTERNS.SEND_EMAIL)
-   async sendEmail(@Payload() data: SendEmailDto, @Ctx() context: RmqContext) {
-      this.logger.log(`Received sendEmail message for: ${Array.isArray(data.to) ? data.to.join(', ') : data.to}`);
+   private async handleConsumerMessage<T>(context: RmqContext, handler: () => Promise<T>): Promise<T> {
       try {
-         const result = await this.notificationService.sendEmail(data);
+         const result = await handler();
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.NOTIFICATION });
          throw error;
       }
+   }
+
+   @EventPattern(NOTIFICATION_PATTERNS.SEND_EMAIL)
+   async sendEmail(@Payload() data: SendEmailDto, @Ctx() context: RmqContext) {
+      this.logger.log(`Received sendEmail message for: ${Array.isArray(data.to) ? data.to.join(', ') : data.to}`);
+      const eventId = data.eventId || this.rmqService.getEventId(context);
+      return this.handleConsumerMessage(context, () => this.notificationService.sendEmail(data, eventId));
    }
 
    @EventPattern(NOTIFICATION_PATTERNS.SEND_WELCOME_EMAIL)
    async sendWelcomeEmail(@Payload() data: SendWelcomeEmailDto, @Ctx() context: RmqContext) {
       this.logger.log(`Received sendWelcomeEmail message for: ${data.to}`);
-      try {
-         const result = await this.notificationService.sendWelcomeEmail(data);
-         this.rmqService.ack(context);
-         return result;
-      } catch (error) {
-         this.rmqService.ack(context);
-         throw error;
-      }
+      const eventId = data.eventId || this.rmqService.getEventId(context);
+      return this.handleConsumerMessage(context, () => this.notificationService.sendWelcomeEmail(data, eventId));
    }
 
    @EventPattern(NOTIFICATION_PATTERNS.SEND_SUPPLIER_WELCOME_EMAIL)
    async sendSupplierWelcomeEmail(@Payload() data: SendSupplierWelcomeEmailDto, @Ctx() context: RmqContext) {
       this.logger.log(`Received sendSupplierWelcomeEmail message for: ${data.to}`);
-      try {
-         const result = await this.notificationService.sendSupplierWelcomeEmail(data);
-         this.rmqService.ack(context);
-         return result;
-      } catch (error) {
-         this.rmqService.ack(context);
-         throw error;
-      }
+      const eventId = data.eventId || this.rmqService.getEventId(context);
+      return this.handleConsumerMessage(context, () =>
+         this.notificationService.sendSupplierWelcomeEmail(data, eventId),
+      );
    }
 
    @EventPattern(NOTIFICATION_PATTERNS.SEND_VERIFICATION_EMAIL)
    async sendVerificationEmail(@Payload() data: SendVerificationEmailDto, @Ctx() context: RmqContext) {
       this.logger.log(`Received sendVerificationEmail message for: ${data.to}`);
-      try {
-         const result = await this.notificationService.sendVerificationEmail(data);
-         this.rmqService.ack(context);
-         return result;
-      } catch (error) {
-         this.rmqService.ack(context);
-         throw error;
-      }
+      const eventId = data.eventId || this.rmqService.getEventId(context);
+      return this.handleConsumerMessage(context, () => this.notificationService.sendVerificationEmail(data, eventId));
    }
 
    @EventPattern(NOTIFICATION_PATTERNS.SEND_RESET_PASSWORD_EMAIL)
    async sendResetPasswordEmail(@Payload() data: SendResetPasswordEmailDto, @Ctx() context: RmqContext) {
       this.logger.log(`Received sendResetPasswordEmail message for: ${data.to}`);
-      try {
-         const result = await this.notificationService.sendResetPasswordEmail(data);
-         this.rmqService.ack(context);
-         return result;
-      } catch (error) {
-         this.rmqService.ack(context);
-         throw error;
-      }
+      const eventId = data.eventId || this.rmqService.getEventId(context);
+      return this.handleConsumerMessage(context, () => this.notificationService.sendResetPasswordEmail(data, eventId));
    }
 
    @EventPattern(NOTIFICATION_PATTERNS.SEND_OTP_EMAIL)
    async sendOtpEmail(@Payload() data: SendOtpEmailDto, @Ctx() context: RmqContext) {
       this.logger.log(`Received sendOtpEmail message for: ${data.to}`);
-      try {
-         const result = await this.notificationService.sendOtpEmail(data);
-         this.rmqService.ack(context);
-         return result;
-      } catch (error) {
-         this.rmqService.ack(context);
-         throw error;
-      }
+      const eventId = data.eventId || this.rmqService.getEventId(context);
+      return this.handleConsumerMessage(context, () => this.notificationService.sendOtpEmail(data, eventId));
    }
 
    @EventPattern(NOTIFICATION_PATTERNS.SEND_CHANGE_PASSWORD_OTP_EMAIL)
    async sendChangePasswordOtpEmail(@Payload() data: SendChangePasswordOtpEmailDto, @Ctx() context: RmqContext) {
       this.logger.log(`Received sendChangePasswordOtpEmail message for: ${data.to}`);
-      try {
-         const result = await this.notificationService.sendChangePasswordOtpEmail(data);
-         this.rmqService.ack(context);
-         return result;
-      } catch (error) {
-         this.rmqService.ack(context);
-         throw error;
-      }
+      const eventId = data.eventId || this.rmqService.getEventId(context);
+      return this.handleConsumerMessage(context, () =>
+         this.notificationService.sendChangePasswordOtpEmail(data, eventId),
+      );
    }
 
    @EventPattern(NOTIFICATION_EVENTS.USER_REGISTERED)
-   async handleUserRegistered(@Payload() data: { email: string; fullName: string }, @Ctx() context: RmqContext) {
+   async handleUserRegistered(
+      @Payload() data: { email: string; fullName: string; eventId?: string },
+      @Ctx() context: RmqContext,
+   ) {
       this.logger.log(`Received USER_REGISTERED event for email: ${data?.email} (${data?.fullName})`);
-      try {
-         const result = await this.notificationService.sendWelcomeEmail({
-            to: data.email,
-            fullName: data.fullName,
-         });
-         this.rmqService.ack(context);
-         this.logger.log(`Successfully dispatched welcome email for user: ${data?.email}`);
-         return result;
-      } catch (error) {
-         this.rmqService.ack(context);
-         const message = error instanceof Error ? error.message : String(error);
-         this.logger.error(`Failed to handle USER_REGISTERED for ${data?.email}: ${message}`);
-         throw error;
-      }
+      const eventId = data.eventId || this.rmqService.getEventId(context);
+      return this.handleConsumerMessage(context, () =>
+         this.notificationService.sendWelcomeEmail(
+            {
+               to: data.email,
+               fullName: data.fullName,
+               eventId,
+            },
+            eventId,
+         ),
+      );
    }
 
    @EventPattern(NOTIFICATION_EVENTS.SUPPLIER_REGISTERED)
@@ -142,25 +115,23 @@ export class NotificationController {
          role?: string;
          supplierName?: string;
          fullName?: string;
+         eventId?: string;
       },
       @Ctx() context: RmqContext,
    ) {
       this.logger.log(`Received SUPPLIER_REGISTERED event for account ${data?.accountId} (${data?.email})`);
-      try {
-         const displayName = data.fullName || data.supplierName || data.email?.split('@')[0] || 'Partner';
-         const result = await this.notificationService.sendSupplierWelcomeEmail({
-            to: data.email,
-            fullName: displayName,
-            supplierName: data.supplierName,
-         });
-         this.rmqService.ack(context);
-         this.logger.log(`Successfully dispatched supplier welcome email for: ${data?.email}`);
-         return result;
-      } catch (error) {
-         this.rmqService.ack(context);
-         const message = error instanceof Error ? error.message : String(error);
-         this.logger.error(`Failed to handle SUPPLIER_REGISTERED for ${data?.email}: ${message}`);
-         throw error;
-      }
+      const eventId = data.eventId || this.rmqService.getEventId(context);
+      const displayName = data.fullName || data.supplierName || data.email?.split('@')[0] || 'Partner';
+      return this.handleConsumerMessage(context, () =>
+         this.notificationService.sendSupplierWelcomeEmail(
+            {
+               to: data.email,
+               fullName: displayName,
+               supplierName: data.supplierName,
+               eventId,
+            },
+            eventId,
+         ),
+      );
    }
 }

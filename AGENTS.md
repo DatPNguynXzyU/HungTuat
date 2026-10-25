@@ -33,3 +33,5 @@
    - Constants must be dynamically composed using domain and version tokens (`buildGrpcPackageName(domain, version)`). Do not hardcode package name strings.
    - For detailed rules and evolution lifecycle, see [grpc-proto-versioning-guidelines.md](.agents/rules/grpc-proto-versioning-guidelines.md).
 
+7. **MCP Todo Task Management**:
+   - When receiving a request to handle or process a task on MCP Todo formatted like `todo-99377` (e.g. `todo-<id>`), use the command `omni-todo --help` to learn how to interact with and manage tasks on MCP Todo.

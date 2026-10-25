@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CommandBus, DEFAULT_ROLES, RmqService } from '@common';
-import { SUPPLIER_MEMBER_STATUS } from '@contracts/supplier';
+import { CommandBus, QUEUES, RmqService } from '@common';
+import { SUPPLIER_MEMBER_STATUS, SUPPLIER_ROLES } from '@contracts/supplier';
 import type { RmqContext } from '@nestjs/microservices';
 import { SupplierRmqController } from '@supplier/adapters/rmq/supplier-rmq.controller';
 import { HandleSupplierRegisteredCommand } from '@supplier/commands';
@@ -17,6 +17,7 @@ describe('SupplierRmqController', () => {
 
       rmqService = {
          ack: jest.fn(),
+         handleError: jest.fn().mockResolvedValue({ action: 'RETRY', retries: 1 }),
       } as unknown as jest.Mocked<RmqService>;
 
       const module: TestingModule = await Test.createTestingModule({
@@ -42,7 +43,7 @@ describe('SupplierRmqController', () => {
          supplierId: null,
          accountId: 'acc-1',
          email: 'sup@test.com',
-         role: DEFAULT_ROLES.SUPPLIER_ADMIN,
+         role: SUPPLIER_ROLES.SUPPLIER_ADMIN,
          memberStatus: SUPPLIER_MEMBER_STATUS.ACTIVE,
          createdAt: new Date(),
          updatedAt: new Date(),
@@ -50,7 +51,7 @@ describe('SupplierRmqController', () => {
       commandBus.execute.mockResolvedValue(mockResult);
 
       const mockContext = {} as RmqContext;
-      const payload = { accountId: 'acc-1', email: 'sup@test.com', role: DEFAULT_ROLES.SUPPLIER_ADMIN };
+      const payload = { accountId: 'acc-1', email: 'sup@test.com', role: SUPPLIER_ROLES.SUPPLIER_ADMIN };
 
       const result = await controller.handleSupplierRegistered(payload, mockContext);
 
@@ -59,13 +60,18 @@ describe('SupplierRmqController', () => {
       expect(result).toEqual(mockResult);
    });
 
-   it('should ack message and rethrow if command fails', async () => {
+   it('should NOT ack and should call handleError when command fails', async () => {
       commandBus.execute.mockRejectedValue(new Error('DB failure'));
 
       const mockContext = {} as RmqContext;
       const payload = { accountId: 'acc-1', email: 'sup@test.com' };
 
       await expect(controller.handleSupplierRegistered(payload, mockContext)).rejects.toThrow('DB failure');
-      expect(rmqService.ack).toHaveBeenCalledWith(mockContext);
+      expect(rmqService.ack).not.toHaveBeenCalled();
+      expect(rmqService.handleError).toHaveBeenCalledWith(
+         expect.any(Error),
+         mockContext,
+         expect.objectContaining({ queue: QUEUES.SUPPLIER }),
+      );
    });
 });

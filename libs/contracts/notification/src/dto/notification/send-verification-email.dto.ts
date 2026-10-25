@@ -41,4 +41,12 @@ export class SendVerificationEmailDto {
    @IsString()
    @IsOptional()
    locale?: string;
+
+   @ApiPropertyOptional({
+      example: 'a0000000-0000-0000-0000-000000000001',
+      description: 'Unique event ID for idempotency tracking',
+   })
+   @IsString()
+   @IsOptional()
+   eventId?: string;
 }

@@ -37,6 +37,7 @@ describe('RabbitMqNotificationAdapter', () => {
          await adapter.sendRegistrationOtp('user@example.com', '123456', 5);
 
          expect(mockNotificationClient.emit).toHaveBeenCalledWith(NOTIFICATION_PATTERNS.SEND_OTP_EMAIL, {
+            eventId: expect.any(String),
             to: 'user@example.com',
             otpCode: '123456',
             expiresInMinutes: 5,
@@ -59,6 +60,7 @@ describe('RabbitMqNotificationAdapter', () => {
          expect(mockNotificationClient.emit).toHaveBeenCalledWith(
             NOTIFICATION_PATTERNS.SEND_CHANGE_PASSWORD_OTP_EMAIL,
             {
+               eventId: expect.any(String),
                to: 'user@example.com',
                otpCode: '654321',
                expiresInMinutes: 10,
@@ -86,6 +88,7 @@ describe('RabbitMqNotificationAdapter', () => {
          });
 
          expect(mockNotificationClient.emit).toHaveBeenCalledWith(NOTIFICATION_PATTERNS.SEND_EMAIL, {
+            eventId: expect.any(String),
             to: 'alert@example.com',
             subject: NOTIFICATION_EMAIL_SUBJECTS.ACCOUNT_LOCKED,
             template: NOTIFICATION_TEMPLATES.SECURITY_ALERT_ACCOUNT_LOCKED,
@@ -124,6 +127,7 @@ describe('RabbitMqNotificationAdapter', () => {
          });
 
          expect(mockNotificationClient.emit).toHaveBeenCalledWith(NOTIFICATION_PATTERNS.SEND_EMAIL, {
+            eventId: expect.any(String),
             to: 'user@example.com',
             subject: NOTIFICATION_EMAIL_SUBJECTS.PASSWORD_CHANGED,
             template: NOTIFICATION_TEMPLATES.PASSWORD_CHANGED,
@@ -148,6 +152,7 @@ describe('RabbitMqNotificationAdapter', () => {
          });
 
          expect(mockNotificationClient.emit).toHaveBeenCalledWith(NOTIFICATION_PATTERNS.SEND_EMAIL, {
+            eventId: expect.any(String),
             to: 'welcome@example.com',
             subject: NOTIFICATION_EMAIL_SUBJECTS.WELCOME,
             template: NOTIFICATION_TEMPLATES.WELCOME_EMAIL,
@@ -171,6 +176,7 @@ describe('RabbitMqNotificationAdapter', () => {
          });
 
          expect(mockNotificationClient.emit).toHaveBeenCalledWith(NOTIFICATION_PATTERNS.SEND_EMAIL, {
+            eventId: expect.any(String),
             to: 'test@example.com',
             subject: 'Test Subject',
             html: '<p>Test content</p>',

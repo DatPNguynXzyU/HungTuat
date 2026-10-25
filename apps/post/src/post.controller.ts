@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { RmqService, type IServiceMessage } from '@common';
+import { QUEUES, RmqService, type IServiceMessage } from '@common';
 import {
    POST_PATTERNS,
    type GetPostFeedDto,
@@ -32,7 +32,7 @@ export class PostController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.POST });
          throw error;
       }
    }
@@ -52,7 +52,7 @@ export class PostController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.POST });
          throw error;
       }
    }
@@ -72,7 +72,7 @@ export class PostController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.POST });
          throw error;
       }
    }

@@ -56,7 +56,7 @@ describe('AuthRbacService', () => {
 
       it('should fetch from repository and cache role if not in cache', async () => {
          const repoRole = {
-            id: 'role-1',
+            roleId: 'role-1',
             code: DEFAULT_ROLES.USER,
             name: 'User',
             description: 'User role',
@@ -70,7 +70,7 @@ describe('AuthRbacService', () => {
          expect(result).toEqual(repoRole);
          expect(mockRbacRepository.findRoleByCode).toHaveBeenCalledWith(DEFAULT_ROLES.USER);
          expect(mockRbacCacheService.setRole).toHaveBeenCalledWith(DEFAULT_ROLES.USER, {
-            id: 'role-1',
+            roleId: 'role-1',
             code: DEFAULT_ROLES.USER,
             name: 'User',
             description: 'User role',
@@ -111,7 +111,7 @@ describe('AuthRbacService', () => {
    describe('assignRoleToAccount', () => {
       it('should assign existing role to account and invalidate role cache', async () => {
          mockRbacRepository.findRoleByCode.mockResolvedValueOnce({
-            id: 'role-123',
+            roleId: 'role-123',
             code: SYSTEM_ROLES.SUPER_ADMIN,
          });
 
@@ -125,7 +125,7 @@ describe('AuthRbacService', () => {
       it('should dynamically create role if not present, then assign and invalidate cache', async () => {
          mockRbacRepository.findRoleByCode.mockResolvedValueOnce(null);
          mockRbacRepository.createRole.mockResolvedValueOnce({
-            id: 'role-new',
+            roleId: 'role-new',
             code: SYSTEM_ROLES.SUPER_ADMIN,
          });
 

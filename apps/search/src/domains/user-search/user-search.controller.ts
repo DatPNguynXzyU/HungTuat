@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, EventPattern, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { AppLogger, RmqService } from '@common';
+import { AppLogger, QUEUES, RmqService } from '@common';
 import { USER_EVENTS, USER_PATTERNS } from '@contracts/user';
 import { BULK_OPERATIONS, SEARCH_INDICES, SEARCH_PATTERNS } from '@contracts/search';
 import { UserSearchService } from '@search/domains/user-search/user-search.service';
@@ -68,9 +68,7 @@ export class UserSearchController {
          }
       } catch (error) {
          this.logger.error(`Error queuing ${USER_EVENTS.CREATED}`, error instanceof Error ? error.stack : undefined);
-         if (context) {
-            this.rmqService.nack(context, false);
-         }
+         await this.rmqService.handleError(error, context, { queue: QUEUES.SEARCH });
       }
    }
 
@@ -101,9 +99,7 @@ export class UserSearchController {
          }
       } catch (error) {
          this.logger.error(`Error queuing ${USER_EVENTS.UPDATED}`, error instanceof Error ? error.stack : undefined);
-         if (context) {
-            this.rmqService.nack(context, false);
-         }
+         await this.rmqService.handleError(error, context, { queue: QUEUES.SEARCH });
       }
    }
 
@@ -121,9 +117,7 @@ export class UserSearchController {
          }
       } catch (error) {
          this.logger.error(`Error queuing ${USER_EVENTS.DELETED}`, error instanceof Error ? error.stack : undefined);
-         if (context) {
-            this.rmqService.nack(context, false);
-         }
+         await this.rmqService.handleError(error, context, { queue: QUEUES.SEARCH });
       }
    }
 
@@ -154,9 +148,7 @@ export class UserSearchController {
          }
       } catch (error) {
          this.logger.error(`Error queuing ${USER_EVENTS.SYNC}`, error instanceof Error ? error.stack : undefined);
-         if (context) {
-            this.rmqService.nack(context, false);
-         }
+         await this.rmqService.handleError(error, context, { queue: QUEUES.SEARCH });
       }
    }
 
@@ -169,9 +161,7 @@ export class UserSearchController {
          }
          return result;
       } catch (error) {
-         if (context) {
-            this.rmqService.ack(context);
-         }
+         await this.rmqService.handleError(error, context, { queue: QUEUES.SEARCH });
          throw error;
       }
    }
@@ -185,9 +175,7 @@ export class UserSearchController {
          }
          return result;
       } catch (error) {
-         if (context) {
-            this.rmqService.ack(context);
-         }
+         await this.rmqService.handleError(error, context, { queue: QUEUES.SEARCH });
          throw error;
       }
    }

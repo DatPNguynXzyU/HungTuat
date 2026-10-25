@@ -12,6 +12,7 @@
       "**/coverage": true,
       "**/.omni": true,
       "**/pnpm-lock.yaml": true,
+      "**/_": true,
       "**/.codegraph": true
    },
    "search.exclude": {
@@ -21,6 +22,7 @@
       "**/coverage": true,
       "**/.omni": true,
       "**/pnpm-lock.yaml": true,
+      "**/_": true,
       "**/.codegraph": true
    },
    "files.watcherExclude": {
@@ -32,6 +34,7 @@
       "**/pnpm-lock.yaml": true,
       "**/coverage/**": true,
       "**/.omni/**": true,
+      "**/_": true,
       "**/.codegraph/**": true
    },
    "editor.defaultFormatter": "esbenp.prettier-vscode",

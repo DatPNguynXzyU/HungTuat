@@ -1,15 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
-import { CommandBus, RmqService } from '@common';
+import { CommandBus, QUEUES, RmqService } from '@common';
 import { NOTIFICATION_EVENTS } from '@contracts/notification';
-import { HandleUserRegisteredCommand } from '@user/commands/authentication';
+import { HandleUserRegisteredCommand } from '@user/commands';
 
-/**
- * UserController handles incoming asynchronous events via RabbitMQ
- * for the User microservice, dedicated exclusively to event-driven processing.
- * All synchronous request-response communication is handled by UserGrpcController.
- */
-@Controller()
+@Controller('users')
 export class UserController {
    constructor(
       private readonly commandBus: CommandBus,
@@ -35,7 +30,7 @@ export class UserController {
          return result;
       } catch (error) {
          if (context) {
-            this.rmqService.ack(context);
+            await this.rmqService.handleError(error, context, { queue: QUEUES.USER });
          }
          throw error;
       }

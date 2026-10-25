@@ -491,6 +491,8 @@ describe('AuthController', () => {
                provide: RmqService,
                useValue: {
                   ack: jest.fn(),
+                  nack: jest.fn(),
+                  handleError: jest.fn(),
                },
             },
             {

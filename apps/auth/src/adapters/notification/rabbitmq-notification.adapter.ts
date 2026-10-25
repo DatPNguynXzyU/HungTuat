@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { SERVICES } from '@common';
+import { SERVICES, uuidv7 } from '@common';
 import {
    NOTIFICATION_EMAIL_SUBJECTS,
    NOTIFICATION_PATTERNS,
@@ -32,6 +32,7 @@ export class RabbitMqNotificationAdapter implements INotificationAdapter {
       try {
          await firstValueFrom(
             this.notificationClient.emit(NOTIFICATION_PATTERNS.SEND_OTP_EMAIL, {
+               eventId: uuidv7(),
                to: email,
                otpCode,
                expiresInMinutes,
@@ -46,6 +47,7 @@ export class RabbitMqNotificationAdapter implements INotificationAdapter {
       try {
          await firstValueFrom(
             this.notificationClient.emit(NOTIFICATION_PATTERNS.SEND_CHANGE_PASSWORD_OTP_EMAIL, {
+               eventId: uuidv7(),
                to: email,
                otpCode,
                expiresInMinutes,
@@ -59,6 +61,7 @@ export class RabbitMqNotificationAdapter implements INotificationAdapter {
    async sendSecurityAlert(data: SecurityAlertNotificationData): Promise<void> {
       await firstValueFrom(
          this.notificationClient.emit(NOTIFICATION_PATTERNS.SEND_EMAIL, {
+            eventId: uuidv7(),
             to: data.email,
             subject: NOTIFICATION_EMAIL_SUBJECTS.ACCOUNT_LOCKED,
             template: NOTIFICATION_TEMPLATES.SECURITY_ALERT_ACCOUNT_LOCKED,
@@ -75,6 +78,7 @@ export class RabbitMqNotificationAdapter implements INotificationAdapter {
    async sendPasswordChangedConfirmation(data: PasswordChangedNotificationData): Promise<void> {
       await firstValueFrom(
          this.notificationClient.emit(NOTIFICATION_PATTERNS.SEND_EMAIL, {
+            eventId: uuidv7(),
             to: data.email,
             subject: NOTIFICATION_EMAIL_SUBJECTS.PASSWORD_CHANGED,
             template: NOTIFICATION_TEMPLATES.PASSWORD_CHANGED,
@@ -91,6 +95,7 @@ export class RabbitMqNotificationAdapter implements INotificationAdapter {
    async sendWelcomeEmail(data: WelcomeEmailNotificationData): Promise<void> {
       await firstValueFrom(
          this.notificationClient.emit(NOTIFICATION_PATTERNS.SEND_EMAIL, {
+            eventId: uuidv7(),
             to: data.email,
             subject: NOTIFICATION_EMAIL_SUBJECTS.WELCOME,
             template: NOTIFICATION_TEMPLATES.WELCOME_EMAIL,
@@ -103,6 +108,10 @@ export class RabbitMqNotificationAdapter implements INotificationAdapter {
    }
 
    async sendEmail(dto: SendEmailDto): Promise<void> {
-      await firstValueFrom(this.notificationClient.emit(NOTIFICATION_PATTERNS.SEND_EMAIL, dto));
+      const payload: SendEmailDto = {
+         eventId: dto.eventId ?? uuidv7(),
+         ...dto,
+      };
+      await firstValueFrom(this.notificationClient.emit(NOTIFICATION_PATTERNS.SEND_EMAIL, payload));
    }
 }

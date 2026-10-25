@@ -1,12 +1,15 @@
 import { ArgumentsHost, Catch, HttpException, HttpStatus, Logger, RpcExceptionFilter } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
+import { RmqContext, RpcException } from '@nestjs/microservices';
 import { EMPTY, Observable, throwError } from 'rxjs';
+import { Channel } from 'amqplib';
+import { CONTEXT_TYPES } from '@common/constants';
 import { AppException } from '@common/exceptions/app.exception';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
 import { IAppExceptionPayload } from '@common/exceptions/exception.types';
 import { IValidationErrorDetail } from '@common/interfaces/response.interface';
 import { AllExceptionsFilter } from '@common/filters/all-exceptions.filter';
 import { mapHttpStatusToGrpc } from '@common/interceptors/grpc-interceptor.util';
+import { TrackedMessage } from '@common/rmq/rmq.types';
 
 @Catch()
 export class AllRpcExceptionsFilter implements RpcExceptionFilter {
@@ -14,10 +17,31 @@ export class AllRpcExceptionsFilter implements RpcExceptionFilter {
    private readonly httpFilter = new AllExceptionsFilter();
 
    catch(exception: unknown, host?: ArgumentsHost): Observable<never> {
-      if (host && host.getType() === 'http') {
+      if (host && host.getType() === CONTEXT_TYPES.HTTP) {
          this.httpFilter.catch(exception, host);
          return EMPTY;
       }
+
+      if (host && host.getType() === CONTEXT_TYPES.RPC) {
+         try {
+            const rpcContext = host.switchToRpc().getContext<RmqContext>();
+            if (
+               rpcContext &&
+               typeof rpcContext.getChannelRef === 'function' &&
+               typeof rpcContext.getMessage === 'function'
+            ) {
+               const channel = rpcContext.getChannelRef() as Channel | undefined;
+               const originalMessage = rpcContext.getMessage() as TrackedMessage | undefined;
+               if (channel && originalMessage && !originalMessage.__acked) {
+                  originalMessage.__acked = true;
+                  channel.nack(originalMessage, false, false);
+               }
+            }
+         } catch {
+            // Silently ignore if not RMQ context or channel closed
+         }
+      }
+
       let payload: IAppExceptionPayload;
 
       if (exception instanceof AppException) {

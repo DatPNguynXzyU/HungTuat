@@ -7,7 +7,7 @@ import {
    DEFAULT_DEV_EC_PUBLIC_KEY,
    DEFAULT_DEV_RSA_PRIVATE_KEY,
 } from '@common/constants/jwt.constant';
-import { REDIS_KEY_PREFIX } from '@common/constants/redis.constant';
+import { AuthRevocationRedisKeys } from '@common/constants/redis.constant';
 import { COMMON_ERROR_CODES } from '@common/exceptions/error-codes';
 import { UnauthorizedException } from '@common/exceptions/http.exceptions';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
@@ -87,7 +87,7 @@ describe('JwtAuthGuard', () => {
    it('should throw UnauthorizedException when token JTI is in Redis blacklist', async () => {
       const token = JwtUtil.sign({ sub: 'user-1', email: 'user@example.com', jti: 'revoked-jti' }, privateKey, 3600);
       mockRedisService.get.mockImplementation((key: string) => {
-         if (key === `${REDIS_KEY_PREFIX.REVOKED_TOKEN}revoked-jti`) return Promise.resolve('revoked');
+         if (key === AuthRevocationRedisKeys.revokedToken('revoked-jti')) return Promise.resolve('revoked');
          return Promise.resolve(null);
       });
 
@@ -123,7 +123,7 @@ describe('JwtAuthGuard', () => {
          3600,
       );
       mockRedisService.get.mockImplementation((key: string) => {
-         if (key === `${REDIS_KEY_PREFIX.USER_REVOKED_AT}user-1`) return Promise.resolve(String(nowSeconds));
+         if (key === AuthRevocationRedisKeys.accountRevokedAt('user-1')) return Promise.resolve(String(nowSeconds));
          return Promise.resolve(null);
       });
 

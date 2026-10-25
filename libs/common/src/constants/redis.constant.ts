@@ -47,16 +47,3 @@ export const AuthRevocationRedisKeys = {
    accountRevokedAt: (accountId: string): string =>
       `${AUTH_REVOCATION_REDIS_KEY_PREFIX.ACCOUNT_REVOKED_AT}${accountId}`,
 } as const;
-
-/**
- * @deprecated Use RbacRedisKeys or AuthRevocationRedisKeys.
- */
-export const REDIS_KEY_PREFIX = {
-   ...RBAC_REDIS_KEY_PREFIX,
-   ...AUTH_REVOCATION_REDIS_KEY_PREFIX,
-} as const;
-
-/**
- * @deprecated Use RBAC_REDIS_TTL for shared RBAC caching.
- */
-export const REDIS_TTL = RBAC_REDIS_TTL;

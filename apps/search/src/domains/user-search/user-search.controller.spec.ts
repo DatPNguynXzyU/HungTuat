@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RmqContext } from '@nestjs/microservices';
-import { AppLogger, RmqService } from '@common';
+import { AppLogger, QUEUES, RmqService } from '@common';
 import { BULK_OPERATIONS, SEARCH_INDICES } from '@contracts/search';
 import { UserSearchController } from '@search/domains/user-search/user-search.controller';
 import { UserSearchService } from '@search/domains/user-search/user-search.service';
@@ -21,6 +21,7 @@ describe('UserSearchController', () => {
    const mockRmqService = {
       ack: jest.fn(),
       nack: jest.fn(),
+      handleError: jest.fn(),
    };
 
    const mockLogger = {
@@ -82,12 +83,18 @@ describe('UserSearchController', () => {
          expect(mockRmqService.ack).toHaveBeenCalledWith(mockContext);
       });
 
-      it('should nack context on queue error', async () => {
-         mockBulkQueue.addOperation.mockRejectedValue(new Error('Queue full'));
+      it('should delegate to rmqService.handleError and not ack on queue error', async () => {
+         const queueError = new Error('Queue full');
+         mockBulkQueue.addOperation.mockRejectedValue(queueError);
 
          await controller.handleUserCreated({ userId: 'u-1' }, mockContext);
 
-         expect(mockRmqService.nack).toHaveBeenCalledWith(mockContext, false);
+         expect(mockRmqService.handleError).toHaveBeenCalledWith(
+            queueError,
+            mockContext,
+            expect.objectContaining({ queue: QUEUES.SEARCH }),
+         );
+         expect(mockRmqService.ack).not.toHaveBeenCalled();
       });
    });
 

@@ -14,6 +14,7 @@ describe('NotificationService', () => {
    let mockSendOtpEmail: jest.Mock;
    let mockPrisma: {
       notificationLog: {
+         findUnique: jest.Mock;
          create: jest.Mock;
          update: jest.Mock;
       };
@@ -31,6 +32,7 @@ describe('NotificationService', () => {
 
       mockPrisma = {
          notificationLog: {
+            findUnique: jest.fn().mockResolvedValue(null),
             create: jest.fn().mockResolvedValue({ notificationLogId: 'log_1' }),
             update: jest.fn().mockResolvedValue({ notificationLogId: 'log_1', status: NOTIFICATION_STATUS.SENT }),
          },
@@ -98,6 +100,52 @@ describe('NotificationService', () => {
                eventId: 'evt-1',
                recipient: 'a@b.com',
                template: NOTIFICATION_TEMPLATES.WELCOME_EMAIL,
+            }) as unknown,
+         }) as unknown,
+      );
+   });
+
+   it('should skip sending email and return existing record when eventId is already SENT (idempotency guard)', async () => {
+      mockPrisma.notificationLog.findUnique.mockResolvedValue({
+         notificationLogId: 'existing-log-id',
+         eventId: 'evt-duplicate',
+         recipient: 'a@b.com',
+         status: NOTIFICATION_STATUS.SENT,
+      });
+
+      const dto = { to: 'a@b.com', fullName: 'User' };
+      const res = await service.sendWelcomeEmail(dto, 'evt-duplicate');
+
+      expect(res.id).toBe('existing-log-id');
+      expect(res.to).toBe('a@b.com');
+      // Resend must NEVER be called if already SENT!
+      expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
+      expect(mockPrisma.notificationLog.create).not.toHaveBeenCalled();
+   });
+
+   it('should update status to PENDING and proceed with email when eventId was previously FAILED', async () => {
+      mockPrisma.notificationLog.findUnique.mockResolvedValue({
+         notificationLogId: 'failed-log-id',
+         eventId: 'evt-retry',
+         recipient: 'a@b.com',
+         status: NOTIFICATION_STATUS.FAILED,
+      });
+      mockPrisma.notificationLog.update.mockResolvedValue({
+         notificationLogId: 'failed-log-id',
+         status: NOTIFICATION_STATUS.PENDING,
+      });
+
+      const dto = { to: 'a@b.com', fullName: 'User' };
+      const res = await service.sendWelcomeEmail(dto, 'evt-retry');
+
+      expect(res.id).toBe('msg_2');
+      expect(mockSendWelcomeEmail).toHaveBeenCalledWith(dto);
+      expect(mockPrisma.notificationLog.update).toHaveBeenCalledWith(
+         expect.objectContaining({
+            where: { eventId: 'evt-retry' },
+            data: expect.objectContaining({
+               status: NOTIFICATION_STATUS.PENDING,
+               errorMessage: null,
             }) as unknown,
          }) as unknown,
       );

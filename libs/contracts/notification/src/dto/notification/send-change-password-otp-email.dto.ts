@@ -45,4 +45,13 @@ export class SendChangePasswordOtpEmailDto {
    @IsString({ message: 'Locale must be a string' })
    @IsOptional()
    locale?: string;
+
+   @ApiProperty({
+      example: 'a0000000-0000-0000-0000-000000000001',
+      description: 'Unique event ID for idempotency tracking',
+      required: false,
+   })
+   @IsString({ message: 'eventId must be a string' })
+   @IsOptional()
+   eventId?: string;
 }

@@ -4,6 +4,7 @@ import {
    CommandBus,
    IDeviceInfo,
    type ISupplierOnboardingCompletedEvent,
+   QUEUES,
    RBAC_INTERNAL_PATTERNS,
    RmqService,
 } from '@common';
@@ -67,7 +68,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -82,7 +83,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -97,7 +98,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -109,7 +110,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -129,7 +130,7 @@ export class AuthController {
          }
          this.rmqService.ack(context);
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -141,7 +142,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -158,7 +159,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -175,7 +176,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -192,7 +193,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -209,7 +210,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -226,7 +227,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -251,7 +252,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -274,7 +275,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -286,7 +287,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -298,7 +299,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -310,7 +311,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -322,7 +323,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -339,7 +340,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -351,7 +352,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }
@@ -363,7 +364,7 @@ export class AuthController {
          this.rmqService.ack(context);
          return result;
       } catch (error) {
-         this.rmqService.ack(context);
+         await this.rmqService.handleError(error, context, { queue: QUEUES.AUTH });
          throw error;
       }
    }

@@ -8,7 +8,7 @@ import {
    type GetMediaByIdDto,
    type DeleteMediaDto,
 } from '@contracts/media';
-import { RmqService, type IServiceMessage, UnauthorizedException } from '@common';
+import { QUEUES, RmqService, type IServiceMessage, UnauthorizedException } from '@common';
 import { MediaService } from '@media/modules/media/media.service';
 
 /**
@@ -38,7 +38,7 @@ export class MediaController {
          return result;
       } catch (error) {
          if (context) {
-            this.rmqService.ack(context);
+            await this.rmqService.handleError(error, context, { queue: QUEUES.MEDIA });
          }
          throw error;
       }
@@ -58,7 +58,7 @@ export class MediaController {
          return result;
       } catch (error) {
          if (context) {
-            this.rmqService.ack(context);
+            await this.rmqService.handleError(error, context, { queue: QUEUES.MEDIA });
          }
          throw error;
       }
@@ -78,7 +78,7 @@ export class MediaController {
          return result;
       } catch (error) {
          if (context) {
-            this.rmqService.ack(context);
+            await this.rmqService.handleError(error, context, { queue: QUEUES.MEDIA });
          }
          throw error;
       }
@@ -94,7 +94,7 @@ export class MediaController {
          return result;
       } catch (error) {
          if (context) {
-            this.rmqService.ack(context);
+            await this.rmqService.handleError(error, context, { queue: QUEUES.MEDIA });
          }
          throw error;
       }
@@ -110,7 +110,7 @@ export class MediaController {
          return result;
       } catch (error) {
          if (context) {
-            this.rmqService.ack(context);
+            await this.rmqService.handleError(error, context, { queue: QUEUES.MEDIA });
          }
          throw error;
       }

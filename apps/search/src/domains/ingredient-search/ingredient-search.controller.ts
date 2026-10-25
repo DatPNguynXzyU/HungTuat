@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, EventPattern, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
-import { AppLogger, RmqService } from '@common';
+import { AppLogger, QUEUES, RmqService } from '@common';
 import {
    COMMERCE_EVENTS,
    CurrencyEnum,
@@ -61,9 +61,7 @@ export class IngredientSearchController {
             `Error queuing ${COMMERCE_EVENTS.INGREDIENT_CREATED}`,
             error instanceof Error ? error.stack : undefined,
          );
-         if (context) {
-            this.rmqService.nack(context, false);
-         }
+         await this.rmqService.handleError(error, context, { queue: QUEUES.SEARCH });
       }
    }
 
@@ -102,9 +100,7 @@ export class IngredientSearchController {
             `Error queuing ${COMMERCE_EVENTS.INGREDIENT_UPDATED}`,
             error instanceof Error ? error.stack : undefined,
          );
-         if (context) {
-            this.rmqService.nack(context, false);
-         }
+         await this.rmqService.handleError(error, context, { queue: QUEUES.SEARCH });
       }
    }
 
@@ -128,9 +124,7 @@ export class IngredientSearchController {
             `Error queuing ${COMMERCE_EVENTS.INGREDIENT_DELETED}`,
             error instanceof Error ? error.stack : undefined,
          );
-         if (context) {
-            this.rmqService.nack(context, false);
-         }
+         await this.rmqService.handleError(error, context, { queue: QUEUES.SEARCH });
       }
    }
 
@@ -143,9 +137,7 @@ export class IngredientSearchController {
          }
          return result;
       } catch (error) {
-         if (context) {
-            this.rmqService.ack(context);
-         }
+         await this.rmqService.handleError(error, context, { queue: QUEUES.SEARCH });
          throw error;
       }
    }

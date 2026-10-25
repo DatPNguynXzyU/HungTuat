@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RmqContext } from '@nestjs/microservices';
-import { CommandBus, RmqService } from '@common';
+import { CommandBus, QUEUES, RmqService } from '@common';
 import { UserController } from '@user/user.controller';
 import { UserEntity, UserStatus } from '@user/entities';
 
@@ -42,6 +42,7 @@ describe('UserController', () => {
 
    const mockRmqService = {
       ack: jest.fn(),
+      handleError: jest.fn().mockResolvedValue({ action: 'RETRY', retries: 1 }),
    };
 
    const mockRmqContext = {
@@ -98,13 +99,18 @@ describe('UserController', () => {
          expect(result).toBe(mockUser);
       });
 
-      it('should ack message and rethrow error if command fails', async () => {
+      it('should NOT ack and should call handleError if command fails', async () => {
          const error = new Error('Registration failed');
          mockCommandBus.execute.mockRejectedValue(error);
          const payload = { accountId: 'acc-123', email: 'test@example.com' };
 
          await expect(controller.handleUserRegistered(payload, mockRmqContext)).rejects.toThrow(error);
-         expect(mockRmqService.ack).toHaveBeenCalledWith(mockRmqContext);
+         expect(mockRmqService.ack).not.toHaveBeenCalled();
+         expect(mockRmqService.handleError).toHaveBeenCalledWith(
+            error,
+            mockRmqContext,
+            expect.objectContaining({ queue: QUEUES.USER }),
+         );
       });
    });
 });

@@ -1,6 +1,6 @@
 import { Controller, Logger } from '@nestjs/common';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
-import { CommandBus, RmqService } from '@common';
+import { CommandBus, QUEUES, RmqService } from '@common';
 import { NOTIFICATION_EVENTS } from '@contracts/notification';
 import { HandleSupplierRegisteredCommand } from '@supplier/commands';
 
@@ -28,7 +28,7 @@ export class SupplierRmqController {
       } catch (error) {
          this.logger.error(`Error handling SUPPLIER_REGISTERED event for account ${data?.accountId}`, error);
          if (context) {
-            this.rmqService.ack(context);
+            await this.rmqService.handleError(error, context, { queue: QUEUES.SUPPLIER });
          }
          throw error;
       }
