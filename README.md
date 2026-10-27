@@ -2,6 +2,7 @@
 
 OmniServices is a scalable, distributed backend platform built with NestJS, TypeScript, gRPC, and RabbitMQ in a pnpm monorepo architecture. It delivers modular services for e-commerce, authentication, social posts, media management, order lifecycle handling, multi-gateway payments, and search indexing.
 
+Hello World
 ---
 
 ## Architecture Overview
